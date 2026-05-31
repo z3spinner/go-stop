@@ -25,19 +25,19 @@ func NewPostRequest(
 	return &PostRequest{requests: requests, rides: rides, subs: subs, notifier: notifier}
 }
 
-func (uc *PostRequest) Execute(req domain.Request) error {
+func (uc *PostRequest) Execute(req domain.Request) (domain.Request, error) {
 	req.ID = uuid.New().String()
 	req.PostedAt = time.Now()
 	req.Date = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day(), 0, 0, 0, 0, req.DepartureAt.Location())
 	req.ExpiresAt = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day()+1, 0, 0, 0, 0, req.DepartureAt.Location())
 
 	if err := uc.requests.Save(req); err != nil {
-		return err
+		return domain.Request{}, err
 	}
 
 	matching, err := uc.rides.FindMatching(req)
 	if err != nil {
-		return err
+		return domain.Request{}, err
 	}
 
 	for _, ride := range matching {
@@ -47,5 +47,5 @@ func (uc *PostRequest) Execute(req domain.Request) error {
 		}
 		_ = NotifyDriver(sub, req, uc.notifier)
 	}
-	return nil
+	return req, nil
 }

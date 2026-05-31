@@ -63,11 +63,12 @@ func (h *RideHandler) Post(c *gin.Context) {
 		DepartureAt: dept,
 		Flexibility: domain.Flexibility(req.Flexibility),
 	}
-	if err := h.postRide.Execute(ride); err != nil {
+	saved, err := h.postRide.Execute(ride)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, ride)
+	c.JSON(http.StatusCreated, saved)
 }
 
 func (h *RideHandler) List(c *gin.Context) {

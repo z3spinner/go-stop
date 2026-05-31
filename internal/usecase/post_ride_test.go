@@ -96,7 +96,7 @@ func TestPostRide_SavesRide(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRide(rides, reqs, subs, n)
-	err := uc.Execute(domain.Ride{
+	_, err := uc.Execute(domain.Ride{
 		DriverName: "Alice", Phone: "555-0001",
 		Origin: "Village A", Destination: "Station",
 		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
@@ -128,7 +128,7 @@ func TestPostRide_NotifiesMatchingSearchers(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRide(rides, reqs, subs, n)
-	err := uc.Execute(domain.Ride{
+	_, err := uc.Execute(domain.Ride{
 		DriverName: "Alice", Phone: "555-0001",
 		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
 	})
@@ -148,7 +148,7 @@ func TestPostRide_SkipsNotificationIfNoSubscription(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRide(rides, reqs, subs, n)
-	err := uc.Execute(domain.Ride{DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)})
+	_, err := uc.Execute(domain.Ride{DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -161,7 +161,7 @@ func TestPostRide_SkipsNotificationIfNoSubscription(t *testing.T) {
 func TestPostRide_ReturnsErrorIfSaveFails(t *testing.T) {
 	rides := &mockRideRepo{saveErr: errors.New("db error")}
 	uc := usecase.NewPostRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &mockNotifier{})
-	if err := uc.Execute(domain.Ride{DepartureAt: time.Now()}); err == nil {
+	if _, err := uc.Execute(domain.Ride{DepartureAt: time.Now()}); err == nil {
 		t.Error("expected error when save fails")
 	}
 }

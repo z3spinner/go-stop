@@ -57,11 +57,12 @@ func (h *RequestHandler) Post(c *gin.Context) {
 		DepartureAt:  dept,
 		Flexibility:  domain.Flexibility(body.Flexibility),
 	}
-	if err := h.postRequest.Execute(req); err != nil {
+	saved, err := h.postRequest.Execute(req)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, req)
+	c.JSON(http.StatusCreated, saved)
 }
 
 func (h *RequestHandler) Get(c *gin.Context) {

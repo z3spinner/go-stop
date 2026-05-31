@@ -25,19 +25,19 @@ func NewPostRide(
 	return &PostRide{rides: rides, requests: requests, subs: subs, notifier: notifier}
 }
 
-func (uc *PostRide) Execute(ride domain.Ride) error {
+func (uc *PostRide) Execute(ride domain.Ride) (domain.Ride, error) {
 	ride.ID = uuid.New().String()
 	ride.PostedAt = time.Now()
 	ride.Date = time.Date(ride.DepartureAt.Year(), ride.DepartureAt.Month(), ride.DepartureAt.Day(), 0, 0, 0, 0, ride.DepartureAt.Location())
 	ride.ExpiresAt = time.Date(ride.DepartureAt.Year(), ride.DepartureAt.Month(), ride.DepartureAt.Day()+1, 0, 0, 0, 0, ride.DepartureAt.Location())
 
 	if err := uc.rides.Save(ride); err != nil {
-		return err
+		return domain.Ride{}, err
 	}
 
 	matching, err := uc.requests.FindMatching(ride)
 	if err != nil {
-		return err
+		return domain.Ride{}, err
 	}
 
 	for _, req := range matching {
@@ -47,5 +47,5 @@ func (uc *PostRide) Execute(ride domain.Ride) error {
 		}
 		_ = NotifySearcher(sub, ride, uc.notifier)
 	}
-	return nil
+	return ride, nil
 }
