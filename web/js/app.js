@@ -275,11 +275,14 @@ function getProfile() {
   };
 }
 
-// Returns a datetime-local string 1 hour from now, rounded to nearest 5 min.
+// Returns a datetime-local string 1 hour from now in the user's LOCAL timezone,
+// rounded to nearest 5 min. Uses local getters (not toISOString) because
+// datetime-local inputs expect local time, not UTC.
 function defaultDeparture() {
   const d = new Date(Date.now() + 60 * 60 * 1000);
   d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5, 0, 0);
-  return d.toISOString().slice(0, 16);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // ── Views ─────────────────────────────────────────────────────────────────────
