@@ -25,14 +25,14 @@ func (r *RideRepo) Save(ride domain.Ride) error {
 
 func (r *RideRepo) FindByID(id string) (domain.Ride, error) {
 	row := r.pool.QueryRow(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 		 FROM rides WHERE id = $1`, id)
 	return scanRide(row)
 }
 
 func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 		 FROM rides WHERE expires_at > NOW() ORDER BY departure_at ASC`)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 
 func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 		 FROM rides WHERE phone = $1 AND expires_at > NOW() ORDER BY departure_at ASC`,
 		phone)
 	if err != nil {
@@ -55,7 +55,7 @@ func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
 
 func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 		 FROM rides WHERE origin = $1 AND destination = $2 AND expires_at > NOW() ORDER BY departure_at ASC`,
 		origin, destination)
 	if err != nil {
@@ -67,7 +67,7 @@ func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]dom
 
 func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 		 FROM rides
 		 WHERE origin = $1 AND destination = $2 AND date = $3 AND expires_at > NOW()
 		   AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5 * interval '1 minute'))
@@ -90,11 +90,32 @@ func (r *RideRepo) DeleteExpired() error {
 	return err
 }
 
+func (r *RideRepo) FindPendingFeedback() ([]domain.Ride, error) {
+	rows, err := r.pool.Query(context.Background(),
+		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+		 FROM rides
+		 WHERE departure_at BETWEEN (NOW() - INTERVAL '23 hours') AND (NOW() - INTERVAL '30 minutes')
+		   AND feedback_given = false
+		   AND expires_at > NOW()
+		 ORDER BY departure_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return collectRides(rows)
+}
+
+func (r *RideRepo) SetFeedbackGiven(id string) error {
+	_, err := r.pool.Exec(context.Background(),
+		`UPDATE rides SET feedback_given = true WHERE id = $1`, id)
+	return err
+}
+
 func scanRide(row pgx.Row) (domain.Ride, error) {
 	var ride domain.Ride
 	var flex int
 	err := row.Scan(&ride.ID, &ride.DriverName, &ride.Phone, &ride.Origin, &ride.Destination,
-		&ride.Date, &ride.DepartureAt, &flex, &ride.PostedAt, &ride.ExpiresAt)
+		&ride.Date, &ride.DepartureAt, &flex, &ride.PostedAt, &ride.ExpiresAt, &ride.FeedbackGiven)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Ride{}, errors.New("ride not found")
@@ -111,7 +132,7 @@ func collectRides(rows pgx.Rows) ([]domain.Ride, error) {
 		var ride domain.Ride
 		var flex int
 		if err := rows.Scan(&ride.ID, &ride.DriverName, &ride.Phone, &ride.Origin, &ride.Destination,
-			&ride.Date, &ride.DepartureAt, &flex, &ride.PostedAt, &ride.ExpiresAt); err != nil {
+			&ride.Date, &ride.DepartureAt, &flex, &ride.PostedAt, &ride.ExpiresAt, &ride.FeedbackGiven); err != nil {
 			return nil, err
 		}
 		ride.Flexibility = domain.Flexibility(flex)
