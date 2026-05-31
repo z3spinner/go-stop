@@ -69,6 +69,15 @@ const STRINGS = {
     labelSearcher:    'Passenger',
     labelDeparture:   'Departure',
     labelContact:     'Contact',
+    footerPrivacy:    'Privacy',
+    aboutTitle:       'About Go Stop',
+    aboutBody:        (siteName) => `<p><strong>Go Stop</strong> is a local ride-sharing platform, positioned between hitchhiking and carpooling. It connects drivers offering one-time trips with people looking for a lift. Direct contact by phone — no accounts required.</p>
+<h3>Your community</h3>
+<p>This instance is deployed for <strong>${esc(siteName)}</strong>.</p>
+<h3>Deploy for your community</h3>
+<p>Go Stop is free and open source. Deploy your own instance in one click:</p>
+<p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Deploy on Scalingo</a></p>
+<p style="font-size:0.8rem;color:var(--gray-600)">Source: <a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0 licence</p>`,
     privacyBody:    `<h3>What we collect</h3>
 <p>When you post a ride or request we store: your name, phone number, origin, destination, departure time, and flexibility window. Nothing else.</p>
 <h3>How long we keep it</h3>
@@ -152,6 +161,16 @@ const STRINGS = {
     labelSearcher:    'Passager',
     labelDeparture:   'Départ',
     labelContact:     'Contact',
+    footerPrivacy:    'Confidentialité',
+    aboutTitle:       'À propos de Go Stop',
+    aboutBody:        (siteName) => `<p><strong>Go Stop</strong> est une plateforme locale de covoiturage, à mi-chemin entre l'autostop et le covoiturage formel. Elle met en relation des conducteurs qui proposent un trajet ponctuel et des personnes qui cherchent un stop.</p>
+<p>Aucun compte n'est requis. Le contact se fait directement par téléphone.</p>
+<h3>Votre communauté</h3>
+<p>Cette instance est déployée pour <strong>${esc(siteName)}</strong>.</p>
+<h3>Déployer pour votre communauté</h3>
+<p>Go Stop est un logiciel libre. Vous pouvez déployer votre propre instance en un clic :</p>
+<p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Déployer sur Scalingo</a></p>
+<p style="font-size:0.8rem;color:var(--gray-600)">Code source : <a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · Licence AGPL-3.0</p>`,
     privacyBody:    `<h3>Ce que nous collectons</h3>
 <p>Lorsque vous publiez un trajet ou une demande, nous enregistrons : votre prénom, numéro de téléphone, lieu de départ, destination, heure de départ et flexibilité. Rien d'autre.</p>
 <h3>Durée de conservation</h3>
@@ -187,7 +206,16 @@ const t = () => STRINGS[lang];
 function toggleLang() {
   lang = lang === 'en' ? 'fr' : 'en';
   localStorage.setItem('lang', lang);
+  renderFooter();
   renderHome();
+}
+
+function renderFooter() {
+  const s = t();
+  const footer = document.getElementById('app-footer');
+  if (!footer) return;
+  footer.innerHTML = `<button class="btn-footer-privacy" id="btn-footer-privacy">${s.footerPrivacy}</button>`;
+  document.getElementById('btn-footer-privacy').onclick = showPrivacyModal;
 }
 
 // Shows the CURRENT language flag so users know what language they are in.
@@ -197,15 +225,36 @@ function langToggle() {
   return `<button class="btn-lang" id="btn-lang">${label}</button>`;
 }
 
-function privacyIcon() {
-  return `<button class="btn-privacy" id="btn-privacy" aria-label="${t().privacyTitle}">ⓘ</button>`;
+function aboutIcon() {
+  return `<button class="btn-privacy" id="btn-about" aria-label="${t().aboutTitle}">ⓘ</button>`;
+}
+
+function privacyFooter() {
+  const s = t();
+  return `<footer class="app-footer"><button class="btn-footer-privacy" id="btn-footer-privacy">${s.footerPrivacy}</button></footer>`;
+}
+
+function showAboutModal() {
+  const s = t();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h2>${s.aboutTitle}</h2>
+        <button class="btn-modal-close" id="btn-modal-close">${s.privacyClose}</button>
+      </div>
+      <div class="modal-body">${s.aboutBody(SITE_NAME)}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  document.getElementById('btn-modal-close').onclick = () => overlay.remove();
 }
 
 function showPrivacyModal() {
   const s = t();
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.id = 'privacy-modal';
   overlay.innerHTML = `
     <div class="modal">
       <div class="modal-header">
@@ -259,8 +308,8 @@ function destinationList(id, destinations) {
 function bindControls() {
   const langBtn = document.getElementById('btn-lang');
   if (langBtn) langBtn.onclick = toggleLang;
-  const privBtn = document.getElementById('btn-privacy');
-  if (privBtn) privBtn.onclick = showPrivacyModal;
+  const aboutBtn = document.getElementById('btn-about');
+  if (aboutBtn) aboutBtn.onclick = showAboutModal;
 }
 
 // ── Push notifications ────────────────────────────────────────────────────────
@@ -367,7 +416,7 @@ function defaultDeparture() {
 // ── Views ─────────────────────────────────────────────────────────────────────
 
 function controls() {
-  return `<div class="controls">${langToggle()}${privacyIcon()}</div>`;
+  return `<div class="controls">${langToggle()}${aboutIcon()}</div>`;
 }
 
 function topBar() {
@@ -555,7 +604,7 @@ async function renderSearchRides() {
       function colEmpty(fromLoc, toLoc) {
         return `<div class="col-empty">
           <p>${s.noRidesCol}</p>
-          <button class="btn-notify-route col-notify" data-from="${esc(fromLoc)}" data-to="${esc(toLoc)}">${s.btnNotifyRoute}</button>
+          <button class="btn-notify-route col-notify" data-from="${esc(fromLoc)}" data-to="${esc(toLoc)}" data-dept="${esc(deptRaw)}">${s.btnNotifyRoute}</button>
         </div>`;
       }
 
@@ -572,7 +621,7 @@ async function renderSearchRides() {
         </div>`;
 
       results.querySelectorAll('.col-notify').forEach(btn => {
-        btn.onclick = () => renderNotifyRoute(btn.dataset.from, btn.dataset.to);
+        btn.onclick = () => renderNotifyRoute(btn.dataset.from, btn.dataset.to, btn.dataset.dept);
       });
     } catch (err) {
       const div = document.createElement('div');
@@ -689,10 +738,12 @@ function renderMyRides() {
 
 // ── Notify me on route ────────────────────────────────────────────────────────
 
-async function renderNotifyRoute(origin, destination) {
+async function renderNotifyRoute(origin, destination, departureAt = '') {
   const s = t();
   const p = getProfile();
   const dests = await getDestinations();
+  // Use the time from the search if provided, otherwise default to 1h from now.
+  const deptValue = departureAt || defaultDeparture();
   app.innerHTML = `
     ${pageBar()}
     <h2>${s.notifRouteTitle}</h2>
@@ -702,7 +753,7 @@ async function renderNotifyRoute(origin, destination) {
       <div class="form-group"><label>${s.labelPhone}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
       <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(origin)}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
       <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(destination)}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
-      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" value="${defaultDeparture()}" required></div>
+      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" value="${esc(deptValue)}" required></div>
       <div class="form-group">
         <label>${s.labelFlex}</label>
         <select name="flexibility">
@@ -860,6 +911,7 @@ async function handleDeepLink() {
     SITE_NAME = cfg.siteName || 'Go-Stop';
     document.title = SITE_NAME;
   } catch {}
+  renderFooter();
   if (!await handleDeepLink()) renderHome();
 })();
 
