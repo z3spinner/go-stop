@@ -1,0 +1,39 @@
+# Run integration tests:
+#   docker compose up db -d
+#   TEST_DATABASE_URL=postgres://gostop:gostop@localhost:5432/gostop?sslmode=disable \
+#     go test -tags integration ./...
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gostop
+      POSTGRES_PASSWORD: gostop
+      POSTGRES_DB: gostop
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gostop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://gostop:gostop@db:5432/gostop?sslmode=disable
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_EMAIL: ${VAPID_EMAIL:-mailto:dev@localhost}
+      PORT: "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
