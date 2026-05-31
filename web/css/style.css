@@ -46,7 +46,16 @@ p.tagline { color: var(--gray-600); margin: 0 0 32px; }
 .btn-secondary { background: white; color: var(--blue); border: 2px solid var(--blue); }
 .btn-secondary:hover { background: var(--gray-100); }
 .btn-danger { background: var(--red); color: white; font-size: 0.9rem; padding: 8px 12px; width: auto; }
-.btn-back { background: none; border: none; color: var(--blue); cursor: pointer; font-size: 1rem; padding: 0; margin-bottom: 16px; }
+.btn-back {
+  background: none;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  color: var(--gray-600);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px 10px;
+}
+.btn-back:hover { background: var(--gray-100); color: var(--gray-900); }
 
 .form-group { margin-bottom: 16px; }
 label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 0.9rem; }
@@ -90,8 +99,11 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
+.page-bar { justify-content: space-between; }
+.controls { display: flex; gap: 8px; align-items: center; }
+.label-optional { color: var(--gray-600); font-weight: 400; }
 
 .btn-privacy {
   background: none;

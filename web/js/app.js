@@ -2,6 +2,7 @@
 'use strict';
 
 const app = document.getElementById('app');
+let SITE_NAME = 'Go-Stop';
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ const STRINGS = {
     btnDelete:        'Delete',
     deleteOk:         'Deleted.',
     deleteErr:        'Could not delete — is that the right phone number?',
+    labelSearchTime:  'Around what time? (optional)',
     btnNotifyRoute:   '🔔 Notify me of new rides on this route',
     notifRouteTitle:  'Get notified',
     notifRouteBody:   'We\'ll alert you when a ride matching this route is posted. Enter your details below.',
@@ -116,6 +118,7 @@ const STRINGS = {
     btnDelete:        'Supprimer',
     deleteOk:         'Supprimé.',
     deleteErr:        'Impossible de supprimer — numéro incorrect ?',
+    labelSearchTime:  'Vers quelle heure ? (optionnel)',
     btnNotifyRoute:   '🔔 Me prévenir des nouveaux trajets sur ce parcours',
     notifRouteTitle:  'Recevoir des alertes',
     notifRouteBody:   'Vous serez alerté(e) dès qu\'un trajet correspondant à ce parcours est publié. Indiquez vos coordonnées.',
@@ -321,6 +324,18 @@ function getProfile() {
   };
 }
 
+function saveLastSearch(origin, destination) {
+  if (origin)      localStorage.setItem('last_origin', origin);
+  if (destination) localStorage.setItem('last_destination', destination);
+}
+
+function getLastSearch() {
+  return {
+    origin:      localStorage.getItem('last_origin')      || '',
+    destination: localStorage.getItem('last_destination') || '',
+  };
+}
+
 // Returns a datetime-local string 1 hour from now in the user's LOCAL timezone,
 // rounded to nearest 5 min. Uses local getters (not toISOString) because
 // datetime-local inputs expect local time, not UTC.
@@ -333,8 +348,17 @@ function defaultDeparture() {
 
 // ── Views ─────────────────────────────────────────────────────────────────────
 
+function controls() {
+  return `<div class="controls">${langToggle()}${privacyIcon()}</div>`;
+}
+
 function topBar() {
-  return `<div class="top-bar">${langToggle()}${privacyIcon()}</div>`;
+  return `<div class="top-bar">${controls()}</div>`;
+}
+
+function pageBar() {
+  const s = t();
+  return `<div class="top-bar page-bar"><button class="btn-back" id="back">${s.btnBack}</button>${controls()}</div>`;
 }
 
 function renderHome() {
@@ -342,7 +366,7 @@ function renderHome() {
   app.innerHTML = `
     ${topBar()}
     <div class="hero">
-      <h1>Go-Stop</h1>
+      <h1>${esc(SITE_NAME)}</h1>
       <p class="tagline">${s.tagline}</p>
       <button class="btn btn-primary" id="btn-driver">${s.btnDriver}</button>
       <button class="btn btn-secondary" id="btn-searcher">${s.btnSearcher}</button>
@@ -364,7 +388,7 @@ async function renderPostRide() {
   const p = getProfile();
   const dests = await getDestinations();
   app.innerHTML = `
-    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    ${pageBar()}
     <h2>${s.postRideTitle}</h2>
     <form id="ride-form">
       <div class="form-group"><label>${s.labelName}</label><input name="driver_name" value="${esc(p.name)}" required></div>
@@ -408,13 +432,15 @@ async function renderPostRide() {
 
 async function renderSearchRides() {
   const s = t();
+  const ls = getLastSearch();
   const dests = await getDestinations();
   app.innerHTML = `
-    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    ${pageBar()}
     <h2>${s.findTitle}</h2>
     <form id="search-form">
-      <div class="form-group"><label>${s.labelFrom}</label><input name="origin" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
-      <div class="form-group"><label>${s.labelTo}</label><input name="destination" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
+      <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(ls.origin)}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
+      <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(ls.destination)}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
+      <div class="form-group"><label class="label-optional">${s.labelSearchTime}</label><input name="departure_at" type="datetime-local"></div>
       <button class="btn btn-primary" type="submit">${s.btnSearch}</button>
     </form>
     <div id="results"></div>`;
@@ -425,9 +451,13 @@ async function renderSearchRides() {
     const fd = new FormData(e.target);
     const origin = fd.get('origin');
     const dest = fd.get('destination');
+    const deptRaw = fd.get('departure_at');
+    saveLastSearch(origin, dest);
     const results = document.getElementById('results');
+    let url = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}`;
+    if (deptRaw) url += `&departure_at=${encodeURIComponent(new Date(deptRaw).toISOString())}`;
     try {
-      const rides = await api('GET', `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}`);
+      const rides = await api('GET', url);
       if (!rides.length) {
         results.innerHTML = `
           <div class="empty"><p>${s.noRides}</p>
@@ -461,7 +491,7 @@ async function renderPostRequest(origin = '', destination = '') {
   const p = getProfile();
   const dests = await getDestinations();
   app.innerHTML = `
-    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    ${pageBar()}
     <h2>${s.postReqTitle}</h2>
     <form id="req-form">
       <div class="form-group"><label>${s.labelName}</label><input name="searcher_name" value="${esc(p.name)}" required></div>
@@ -509,7 +539,7 @@ function renderMyRides() {
   const s = t();
   const p = getProfile();
   app.innerHTML = `
-    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    ${pageBar()}
     <h2>${s.myRidesTitle}</h2>
     <form id="my-rides-form">
       <div class="form-group"><label>${s.labelPhoneCheck}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
@@ -566,7 +596,7 @@ async function renderNotifyRoute(origin, destination) {
   const p = getProfile();
   const dests = await getDestinations();
   app.innerHTML = `
-    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    ${pageBar()}
     <h2>${s.notifRouteTitle}</h2>
     <p class="section-hint">${s.notifRouteBody}</p>
     <form id="notify-form">
@@ -618,7 +648,7 @@ function renderMyAlerts() {
   const s = t();
   const p = getProfile();
   app.innerHTML = `
-    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    ${pageBar()}
     <h2>${s.myAlertsTitle}</h2>
     <form id="my-alerts-form">
       <div class="form-group"><label>${s.labelPhoneCheck}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
@@ -678,7 +708,7 @@ async function renderItemDetail(type, item) {
   const phone = item.Phone;
 
   app.innerHTML = `
-    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    ${pageBar()}
     <h2>${title}</h2>
     <div class="card detail-card">
       <div class="card-route">${esc(item.Origin)} → ${esc(item.Destination)}</div>
@@ -711,6 +741,11 @@ async function handleDeepLink() {
 }
 
 (async () => {
+  try {
+    const cfg = await api('GET', '/config');
+    SITE_NAME = cfg.siteName || 'Go-Stop';
+    document.title = SITE_NAME;
+  } catch {}
   if (!await handleDeepLink()) renderHome();
 })();
 

@@ -19,6 +19,10 @@
     "GIN_MODE": {
       "description": "Set to 'release' for production",
       "value": "release"
+    },
+    "SITE_NAME": {
+      "description": "Display name for this community's instance (default: Go-Stop)",
+      "value": "Go-Stop"
     }
   }
 }

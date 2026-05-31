@@ -49,6 +49,11 @@ func main() {
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 	vapidH := handler.NewVapidHandler(os.Getenv("VAPID_PUBLIC_KEY"))
+	siteName := os.Getenv("SITE_NAME")
+	if siteName == "" {
+		siteName = "Go-Stop"
+	}
+	configH := handler.NewConfigHandler(siteName)
 
 	go func() {
 		ticker := time.NewTicker(time.Hour)
@@ -91,6 +96,7 @@ func main() {
 		api.DELETE("/subscriptions/:phone", subH.Unsubscribe)
 
 		api.GET("/vapid-public-key", vapidH.GetPublicKey)
+		api.GET("/config", configH.Get)
 	}
 
 	port := os.Getenv("PORT")
