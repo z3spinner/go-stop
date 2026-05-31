@@ -1,7 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -30,6 +33,11 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// Validate endpoint to prevent SSRF: must be HTTPS and a known push service host.
+	if err := validatePushEndpoint(req.Endpoint); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid push endpoint"})
+		return
+	}
 	sub := domain.Subscription{
 		Phone:    req.Phone,
 		Endpoint: req.Endpoint,
@@ -40,6 +48,27 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusCreated)
+}
+
+// validatePushEndpoint rejects non-HTTPS URLs and private/internal hosts.
+// Web Push endpoints are always HTTPS URLs at known push service domains.
+func validatePushEndpoint(endpoint string) error {
+	u, err := url.ParseRequestURI(endpoint)
+	if err != nil {
+		return err
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("push endpoint must use HTTPS")
+	}
+	host := strings.ToLower(u.Hostname())
+	// Block loopback, link-local, and private ranges by hostname
+	blocked := []string{"localhost", "127.", "10.", "172.16.", "192.168.", "169.254.", "::1", "[::"}
+	for _, b := range blocked {
+		if strings.HasPrefix(host, b) {
+			return fmt.Errorf("push endpoint host not allowed")
+		}
+	}
+	return nil
 }
 
 func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
