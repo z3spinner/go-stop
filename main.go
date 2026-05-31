@@ -23,6 +23,7 @@ func main() {
 	requestRepo := postgres.NewRequestRepo(pool)
 	destRepo := postgres.NewDestinationRepo(pool)
 	subRepo := postgres.NewSubscriptionRepo(pool)
+	statRepo := postgres.NewStatRepo(pool)
 
 	notifier := webpush.New(
 		os.Getenv("VAPID_PUBLIC_KEY"),
@@ -35,14 +36,17 @@ func main() {
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)
-	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	deleteRide := usecase.NewDeleteRide(rideRepo)
 	deleteRequest := usecase.NewDeleteRequest(requestRepo)
+	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
+	getStats := usecase.NewGetStats(statRepo)
+	sendFeedbackReminders := usecase.NewSendFeedbackReminders(rideRepo, subRepo, notifier)
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, rideRepo)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, requestRepo)
@@ -54,6 +58,8 @@ func main() {
 		siteName = "Go-Stop"
 	}
 	configH := handler.NewConfigHandler(siteName)
+	feedbackH := handler.NewFeedbackHandler(recordFeedback)
+	statsH := handler.NewStatsHandler(getStats)
 
 	go func() {
 		ticker := time.NewTicker(time.Hour)
@@ -64,6 +70,9 @@ func main() {
 			}
 			if err := expireRequests.Execute(); err != nil {
 				log.Printf("expire requests: %v", err)
+			}
+			if err := sendFeedbackReminders.Execute(); err != nil {
+				log.Printf("send feedback reminders: %v", err)
 			}
 		}
 	}()
@@ -85,6 +94,7 @@ func main() {
 		api.GET("/rides", rideH.List)
 		api.GET("/rides/:id", rideH.Get)
 		api.DELETE("/rides/:id", rideH.Delete)
+		api.POST("/rides/:id/feedback", feedbackH.Post)
 
 		api.POST("/requests", requestH.Post)
 		api.GET("/requests", requestH.List)
@@ -98,6 +108,7 @@ func main() {
 
 		api.GET("/vapid-public-key", vapidH.GetPublicKey)
 		api.GET("/config", configH.Get)
+		api.GET("/stats", statsH.Get)
 	}
 
 	port := os.Getenv("PORT")
