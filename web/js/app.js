@@ -1037,10 +1037,6 @@ async function renderSearchRides(autoQuery = null) {
   document.getElementById('back').onclick = autoQuery ? renderMyAlerts : renderHome;
   bindControls();
 
-  // Auto-submit when navigating from an alert
-  if (autoQuery) {
-    document.getElementById('search-form').requestSubmit();
-  }
   document.getElementById('search-form').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -1094,6 +1090,13 @@ async function renderSearchRides(autoQuery = null) {
       results.replaceChildren(div);
     }
   };
+
+  // Auto-submit AFTER onsubmit is set — requestSubmit() fires the event synchronously,
+  // so it must come after the handler is registered or the browser falls back to a native
+  // form submit (full page reload) causing a loop.
+  if (autoQuery) {
+    document.getElementById('search-form').requestSubmit();
+  }
 }
 
 async function renderPostRequest(origin = '', destination = '') {
