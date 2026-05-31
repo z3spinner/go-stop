@@ -1048,6 +1048,9 @@ async function renderSearchRides(autoQuery = null) {
     const dest = fd.get('destination');
     const deptRaw = fd.get('departure_at');
     saveLastSearch(origin, dest);
+    // Update URL to reflect search state so it's shareable and survives reload
+    const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${deptRaw ? `&departure_at=${encodeURIComponent(new Date(deptRaw).toISOString())}` : ''}`;
+    history.replaceState({ path: '/search' }, '', '/search' + searchQS);
     const results = document.getElementById('results');
     const timeParam = deptRaw ? `&departure_at=${encodeURIComponent(new Date(deptRaw).toISOString())}` : '';
     const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${timeParam}`;
@@ -1403,7 +1406,14 @@ async function handleDeepLink() {
   // SPA view routes
   switch (path) {
     case '/post-ride':    await renderPostRide();    return true;
-    case '/search':       await renderSearchRides(); return true;
+    case '/search': {
+      const p = new URLSearchParams(window.location.search);
+      const autoQuery = (p.get('origin') || p.get('destination') || p.get('departure_at'))
+        ? { origin: p.get('origin') || '', destination: p.get('destination') || '', departureAt: p.get('departure_at') || '' }
+        : null;
+      await renderSearchRides(autoQuery);
+      return true;
+    }
     case '/my-rides':     renderMyRides();           return true;
     case '/my-alerts':    renderMyAlerts();          return true;
     case '/post-request': await renderPostRequest(); return true;
