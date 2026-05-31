@@ -250,3 +250,41 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 }
 .return-section-title { font-weight: 600; font-size: 0.9rem; color: var(--gray-600); margin-bottom: 12px; }
 .hidden { display: none; }
+
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+.results-col-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--gray-300);
+}
+.card-compact { padding: 10px 12px; margin-bottom: 8px; }
+.card-compact .card-meta { margin-bottom: 4px; }
+.card-compact .card-contact { font-size: 0.85rem; line-height: 1.5; }
+.col-empty { padding: 8px 0; color: var(--gray-600); font-size: 0.85rem; }
+.col-empty p { margin: 0 0 8px; }
+.col-notify {
+  display: block;
+  width: 100%;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  color: var(--blue);
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.4;
+}
+.col-notify:hover { text-decoration: underline; }
+@media (max-width: 380px) {
+  .results-grid { grid-template-columns: 1fr; }
+}

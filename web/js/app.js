@@ -45,6 +45,9 @@ const STRINGS = {
     deleteOk:         'Deleted.',
     deleteErr:        'Could not delete — is that the right phone number?',
     labelSearchTime:   'Around what time? (optional)',
+    colOutbound:       'Outbound',
+    colReturn:         'Return',
+    noRidesCol:        'No rides available.',
     tripTypeLabel:     'Trip type',
     tripOneWay:        'One way',
     tripReturn:        'Return',
@@ -125,6 +128,9 @@ const STRINGS = {
     deleteOk:         'Supprimé.',
     deleteErr:        'Impossible de supprimer — numéro incorrect ?',
     labelSearchTime:   'Vers quelle heure ? (optionnel)',
+    colOutbound:       'Aller',
+    colReturn:         'Retour',
+    noRidesCol:        'Aucun trajet disponible.',
     tripTypeLabel:     'Type de trajet',
     tripOneWay:        'Aller simple',
     tripReturn:        'Aller-retour',
@@ -517,29 +523,41 @@ async function renderSearchRides() {
     const deptRaw = fd.get('departure_at');
     saveLastSearch(origin, dest);
     const results = document.getElementById('results');
-    let url = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}`;
-    if (deptRaw) url += `&departure_at=${encodeURIComponent(new Date(deptRaw).toISOString())}`;
+    const timeParam = deptRaw ? `&departure_at=${encodeURIComponent(new Date(deptRaw).toISOString())}` : '';
+    const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${timeParam}`;
+    const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${timeParam}`;
     try {
-      const rides = await api('GET', url);
-      if (!rides.length) {
-        results.innerHTML = `
-          <div class="empty"><p>${s.noRides}</p>
-          <button class="btn btn-secondary" id="btn-post-req">${s.btnWaitingReq}</button>
-          <button class="btn btn-notify-route" id="btn-notify-route">${s.btnNotifyRoute}</button></div>`;
-        document.getElementById('btn-post-req').onclick = () => renderPostRequest(origin, dest);
-        document.getElementById('btn-notify-route').onclick = () => renderNotifyRoute(origin, dest);
-        return;
-      }
-      results.innerHTML = rides.map(r => `
-        <div class="card">
-          <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
+      const [rides, returnRides] = await Promise.all([api('GET', fwdUrl), api('GET', retUrl)]);
+
+      function rideCard(r) {
+        return `<div class="card card-compact">
           <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
-          <div class="card-contact">
-            <strong>${esc(r.DriverName)}</strong> — <a href="tel:${esc(r.Phone)}">${esc(r.Phone)}</a>
+          <div class="card-contact"><strong>${esc(r.DriverName)}</strong><br><a href="tel:${esc(r.Phone)}">${esc(r.Phone)}</a></div>
+        </div>`;
+      }
+
+      function colEmpty(fromLoc, toLoc) {
+        return `<div class="col-empty">
+          <p>${s.noRidesCol}</p>
+          <button class="btn-notify-route col-notify" data-from="${esc(fromLoc)}" data-to="${esc(toLoc)}">${s.btnNotifyRoute}</button>
+        </div>`;
+      }
+
+      results.innerHTML = `
+        <div class="results-grid">
+          <div class="results-col">
+            <div class="results-col-header">${esc(origin)} → ${esc(dest)}</div>
+            ${rides.length ? rides.map(rideCard).join('') : colEmpty(origin, dest)}
           </div>
-        </div>`).join('') +
-        `<div class="notify-route-bar"><button class="btn-notify-route" id="btn-notify-route">${s.btnNotifyRoute}</button></div>`;
-      document.getElementById('btn-notify-route').onclick = () => renderNotifyRoute(origin, dest);
+          <div class="results-col">
+            <div class="results-col-header">${esc(dest)} → ${esc(origin)}</div>
+            ${returnRides.length ? returnRides.map(rideCard).join('') : colEmpty(dest, origin)}
+          </div>
+        </div>`;
+
+      results.querySelectorAll('.col-notify').forEach(btn => {
+        btn.onclick = () => renderNotifyRoute(btn.dataset.from, btn.dataset.to);
+      });
     } catch (err) {
       const div = document.createElement('div');
       div.className = 'error';
