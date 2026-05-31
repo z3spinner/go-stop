@@ -24,6 +24,8 @@ func (r *expiringRideRepo) DeleteExpired() error {
 	r.called = true
 	return nil
 }
+func (r *expiringRideRepo) FindPendingFeedback() ([]domain.Ride, error) { return nil, nil }
+func (r *expiringRideRepo) SetFeedbackGiven(string) error               { return nil }
 
 type expiringRequestRepo struct {
 	called bool

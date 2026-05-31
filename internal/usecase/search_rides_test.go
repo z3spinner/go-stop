@@ -21,6 +21,8 @@ func (m *mockRideRepoSearch) FindByOriginAndDestination(o, d string) ([]domain.R
 func (m *mockRideRepoSearch) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoSearch) Delete(string) error                                 { return nil }
 func (m *mockRideRepoSearch) DeleteExpired() error                                { return nil }
+func (m *mockRideRepoSearch) FindPendingFeedback() ([]domain.Ride, error)        { return nil, nil }
+func (m *mockRideRepoSearch) SetFeedbackGiven(string) error                      { return nil }
 
 func TestSearchRides_FiltersByOriginAndDestination(t *testing.T) {
 	rides := &mockRideRepoSearch{

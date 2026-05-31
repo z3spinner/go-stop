@@ -29,7 +29,9 @@ func (m *mockRideRepoDelete) Delete(id string) error {
 	m.deleted = append(m.deleted, id)
 	return nil
 }
-func (m *mockRideRepoDelete) DeleteExpired() error { return nil }
+func (m *mockRideRepoDelete) DeleteExpired() error                           { return nil }
+func (m *mockRideRepoDelete) FindPendingFeedback() ([]domain.Ride, error)   { return nil, nil }
+func (m *mockRideRepoDelete) SetFeedbackGiven(string) error                  { return nil }
 
 type mockRequestRepoDelete struct {
 	requests map[string]domain.Request

@@ -39,6 +39,8 @@ func (m *mockRideRepo) FindByOriginAndDestination(o, d string) ([]domain.Ride, e
 func (m *mockRideRepo) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) Delete(string) error                                 { return nil }
 func (m *mockRideRepo) DeleteExpired() error                                { return nil }
+func (m *mockRideRepo) FindPendingFeedback() ([]domain.Ride, error)        { return nil, nil }
+func (m *mockRideRepo) SetFeedbackGiven(string) error                      { return nil }
 
 type mockRequestRepo struct {
 	saved    []domain.Request
