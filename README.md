@@ -34,6 +34,8 @@ docker compose up --build
 
 Open [http://localhost:8080](http://localhost:8080). The database is created and migrated automatically.
 
+The `app` service uses `reflex` for hot-reload: any change to a `.go` file triggers an automatic rebuild and restart. Changes to `web/` (HTML, CSS, JS) are served live from the host volume with no restart needed — just refresh your browser.
+
 ## Local setup (manual)
 
 ```bash
