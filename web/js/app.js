@@ -78,6 +78,16 @@ const STRINGS = {
 <p>Go Stop is free and open source. Deploy your own instance in one click:</p>
 <p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Deploy on Scalingo</a></p>
 <p style="font-size:0.8rem;color:var(--gray-600)">Source: <a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0 licence</p>`,
+    feedbackTitle:   'Did anyone join your ride?',
+    feedbackYes:     'Yes, someone joined',
+    feedbackNo:      'No, I drove alone',
+    feedbackThanks:  'Thanks!',
+    statsTitle:      'This week',
+    statsEmpty:      'No confirmed rides yet this week.',
+    statsAllTime:    (n) => `All time: ${n} confirmed`,
+    btnAllStats:     'All stats →',
+    statsPageTitle:  'Stats',
+    statsRouteCount: (n) => `${n} ✓`,
     privacyBody:    `<h3>What we collect</h3>
 <p>When you post a ride or request we store: your name, phone number, origin, destination, departure time, and flexibility window. Nothing else.</p>
 <h3>How long we keep it</h3>
@@ -171,6 +181,16 @@ const STRINGS = {
 <p>Go Stop est un logiciel libre. Vous pouvez déployer votre propre instance en un clic :</p>
 <p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Déployer sur Scalingo</a></p>
 <p style="font-size:0.8rem;color:var(--gray-600)">Code source : <a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · Licence AGPL-3.0</p>`,
+    feedbackTitle:   'Quelqu\'un est-il venu ?',
+    feedbackYes:     'Oui, quelqu\'un est venu',
+    feedbackNo:      'Non, j\'ai conduit seul(e)',
+    feedbackThanks:  'Merci !',
+    statsTitle:      'Cette semaine',
+    statsEmpty:      'Aucun trajet confirmé cette semaine.',
+    statsAllTime:    (n) => `Depuis le début : ${n} confirmés`,
+    btnAllStats:     'Toutes les stats →',
+    statsPageTitle:  'Statistiques',
+    statsRouteCount: (n) => `${n} ✓`,
     privacyBody:    `<h3>Ce que nous collectons</h3>
 <p>Lorsque vous publiez un trajet ou une demande, nous enregistrons : votre prénom, numéro de téléphone, lieu de départ, destination, heure de départ et flexibilité. Rien d'autre.</p>
 <h3>Durée de conservation</h3>
@@ -441,7 +461,40 @@ window.addEventListener('popstate', () => {
   (async () => { if (!await handleDeepLink()) renderHome(); })();
 });
 
-function renderHome() {
+async function renderStats() {
+  pushRoute('/stats');
+  const s = t();
+  app.innerHTML = `
+    ${pageBar()}
+    <h2>${s.statsPageTitle}</h2>
+    <div id="stats-content"><p class="section-hint">…</p></div>`;
+  document.getElementById('back').onclick = renderHome;
+  bindControls();
+
+  try {
+    const stats = await api('GET', '/stats');
+    const totalLine = stats.total_confirmed > 0
+      ? `<p class="stats-total">${s.statsAllTime(stats.total_confirmed)}</p>`
+      : '';
+    const rows = stats.top_routes && stats.top_routes.length
+      ? stats.top_routes.map(r => `
+          <div class="stats-row">
+            <span class="stats-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
+            <span class="stats-count">${s.statsRouteCount(r.Count)}</span>
+          </div>`).join('')
+      : `<p class="section-hint">${s.statsEmpty}</p>`;
+
+    document.getElementById('stats-content').innerHTML = `
+      ${totalLine}
+      <div class="stats-week-title">${s.statsTitle}</div>
+      ${rows}`;
+  } catch (err) {
+    document.getElementById('stats-content').innerHTML =
+      `<p class="error">${esc(err.message)}</p>`;
+  }
+}
+
+async function renderHome() {
   history.replaceState({ path: '/' }, '', '/');
   const s = t();
   app.innerHTML = `
@@ -456,12 +509,37 @@ function renderHome() {
         <span class="ghost-sep">·</span>
         <button class="btn-ghost-inline" id="btn-my-alerts">${s.btnMyAlerts}</button>
       </div>
-    </div>`;
+    </div>
+    <div id="home-stats"></div>`;
   document.getElementById('btn-driver').onclick = renderPostRide;
   document.getElementById('btn-searcher').onclick = renderSearchRides;
   document.getElementById('btn-my-rides').onclick = renderMyRides;
   document.getElementById('btn-my-alerts').onclick = renderMyAlerts;
   bindControls();
+  loadHomeStats();
+}
+
+async function loadHomeStats() {
+  const s = t();
+  try {
+    const stats = await api('GET', '/stats');
+    if (!stats.top_routes || !stats.top_routes.length) return;
+    const rows = stats.top_routes.map(r =>
+      `<div class="stats-row">
+        <span class="stats-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
+        <span class="stats-count">${s.statsRouteCount(r.Count)}</span>
+      </div>`
+    ).join('');
+    document.getElementById('home-stats').innerHTML = `
+      <div class="stats-widget">
+        <div class="stats-widget-title">${s.statsTitle}</div>
+        ${rows}
+        <button class="btn-all-stats" id="btn-all-stats">${s.btnAllStats}</button>
+      </div>`;
+    document.getElementById('btn-all-stats').onclick = renderStats;
+  } catch {
+    // silently omit if unavailable
+  }
 }
 
 async function renderPostRide() {
@@ -705,13 +783,49 @@ function renderMyRides() {
         list.innerHTML = `<div class="empty">${s.noMyRides}</div>`;
         return;
       }
-      list.innerHTML = rides.map(r => `
-        <div class="card" id="card-${esc(r.ID)}">
-          <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
-          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
-          <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
-          <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
-        </div>`).join('');
+      list.innerHTML = rides.map(r => {
+        const isPast = new Date(r.DepartureAt) < new Date();
+        const needsFeedback = isPast && !r.FeedbackGiven;
+        const feedbackSection = needsFeedback ? `
+          <div class="feedback-prompt" id="fb-${esc(r.ID)}">
+            <span class="feedback-question">${s.feedbackTitle}</span>
+            <div class="feedback-btns">
+              <button class="btn-fb-yes" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.feedbackYes}</button>
+              <button class="btn-fb-no"  data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.feedbackNo}</button>
+            </div>
+            <div class="feedback-thanks hidden" id="fb-thanks-${esc(r.ID)}">${s.feedbackThanks}</div>
+          </div>` : '';
+        return `
+          <div class="card" id="card-${esc(r.ID)}">
+            <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
+            <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
+            ${feedbackSection}
+            <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
+            <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
+          </div>`;
+      }).join('');
+
+      // Bind feedback buttons
+      list.querySelectorAll('.btn-fb-yes, .btn-fb-no').forEach(btn => {
+        btn.onclick = async () => {
+          const taken = btn.classList.contains('btn-fb-yes');
+          try {
+            await api('POST', `/rides/${btn.dataset.id}/feedback`, {
+              phone: btn.dataset.phone, taken,
+            });
+            const prompt = document.getElementById('fb-' + btn.dataset.id);
+            const btns = prompt.querySelector('.feedback-btns');
+            const question = prompt.querySelector('.feedback-question');
+            if (btns) btns.remove();
+            if (question) question.remove();
+            document.getElementById('fb-thanks-' + btn.dataset.id).classList.remove('hidden');
+          } catch {
+            // silently fail — will retry next visit
+          }
+        };
+      });
+
+      // Bind delete buttons
       list.querySelectorAll('.btn-delete').forEach(btn => {
         btn.onclick = async () => {
           try {
@@ -900,6 +1014,7 @@ async function handleDeepLink() {
     case '/my-rides':     renderMyRides();           return true;
     case '/my-alerts':    renderMyAlerts();          return true;
     case '/post-request': await renderPostRequest(); return true;
+    case '/stats':        await renderStats();       return true;
   }
 
   return false;
