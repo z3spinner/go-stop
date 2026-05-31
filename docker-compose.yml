@@ -35,6 +35,8 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       VAPID_EMAIL: ${VAPID_EMAIL:-mailto:dev@localhost}
       PORT: "8080"
+    volumes:
+      - ./web:/app/web:ro
     depends_on:
       db:
         condition: service_healthy

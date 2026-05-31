@@ -21,7 +21,7 @@ body {
   min-height: 100vh;
 }
 
-#app { max-width: 600px; margin: 0 auto; padding: 16px; }
+#app { max-width: 600px; margin: 0 auto; padding: 16px; position: relative; }
 
 h1 { font-size: 1.75rem; margin: 0 0 4px; }
 h2 { font-size: 1.25rem; margin: 0 0 16px; }
@@ -83,3 +83,17 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 }
 
 .error { color: var(--red); font-size: 0.9rem; margin-top: 8px; }
+
+.btn-lang {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--gray-600);
+}
+.btn-lang:hover { background: var(--gray-100); }
