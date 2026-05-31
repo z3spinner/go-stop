@@ -21,7 +21,7 @@ body {
   min-height: 100vh;
 }
 
-#app { max-width: 600px; margin: 0 auto; padding: 16px; position: relative; }
+#app { max-width: 600px; margin: 0 auto; padding: 16px; }
 
 h1 { font-size: 1.75rem; margin: 0 0 4px; }
 h2 { font-size: 1.25rem; margin: 0 0 16px; }
@@ -84,16 +84,76 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 
 .error { color: var(--red); font-size: 0.9rem; margin-top: 8px; }
 
-.btn-lang {
-  position: absolute;
-  top: 16px;
-  right: 16px;
+
+.top-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.btn-privacy {
   background: none;
-  border: 1px solid var(--gray-300);
-  border-radius: var(--radius);
-  padding: 4px 10px;
-  font-size: 0.85rem;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 1rem;
+  font-style: normal;
   cursor: pointer;
   color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: grayscale(1);
 }
-.btn-lang:hover { background: var(--gray-100); }
+.btn-privacy:hover { background: var(--gray-100); color: var(--gray-900); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.modal {
+  background: white;
+  border-radius: var(--radius);
+  max-width: 560px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--gray-300);
+}
+.modal-header h2 { margin: 0; font-size: 1.15rem; }
+.btn-modal-close {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--blue);
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.modal-body {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--gray-900);
+}
+.modal-body h3 { margin: 16px 0 4px; font-size: 0.95rem; }
+.modal-body p { margin: 0 0 8px; }
+.modal-body code { background: var(--gray-100); padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
