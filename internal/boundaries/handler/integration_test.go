@@ -80,6 +80,11 @@ func setupRouter() *gin.Engine {
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
+	statRepo := postgres.NewStatRepo(handlerPool)
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
+	getStats := usecase.NewGetStats(statRepo)
+	feedbackH := handler.NewFeedbackHandler(recordFeedback)
+	statsH := handler.NewStatsHandler(getStats)
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, rideRepo)
 	reqH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, reqRepo)
@@ -91,6 +96,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/rides", rideH.List)
 	r.GET("/api/rides/:id", rideH.Get)
 	r.DELETE("/api/rides/:id", rideH.Delete)
+	r.POST("/api/rides/:id/feedback", feedbackH.Post)
 	r.POST("/api/requests", reqH.Post)
 	r.GET("/api/requests", reqH.List)
 	r.GET("/api/requests/:id", reqH.Get)
@@ -98,6 +104,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/destinations", destH.List)
 	r.POST("/api/subscriptions", subH.Subscribe)
 	r.DELETE("/api/subscriptions/:phone", subH.Unsubscribe)
+	r.GET("/api/stats", statsH.Get)
 	return r
 }
 
@@ -294,5 +301,66 @@ func TestHTTP_MyRides_NoXPhoneHeader_ReturnsAllRides(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &rides)
 	if len(rides) != 2 {
 		t.Errorf("expected 2 rides without filter, got %d", len(rides))
+	}
+}
+
+func TestHTTP_Feedback_RecordsStatAndMarksFeedbackGiven(t *testing.T) {
+	truncateAll(t)
+	// Also truncate ride_stats
+	handlerPool.Exec(context.Background(), `TRUNCATE ride_stats`)
+	r := setupRouter()
+
+	// Post a ride
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "555-0001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var created map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &created)
+	id := created["ID"].(string)
+
+	// Submit positive feedback
+	w2 := postJSON(r, "/api/rides/"+id+"/feedback", map[string]interface{}{
+		"phone": "555-0001",
+		"taken": true,
+	})
+	if w2.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", w2.Code, w2.Body.String())
+	}
+
+	// Stats should now show the route
+	w3 := httptest.NewRecorder()
+	req3, _ := http.NewRequest(http.MethodGet, "/api/stats", nil)
+	r.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w3.Code)
+	}
+	var stats map[string]interface{}
+	json.Unmarshal(w3.Body.Bytes(), &stats)
+	if stats["total_this_week"].(float64) != 1 {
+		t.Errorf("expected total_this_week=1, got %v", stats["total_this_week"])
+	}
+}
+
+func TestHTTP_Feedback_WrongPhone_Returns403(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "555-0001",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var created map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &created)
+	id := created["ID"].(string)
+
+	w2 := postJSON(r, "/api/rides/"+id+"/feedback", map[string]interface{}{
+		"phone": "555-9999",
+		"taken": true,
+	})
+	if w2.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w2.Code)
 	}
 }
