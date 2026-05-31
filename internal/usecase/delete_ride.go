@@ -1,12 +1,6 @@
 package usecase
 
-import (
-	"errors"
-
-	"github.com/z3spinner/go-stop/internal/boundaries/repository"
-)
-
-var ErrUnauthorized = errors.New("unauthorized")
+import "github.com/z3spinner/go-stop/internal/boundaries/repository"
 
 type DeleteRide struct {
 	rides repository.RideRepository

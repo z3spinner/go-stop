@@ -74,3 +74,21 @@ func TestPostRequest_ReturnsErrorIfSaveFails(t *testing.T) {
 		t.Error("expected error when save fails")
 	}
 }
+
+func TestPostRequest_SkipsNotificationIfNoSubscription(t *testing.T) {
+	reqs := &mockRequestRepo{}
+	ridesWithMatch := &mockRideRepoWithMatch{
+		matchResult: []domain.Ride{{Phone: "555-no-sub"}},
+	}
+	subs := &mockSubRepo{subs: map[string]domain.Subscription{}}
+	n := &mockNotifier{}
+
+	uc := usecase.NewPostRequest(reqs, ridesWithMatch, subs, n)
+	err := uc.Execute(domain.Request{DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n.called {
+		t.Error("should not send notification when driver has no subscription")
+	}
+}

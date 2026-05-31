@@ -105,3 +105,11 @@ func TestDeleteRequest_RejectsWrongPhone(t *testing.T) {
 		t.Error("expected unauthorized error")
 	}
 }
+
+func TestDeleteRequest_ReturnsErrorIfNotFound(t *testing.T) {
+	reqs := &mockRequestRepoDelete{requests: map[string]domain.Request{}}
+	uc := usecase.NewDeleteRequest(reqs)
+	if err := uc.Execute("nonexistent", "555-0001"); err == nil {
+		t.Error("expected not found error")
+	}
+}

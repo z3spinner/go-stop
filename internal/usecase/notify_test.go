@@ -71,3 +71,11 @@ func TestNotifySearcher_PropagatesNotifierError(t *testing.T) {
 		t.Error("expected error to be propagated")
 	}
 }
+
+func TestNotifyDriver_PropagatesNotifierError(t *testing.T) {
+	n := &mockNotifier{err: errors.New("push failed")}
+	err := usecase.NotifyDriver(domain.Subscription{}, domain.Request{ID: "x"}, n)
+	if err == nil {
+		t.Error("expected error to be propagated")
+	}
+}
