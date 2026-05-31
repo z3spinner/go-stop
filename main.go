@@ -74,6 +74,7 @@ func main() {
 	r.Static("/js", "./web/js")
 	r.StaticFile("/manifest.json", "./web/manifest.json")
 	r.StaticFile("/sw.js", "./web/js/sw.js")
+	r.StaticFile("/logo.svg", "./web/logo.svg")
 	r.NoRoute(func(c *gin.Context) {
 		c.File("./web/index.html")
 	})

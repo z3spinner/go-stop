@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#1a56db"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square (iOS-style icon) -->
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
+
+  <!-- Subtle road stripe at bottom -->
+  <rect x="0" y="390" width="512" height="122" rx="0" ry="0" fill="rgba(0,0,0,0.12)"/>
+  <rect x="112" y="390" width="512" height="122" rx="0" ry="0" fill="rgba(0,0,0,0)" clip-path="url(#round)"/>
+
+  <!-- Road dashes -->
+  <rect x="80"  y="418" width="80" height="14" rx="7" fill="rgba(255,255,255,0.5)"/>
+  <rect x="216" y="418" width="80" height="14" rx="7" fill="rgba(255,255,255,0.5)"/>
+  <rect x="352" y="418" width="80" height="14" rx="7" fill="rgba(255,255,255,0.5)"/>
+
+  <!-- Hitchhiker hand (simple geometric thumb-up, pointing right) -->
+  <!-- Fist body -->
+  <rect x="54" y="175" width="90" height="108" rx="18" fill="white" opacity="0.95"/>
+  <!-- Thumb extending right-up -->
+  <path d="M144 200 C144 200 200 178 208 170 C220 158 224 142 210 138 C196 134 180 148 168 162 L144 175 Z"
+        fill="white" opacity="0.95"/>
+  <!-- Knuckle lines on fist (subtle) -->
+  <line x1="144" y1="203" x2="144" y2="283" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" opacity="0.3"/>
+  <line x1="54"  y1="228" x2="144" y2="228" stroke="#2563eb" stroke-width="2"   stroke-linecap="round" opacity="0.15"/>
+  <line x1="54"  y1="252" x2="144" y2="252" stroke="#2563eb" stroke-width="2"   stroke-linecap="round" opacity="0.15"/>
+
+  <!-- GO — large, bold, white -->
+  <text x="196" y="248"
+        font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="900"
+        font-size="148"
+        fill="white"
+        text-anchor="start"
+        letter-spacing="-6">GO</text>
+
+  <!-- STOP — same size, lower opacity -->
+  <text x="196" y="368"
+        font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="900"
+        font-size="100"
+        fill="rgba(255,255,255,0.65)"
+        text-anchor="start"
+        letter-spacing="-3">STOP</text>
+
+  <!-- Saillans — small spaced caption inside road area -->
+  <text x="256" y="456"
+        font-family="'Helvetica Neue', Arial, sans-serif"
+        font-weight="600"
+        font-size="32"
+        fill="rgba(255,255,255,0.7)"
+        text-anchor="middle"
+        letter-spacing="4">SAILLANS</text>
+</svg>
