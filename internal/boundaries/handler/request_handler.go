@@ -34,6 +34,7 @@ func NewRequestHandler(
 
 func (h *RequestHandler) List(c *gin.Context) {
 	phone := c.GetHeader("X-Phone")
+	phone = normalizePhone(phone)
 	if phone == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "phone query parameter required"})
 		return
@@ -68,7 +69,7 @@ func (h *RequestHandler) Post(c *gin.Context) {
 	}
 	req := domain.Request{
 		SearcherName: body.SearcherName,
-		Phone:        body.Phone,
+		Phone:        normalizePhone(body.Phone),
 		Origin:       body.Origin,
 		Destination:  body.Destination,
 		DepartureAt:  dept,
@@ -101,7 +102,7 @@ func (h *RequestHandler) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.deleteRequest.Execute(c.Param("id"), body.Phone); err != nil {
+	if err := h.deleteRequest.Execute(c.Param("id"), normalizePhone(body.Phone)); err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
 			return

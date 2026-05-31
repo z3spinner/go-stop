@@ -40,7 +40,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		return
 	}
 	sub := domain.Subscription{
-		Phone:    req.Phone,
+		Phone:    normalizePhone(req.Phone),
 		Endpoint: req.Endpoint,
 		Keys:     domain.PushKeys{P256DH: req.P256DH, Auth: req.Auth},
 	}
@@ -107,7 +107,7 @@ func validatePushEndpoint(endpoint string) error {
 }
 
 func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
-	if err := h.unsubscribe.Execute(c.Param("phone")); err != nil {
+	if err := h.unsubscribe.Execute(normalizePhone(c.Param("phone"))); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

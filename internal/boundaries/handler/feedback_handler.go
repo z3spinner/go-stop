@@ -27,7 +27,7 @@ func (h *FeedbackHandler) Post(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.recordFeedback.Execute(c.Param("id"), req.Phone, req.Taken); err != nil {
+	if err := h.recordFeedback.Execute(c.Param("id"), normalizePhone(req.Phone), req.Taken); err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
 			return

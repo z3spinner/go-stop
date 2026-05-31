@@ -63,7 +63,7 @@ func (h *RideHandler) Post(c *gin.Context) {
 	}
 	ride := domain.Ride{
 		DriverName:  req.DriverName,
-		Phone:       req.Phone,
+		Phone:       normalizePhone(req.Phone),
 		Origin:      req.Origin,
 		Destination: req.Destination,
 		DepartureAt: dept,
@@ -81,6 +81,7 @@ func (h *RideHandler) List(c *gin.Context) {
 	origin := c.Query("origin")
 	destination := c.Query("destination")
 	phone := c.GetHeader("X-Phone")
+	phone = normalizePhone(phone)
 
 	var rides []domain.Ride
 	var err error
@@ -111,6 +112,7 @@ func (h *RideHandler) Get(c *gin.Context) {
 func (h *RideHandler) ListMatchingRequests(c *gin.Context) {
 	// Require the driver's phone via X-Phone header — same lightweight auth as delete.
 	phone := c.GetHeader("X-Phone")
+	phone = normalizePhone(phone)
 	if phone == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
 		return
@@ -142,7 +144,7 @@ func (h *RideHandler) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.deleteRide.Execute(c.Param("id"), req.Phone); err != nil {
+	if err := h.deleteRide.Execute(c.Param("id"), normalizePhone(req.Phone)); err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
 			return
