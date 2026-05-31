@@ -1,0 +1,20 @@
+{
+  "name": "Go-Stop",
+  "description": "Lightweight local ride-sharing notice board",
+  "website": "https://github.com/z3spinner/go-stop",
+  "addons": ["postgresql:postgresql-sandbox"],
+  "env": {
+    "VAPID_PUBLIC_KEY": {
+      "description": "VAPID public key for Web Push notifications (generate with webpush-go or similar)",
+      "required": true
+    },
+    "VAPID_PRIVATE_KEY": {
+      "description": "VAPID private key for Web Push notifications",
+      "required": true
+    },
+    "VAPID_EMAIL": {
+      "description": "Contact email for Web Push — prefix with mailto: (e.g. mailto:you@example.com)",
+      "required": true
+    }
+  }
+}
