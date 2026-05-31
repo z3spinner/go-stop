@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -50,22 +51,56 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
-// validatePushEndpoint rejects non-HTTPS URLs and private/internal hosts.
-// Web Push endpoints are always HTTPS URLs at known push service domains.
+// knownPushServiceSuffixes is an allowlist of known Web Push service domains.
+// A push endpoint hostname must equal one of these or end with ".<suffix>".
+// Covers Chrome (FCM), Firefox (Mozilla), Safari/iOS (Apple), Edge (Windows).
+var knownPushServiceSuffixes = []string{
+	"fcm.googleapis.com",
+	"push.services.mozilla.com",
+	"push.apple.com",
+	"notify.windows.com",
+	"pushpad.xyz",
+	"onesignal.com",
+}
+
+// validatePushEndpoint rejects endpoints that are not HTTPS, not from a known
+// push service, or that resolve to private/loopback addresses.
+// A prefix denylist is bypassable via decimal/hex IPs and DNS rebinding;
+// an allowlist + resolved-IP check is the correct defence.
 func validatePushEndpoint(endpoint string) error {
 	u, err := url.ParseRequestURI(endpoint)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid endpoint URL: %w", err)
 	}
 	if u.Scheme != "https" {
 		return fmt.Errorf("push endpoint must use HTTPS")
 	}
-	host := strings.ToLower(u.Hostname())
-	// Block loopback, link-local, and private ranges by hostname
-	blocked := []string{"localhost", "127.", "10.", "172.16.", "192.168.", "169.254.", "::1", "[::"}
-	for _, b := range blocked {
-		if strings.HasPrefix(host, b) {
-			return fmt.Errorf("push endpoint host not allowed")
+
+	host := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
+	if host == "" {
+		return fmt.Errorf("push endpoint has no host")
+	}
+
+	allowed := false
+	for _, suffix := range knownPushServiceSuffixes {
+		if host == suffix || strings.HasSuffix(host, "."+suffix) {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return fmt.Errorf("push endpoint host is not a known push service")
+	}
+
+	// Resolve and validate IPs to defeat DNS rebinding / creative hostname encoding.
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return fmt.Errorf("could not resolve push endpoint host: %w", err)
+	}
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+			ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return fmt.Errorf("push endpoint resolves to a non-public address")
 		}
 	}
 	return nil
