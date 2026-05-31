@@ -71,16 +71,18 @@ func setupRouter() *gin.Engine {
 
 	postRide := usecase.NewPostRide(rideRepo, reqRepo, subRepo, n)
 	getRides := usecase.NewGetRides(rideRepo)
+	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)
 	deleteRide := usecase.NewDeleteRide(rideRepo)
 	postRequest := usecase.NewPostRequest(reqRepo, rideRepo, subRepo, n)
+	getMyRequests := usecase.NewGetMyRequests(reqRepo)
 	deleteRequest := usecase.NewDeleteRequest(reqRepo)
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 
-	rideH := handler.NewRideHandler(postRide, getRides, searchRides, deleteRide, rideRepo)
-	reqH := handler.NewRequestHandler(postRequest, deleteRequest, reqRepo)
+	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, rideRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, reqRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 
@@ -90,6 +92,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/rides/:id", rideH.Get)
 	r.DELETE("/api/rides/:id", rideH.Delete)
 	r.POST("/api/requests", reqH.Post)
+	r.GET("/api/requests", reqH.List)
 	r.GET("/api/requests/:id", reqH.Get)
 	r.DELETE("/api/requests/:id", reqH.Delete)
 	r.GET("/api/destinations", destH.List)
@@ -192,5 +195,104 @@ func TestHTTP_Destinations_ReturnsSortedUnique(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &dests)
 	if len(dests) != 3 {
 		t.Errorf("expected 3 destinations, got %d: %v", len(dests), dests)
+	}
+}
+
+func TestHTTP_MyRides_XPhoneHeader_FiltersToOwnerOnly(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Alice posts a ride
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "555-alice",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	// Bob posts a ride
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "555-bob",
+		"origin": "C", "destination": "D",
+		"departure_at": "2030-06-01T10:00:00Z", "flexibility": 0,
+	})
+
+	// Fetch with Alice's phone — must only return Alice's ride
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/rides", nil)
+	req.Header.Set("X-Phone", "555-alice")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var rides []map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &rides)
+	if len(rides) != 1 {
+		t.Errorf("expected 1 ride for Alice, got %d — X-Phone filter not working", len(rides))
+	}
+	if len(rides) > 0 && rides[0]["DriverName"] != "Alice" {
+		t.Errorf("expected Alice's ride, got driver: %v", rides[0]["DriverName"])
+	}
+}
+
+func TestHTTP_MyAlerts_XPhoneHeader_FiltersToOwnerOnly(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Carol posts a request
+	postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Carol", "phone": "555-carol",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	// Dave posts a request
+	postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Dave", "phone": "555-dave",
+		"origin": "C", "destination": "D",
+		"departure_at": "2030-06-01T10:00:00Z", "flexibility": 0,
+	})
+
+	// Fetch with Carol's phone — must only return Carol's request
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/requests", nil)
+	req.Header.Set("X-Phone", "555-carol")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var reqs []map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &reqs)
+	if len(reqs) != 1 {
+		t.Errorf("expected 1 request for Carol, got %d — X-Phone filter not working", len(reqs))
+	}
+	if len(reqs) > 0 && reqs[0]["SearcherName"] != "Carol" {
+		t.Errorf("expected Carol's request, got: %v", reqs[0]["SearcherName"])
+	}
+}
+
+func TestHTTP_MyRides_NoXPhoneHeader_ReturnsAllRides(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "555-alice",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "555-bob",
+		"origin": "C", "destination": "D",
+		"departure_at": "2030-06-01T10:00:00Z", "flexibility": 0,
+	})
+
+	// Without X-Phone header, all active rides are returned
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/rides", nil)
+	r.ServeHTTP(w, req)
+
+	var rides []map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &rides)
+	if len(rides) != 2 {
+		t.Errorf("expected 2 rides without filter, got %d", len(rides))
 	}
 }

@@ -379,7 +379,21 @@ function pageBar() {
   return `<div class="top-bar page-bar"><button class="btn-back" id="back">${s.btnBack}</button>${controls()}</div>`;
 }
 
+// Push a URL into browser history when navigating to a view so that
+// reload restores the correct page.
+function pushRoute(path) {
+  if (window.location.pathname !== path) {
+    history.pushState({ path }, '', path);
+  }
+}
+
+// Called on popstate (back/forward button) — re-render whatever the URL says.
+window.addEventListener('popstate', () => {
+  (async () => { if (!await handleDeepLink()) renderHome(); })();
+});
+
 function renderHome() {
+  history.replaceState({ path: '/' }, '', '/');
   const s = t();
   app.innerHTML = `
     ${topBar()}
@@ -402,6 +416,7 @@ function renderHome() {
 }
 
 async function renderPostRide() {
+  pushRoute('/post-ride');
   const s = t();
   const p = getProfile();
   const dests = await getDestinations();
@@ -500,6 +515,7 @@ async function renderPostRide() {
 }
 
 async function renderSearchRides() {
+  pushRoute('/search');
   const s = t();
   const ls = getLastSearch();
   const dests = await getDestinations();
@@ -617,6 +633,7 @@ async function renderPostRequest(origin = '', destination = '') {
 // ── My rides ──────────────────────────────────────────────────────────────────
 
 function renderMyRides() {
+  pushRoute('/my-rides');
   const s = t();
   const p = getProfile();
   app.innerHTML = `
@@ -726,6 +743,7 @@ async function renderNotifyRoute(origin, destination) {
 // ── My alerts (waiting requests) ─────────────────────────────────────────────
 
 function renderMyAlerts() {
+  pushRoute('/my-alerts');
   const s = t();
   const p = getProfile();
   app.innerHTML = `
@@ -808,17 +826,32 @@ async function renderItemDetail(type, item) {
 }
 
 async function handleDeepLink() {
-  const m = window.location.pathname.match(/^\/(rides|requests)\/([^/]+)$/);
-  if (!m) return false;
-  const [, type, id] = m;
-  try {
-    const item = await api('GET', `/${type}/${id}`);
-    renderItemDetail(type, item);
-  } catch {
-    history.replaceState({}, '', '/');
-    renderHome();
+  const path = window.location.pathname;
+
+  // Item detail from push notification
+  const itemMatch = path.match(/^\/(rides|requests)\/([^/]+)$/);
+  if (itemMatch) {
+    const [, type, id] = itemMatch;
+    try {
+      const item = await api('GET', `/${type}/${id}`);
+      renderItemDetail(type, item);
+    } catch {
+      history.replaceState({}, '', '/');
+      renderHome();
+    }
+    return true;
   }
-  return true;
+
+  // SPA view routes
+  switch (path) {
+    case '/post-ride':    await renderPostRide();    return true;
+    case '/search':       await renderSearchRides(); return true;
+    case '/my-rides':     renderMyRides();           return true;
+    case '/my-alerts':    renderMyAlerts();          return true;
+    case '/post-request': await renderPostRequest(); return true;
+  }
+
+  return false;
 }
 
 (async () => {

@@ -27,7 +27,7 @@ This app uses phone number as a lightweight delete credential with **no verifica
 go run github.com/SherClockHolmes/webpush-go/cmd/vapid-keygen@latest
 
 cp .env.example .env
-# Edit .env and paste your VAPID keys
+# Edit .env — set your VAPID keys and optionally SITE_NAME for your community
 
 docker compose up --build
 ```
@@ -51,7 +51,14 @@ go run .
 
 ## Deployment (Scalingo)
 
-Click the button above. You will be prompted for your VAPID keys and email.
+Click the button above. You will be prompted for:
+
+| Variable | Description |
+|---|---|
+| `VAPID_PUBLIC_KEY` | Web Push public key (generate below) |
+| `VAPID_PRIVATE_KEY` | Web Push private key |
+| `VAPID_EMAIL` | Contact email for Web Push (e.g. `mailto:you@example.com`) |
+| `SITE_NAME` | **Your community's name** shown as the site heading (e.g. `Stop Nyons`, `Covoiturage Drôme`) |
 
 Generate VAPID keys before deploying:
 
