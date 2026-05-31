@@ -1061,10 +1061,14 @@ async function renderSearchRides(autoQuery = null) {
         </div>`;
       }
 
+      function colNotify(fromLoc, toLoc) {
+        return `<button class="btn-notify-route col-notify" data-from="${esc(fromLoc)}" data-to="${esc(toLoc)}" data-dept="${esc(deptRaw)}">${s.btnNotifyRoute}</button>`;
+      }
+
       function colEmpty(fromLoc, toLoc) {
         return `<div class="col-empty">
           <p>${s.noRidesCol}</p>
-          <button class="btn-notify-route col-notify" data-from="${esc(fromLoc)}" data-to="${esc(toLoc)}" data-dept="${esc(deptRaw)}">${s.btnNotifyRoute}</button>
+          ${colNotify(fromLoc, toLoc)}
         </div>`;
       }
 
@@ -1072,11 +1076,11 @@ async function renderSearchRides(autoQuery = null) {
         <div class="results-grid">
           <div class="results-col">
             <div class="results-col-header">${esc(origin)} → ${esc(dest)}</div>
-            ${rides.length ? rides.map(rideCard).join('') : colEmpty(origin, dest)}
+            ${rides.length ? rides.map(rideCard).join('') + colNotify(origin, dest) : colEmpty(origin, dest)}
           </div>
           <div class="results-col">
             <div class="results-col-header">${esc(dest)} → ${esc(origin)}</div>
-            ${returnRides.length ? returnRides.map(rideCard).join('') : colEmpty(dest, origin)}
+            ${returnRides.length ? returnRides.map(rideCard).join('') + colNotify(dest, origin) : colEmpty(dest, origin)}
           </div>
         </div>`;
 
