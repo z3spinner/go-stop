@@ -9,6 +9,8 @@ type RideRepository interface {
 	FindByPhone(phone string) ([]domain.Ride, error)
 	FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error)
 	FindMatching(request domain.Request) ([]domain.Ride, error)
+	FindPendingFeedback() ([]domain.Ride, error)
 	Delete(id string) error
 	DeleteExpired() error
+	SetFeedbackGiven(id string) error
 }
