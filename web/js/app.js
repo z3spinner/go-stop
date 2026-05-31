@@ -44,6 +44,8 @@ const STRINGS = {
     btnDelete:        'Delete',
     deleteOk:         'Deleted.',
     deleteErr:        'Could not delete — is that the right phone number?',
+    seekersTitle:     'People looking for this ride',
+    noSeekers:        'No one waiting yet.',
     labelSearchTime:   'Around what time? (optional)',
     colOutbound:       'Outbound',
     colReturn:         'Return',
@@ -147,6 +149,8 @@ const STRINGS = {
     btnDelete:        'Supprimer',
     deleteOk:         'Supprimé.',
     deleteErr:        'Impossible de supprimer — numéro incorrect ?',
+    seekersTitle:     'Personnes cherchant ce trajet',
+    noSeekers:        'Personne en attente.',
     labelSearchTime:   'Vers quelle heure ? (optionnel)',
     colOutbound:       'Aller',
     colReturn:         'Retour',
@@ -252,6 +256,8 @@ const STRINGS = {
     btnDelete:      'Eliminar',
     deleteOk:       'Eliminado.',
     deleteErr:      '¿Número de teléfono incorrecto?',
+    seekersTitle: 'Personas que buscan este viaje',
+    noSeekers:    'Nadie en espera todavía.',
     labelSearchTime: '¿A qué hora? (opcional)',
     colOutbound:    'Ida',
     colReturn:      'Vuelta',
@@ -334,6 +340,8 @@ const STRINGS = {
     btnDelete:      'Elimina',
     deleteOk:       'Eliminato.',
     deleteErr:      'Numero di telefono errato?',
+    seekersTitle: 'Persone che cercano questo viaggio',
+    noSeekers:    'Nessuno in attesa.',
     labelSearchTime:'A che ora? (opzionale)',
     colOutbound:    'Andata',
     colReturn:      'Ritorno',
@@ -416,6 +424,8 @@ const STRINGS = {
     btnDelete:      'Löschen',
     deleteOk:       'Gelöscht.',
     deleteErr:      'Falsche Telefonnummer?',
+    seekersTitle: 'Personen, die diese Fahrt suchen',
+    noSeekers:    'Noch niemand wartet.',
     labelSearchTime:'Ungefähre Uhrzeit? (optional)',
     colOutbound:    'Hinfahrt',
     colReturn:      'Rückfahrt',
@@ -498,6 +508,8 @@ const STRINGS = {
     btnDelete:      'Verwijderen',
     deleteOk:       'Verwijderd.',
     deleteErr:      'Verkeerd telefoonnummer?',
+    seekersTitle: 'Mensen die deze rit zoeken',
+    noSeekers:    'Nog niemand in afwachting.',
     labelSearchTime:'Rond welk tijdstip? (optioneel)',
     colOutbound:    'Heen',
     colReturn:      'Terug',
@@ -1195,11 +1207,36 @@ function renderMyRides() {
           <div class="card" id="card-${esc(r.ID)}">
             <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
             <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
+            <div class="seekers-section" id="seekers-${esc(r.ID)}">
+              <div class="seekers-loading">…</div>
+            </div>
             ${feedbackSection}
             <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
             <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
           </div>`;
       }).join('');
+
+      // Load matching requests (seekers) for each ride in parallel
+      rides.forEach(r => {
+        api('GET', `/rides/${r.ID}/requests`).then(reqs => {
+          const el = document.getElementById('seekers-' + r.ID);
+          if (!el) return;
+          if (!reqs || !reqs.length) {
+            el.innerHTML = `<span class="seekers-empty">${s.noSeekers}</span>`;
+            return;
+          }
+          el.innerHTML = `<div class="seekers-title">${s.seekersTitle}</div>` +
+            reqs.map(req => `
+              <div class="seeker-row">
+                <strong>${esc(req.SearcherName)}</strong>
+                <span class="seeker-meta">${formatTime(req.DepartureAt)} <span class="tag">${s.flexLabel[req.Flexibility] || esc(req.Flexibility) + ' min'}</span></span>
+                <a href="tel:${esc(req.Phone)}" class="seeker-phone">${esc(req.Phone)}</a>
+              </div>`).join('');
+        }).catch(() => {
+          const el = document.getElementById('seekers-' + r.ID);
+          if (el) el.innerHTML = '';
+        });
+      });
 
       // Bind feedback buttons
       list.querySelectorAll('.btn-fb-yes, .btn-fb-no').forEach(btn => {

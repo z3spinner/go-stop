@@ -44,11 +44,12 @@ func main() {
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)
+	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, requestRepo)
 	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
 	getStats := usecase.NewGetStats(statRepo)
 	sendFeedbackReminders := usecase.NewSendFeedbackReminders(rideRepo, subRepo, notifier)
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, rideRepo)
+	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, rideRepo)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
@@ -94,6 +95,7 @@ func main() {
 		api.GET("/rides", rideH.List)
 		api.GET("/rides/:id", rideH.Get)
 		api.DELETE("/rides/:id", rideH.Delete)
+		api.GET("/rides/:id/requests", rideH.ListMatchingRequests)
 		api.POST("/rides/:id/feedback", feedbackH.Post)
 
 		api.POST("/requests", requestH.Post)

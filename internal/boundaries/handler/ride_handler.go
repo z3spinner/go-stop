@@ -12,12 +12,13 @@ import (
 )
 
 type RideHandler struct {
-	postRide    *usecase.PostRide
-	getRides    *usecase.GetRides
-	getMyRides  *usecase.GetMyRides
-	searchRides *usecase.SearchRides
-	deleteRide  *usecase.DeleteRide
-	rideRepo    repository.RideRepository
+	postRide             *usecase.PostRide
+	getRides             *usecase.GetRides
+	getMyRides           *usecase.GetMyRides
+	searchRides          *usecase.SearchRides
+	deleteRide           *usecase.DeleteRide
+	getMatchingRequests  *usecase.GetMatchingRequests
+	rideRepo             repository.RideRepository
 }
 
 func NewRideHandler(
@@ -26,15 +27,17 @@ func NewRideHandler(
 	getMyRides *usecase.GetMyRides,
 	searchRides *usecase.SearchRides,
 	deleteRide *usecase.DeleteRide,
+	getMatchingRequests *usecase.GetMatchingRequests,
 	rideRepo repository.RideRepository,
 ) *RideHandler {
 	return &RideHandler{
-		postRide:    postRide,
-		getRides:    getRides,
-		getMyRides:  getMyRides,
-		searchRides: searchRides,
-		deleteRide:  deleteRide,
-		rideRepo:    rideRepo,
+		postRide:            postRide,
+		getRides:            getRides,
+		getMyRides:          getMyRides,
+		searchRides:         searchRides,
+		deleteRide:          deleteRide,
+		getMatchingRequests: getMatchingRequests,
+		rideRepo:            rideRepo,
 	}
 }
 
@@ -103,6 +106,15 @@ func (h *RideHandler) Get(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, ride)
+}
+
+func (h *RideHandler) ListMatchingRequests(c *gin.Context) {
+	requests, err := h.getMatchingRequests.Execute(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	c.JSON(http.StatusOK, requests)
 }
 
 type deleteRideRequest struct {
