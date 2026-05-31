@@ -7,7 +7,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o go-stop .
 
 FROM alpine:latest AS production
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates postgresql-client
 WORKDIR /app
 COPY --from=builder /app/go-stop .
 COPY web/ ./web/

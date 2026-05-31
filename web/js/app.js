@@ -1216,9 +1216,10 @@ function renderMyRides() {
           </div>`;
       }).join('');
 
-      // Load matching requests (seekers) for each ride in parallel
+      // Load matching requests (seekers) for each ride in parallel.
+      // X-Phone proves the viewer is the driver (same lightweight auth as delete).
       rides.forEach(r => {
-        api('GET', `/rides/${r.ID}/requests`).then(reqs => {
+        api('GET', `/rides/${r.ID}/requests`, null, { 'X-Phone': phone }).then(reqs => {
           const el = document.getElementById('seekers-' + r.ID);
           if (!el) return;
           if (!reqs || !reqs.length) {

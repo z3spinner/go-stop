@@ -109,9 +109,24 @@ func (h *RideHandler) Get(c *gin.Context) {
 }
 
 func (h *RideHandler) ListMatchingRequests(c *gin.Context) {
-	requests, err := h.getMatchingRequests.Execute(c.Param("id"))
+	// Require the driver's phone via X-Phone header — same lightweight auth as delete.
+	phone := c.GetHeader("X-Phone")
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	ride, err := h.rideRepo.FindByID(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	if ride.Phone != phone {
+		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+		return
+	}
+	requests, err := h.getMatchingRequests.Execute(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, requests)
