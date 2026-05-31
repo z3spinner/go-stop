@@ -1,0 +1,95 @@
+package handler
+
+import (
+	"errors"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/z3spinner/go-stop/internal/boundaries/repository"
+	"github.com/z3spinner/go-stop/internal/domain"
+	"github.com/z3spinner/go-stop/internal/usecase"
+)
+
+type RequestHandler struct {
+	postRequest   *usecase.PostRequest
+	deleteRequest *usecase.DeleteRequest
+	requestRepo   repository.RequestRepository
+}
+
+func NewRequestHandler(
+	postRequest *usecase.PostRequest,
+	deleteRequest *usecase.DeleteRequest,
+	requestRepo repository.RequestRepository,
+) *RequestHandler {
+	return &RequestHandler{
+		postRequest:   postRequest,
+		deleteRequest: deleteRequest,
+		requestRepo:   requestRepo,
+	}
+}
+
+type postRequestBody struct {
+	SearcherName string `json:"searcher_name" binding:"required"`
+	Phone        string `json:"phone" binding:"required"`
+	Origin       string `json:"origin" binding:"required"`
+	Destination  string `json:"destination" binding:"required"`
+	DepartureAt  string `json:"departure_at" binding:"required"`
+	Flexibility  int    `json:"flexibility"`
+}
+
+func (h *RequestHandler) Post(c *gin.Context) {
+	var body postRequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	dept, err := time.Parse(time.RFC3339, body.DepartureAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid departure_at, use RFC3339"})
+		return
+	}
+	req := domain.Request{
+		SearcherName: body.SearcherName,
+		Phone:        body.Phone,
+		Origin:       body.Origin,
+		Destination:  body.Destination,
+		DepartureAt:  dept,
+		Flexibility:  domain.Flexibility(body.Flexibility),
+	}
+	if err := h.postRequest.Execute(req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, req)
+}
+
+func (h *RequestHandler) Get(c *gin.Context) {
+	req, err := h.requestRepo.FindByID(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	c.JSON(http.StatusOK, req)
+}
+
+type deleteRequestBody struct {
+	Phone string `json:"phone" binding:"required"`
+}
+
+func (h *RequestHandler) Delete(c *gin.Context) {
+	var body deleteRequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.deleteRequest.Execute(c.Param("id"), body.Phone); err != nil {
+		if errors.Is(err, usecase.ErrUnauthorized) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
