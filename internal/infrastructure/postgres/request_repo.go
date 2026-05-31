@@ -41,6 +41,32 @@ func (r *RequestRepo) FindByID(id string) (domain.Request, error) {
 	return req, nil
 }
 
+func (r *RequestRepo) FindByPhone(phone string) ([]domain.Request, error) {
+	rows, err := r.pool.Query(context.Background(),
+		`SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+		 FROM requests WHERE phone = $1 AND expires_at > NOW() ORDER BY departure_at ASC`,
+		phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var reqs []domain.Request
+	for rows.Next() {
+		var req domain.Request
+		var flex int
+		if err := rows.Scan(&req.ID, &req.SearcherName, &req.Phone, &req.Origin, &req.Destination,
+			&req.Date, &req.DepartureAt, &flex, &req.PostedAt, &req.ExpiresAt); err != nil {
+			return nil, err
+		}
+		req.Flexibility = domain.Flexibility(flex)
+		reqs = append(reqs, req)
+	}
+	if reqs == nil {
+		reqs = []domain.Request{}
+	}
+	return reqs, rows.Err()
+}
+
 func (r *RequestRepo) FindMatching(ride domain.Ride) ([]domain.Request, error) {
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at

@@ -53,6 +53,7 @@ func (m *mockRequestRepo) Save(r domain.Request) error {
 	m.saved = append(m.saved, r)
 	return nil
 }
+func (m *mockRequestRepo) FindByPhone(string) ([]domain.Request, error) { return nil, nil }
 func (m *mockRequestRepo) FindByID(string) (domain.Request, error) {
 	return domain.Request{}, errors.New("not found")
 }

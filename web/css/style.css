@@ -199,3 +199,16 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .delete-msg { font-size: 0.85rem; color: var(--gray-600); margin-top: 4px; }
 
 .section-hint { color: var(--gray-600); font-size: 0.9rem; margin: -8px 0 16px; }
+
+.ghost-row { display: flex; justify-content: center; gap: 4px; margin-top: 4px; }
+.btn-ghost-inline {
+  background: none; border: none; font-size: 0.9rem;
+  color: var(--gray-600); cursor: pointer; padding: 6px 8px; border-radius: var(--radius);
+}
+.btn-ghost-inline:hover { background: var(--gray-100); color: var(--gray-900); }
+.ghost-sep { color: var(--gray-300); line-height: 2.2; }
+
+.detail-card { margin-top: 8px; }
+.detail-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.95rem; }
+.detail-table td { padding: 6px 4px; vertical-align: top; }
+.detail-table td:first-child { color: var(--gray-600); width: 40%; }

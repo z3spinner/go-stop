@@ -35,6 +35,7 @@ func main() {
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)
+	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
@@ -44,7 +45,7 @@ func main() {
 	expireRequests := usecase.NewExpireRequests(requestRepo)
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, rideRepo)
-	requestH := handler.NewRequestHandler(postRequest, deleteRequest, requestRepo)
+	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 	vapidH := handler.NewVapidHandler(os.Getenv("VAPID_PUBLIC_KEY"))
@@ -80,6 +81,7 @@ func main() {
 		api.DELETE("/rides/:id", rideH.Delete)
 
 		api.POST("/requests", requestH.Post)
+		api.GET("/requests", requestH.List)
 		api.GET("/requests/:id", requestH.Get)
 		api.DELETE("/requests/:id", requestH.Delete)
 

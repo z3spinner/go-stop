@@ -47,6 +47,17 @@ const STRINGS = {
     notifRouteTitle:  'Get notified',
     notifRouteBody:   'We\'ll alert you when a ride matching this route is posted. Enter your details below.',
     notifRouteSet:    '✓ You\'ll be notified when a matching ride appears.',
+    btnMyAlerts:      'My alerts',
+    myAlertsTitle:    'My alerts',
+    btnShowAlerts:    'Show my alerts',
+    noMyAlerts:       'No active alerts found for this number.',
+    alertCard:        (r) => `${r.Origin} → ${r.Destination}`,
+    detailRideTitle:  'Ride available',
+    detailReqTitle:   'Ride request',
+    labelDriver:      'Driver',
+    labelSearcher:    'Passenger',
+    labelDeparture:   'Departure',
+    labelContact:     'Contact',
     privacyBody:    `<h3>What we collect</h3>
 <p>When you post a ride or request we store: your name, phone number, origin, destination, departure time, and flexibility window. Nothing else.</p>
 <h3>How long we keep it</h3>
@@ -109,6 +120,17 @@ const STRINGS = {
     notifRouteTitle:  'Recevoir des alertes',
     notifRouteBody:   'Vous serez alerté(e) dès qu\'un trajet correspondant à ce parcours est publié. Indiquez vos coordonnées.',
     notifRouteSet:    '✓ Vous serez alerté(e) dès qu\'un trajet correspondant apparaît.',
+    btnMyAlerts:      'Mes alertes',
+    myAlertsTitle:    'Mes alertes',
+    btnShowAlerts:    'Voir mes alertes',
+    noMyAlerts:       'Aucune alerte active trouvée pour ce numéro.',
+    alertCard:        (r) => `${r.Origin} → ${r.Destination}`,
+    detailRideTitle:  'Trajet disponible',
+    detailReqTitle:   'Demande de trajet',
+    labelDriver:      'Conducteur',
+    labelSearcher:    'Passager',
+    labelDeparture:   'Départ',
+    labelContact:     'Contact',
     privacyBody:    `<h3>Ce que nous collectons</h3>
 <p>Lorsque vous publiez un trajet ou une demande, nous enregistrons : votre prénom, numéro de téléphone, lieu de départ, destination, heure de départ et flexibilité. Rien d'autre.</p>
 <h3>Durée de conservation</h3>
@@ -324,11 +346,16 @@ function renderHome() {
       <p class="tagline">${s.tagline}</p>
       <button class="btn btn-primary" id="btn-driver">${s.btnDriver}</button>
       <button class="btn btn-secondary" id="btn-searcher">${s.btnSearcher}</button>
-      <button class="btn btn-ghost" id="btn-my-rides">${s.btnMyRides}</button>
+      <div class="ghost-row">
+        <button class="btn-ghost-inline" id="btn-my-rides">${s.btnMyRides}</button>
+        <span class="ghost-sep">·</span>
+        <button class="btn-ghost-inline" id="btn-my-alerts">${s.btnMyAlerts}</button>
+      </div>
     </div>`;
   document.getElementById('btn-driver').onclick = renderPostRide;
   document.getElementById('btn-searcher').onclick = renderSearchRides;
   document.getElementById('btn-my-rides').onclick = renderMyRides;
+  document.getElementById('btn-my-alerts').onclick = renderMyAlerts;
   bindControls();
 }
 
@@ -585,7 +612,107 @@ async function renderNotifyRoute(origin, destination) {
   };
 }
 
-renderHome();
+// ── My alerts (waiting requests) ─────────────────────────────────────────────
+
+function renderMyAlerts() {
+  const s = t();
+  const p = getProfile();
+  app.innerHTML = `
+    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    <h2>${s.myAlertsTitle}</h2>
+    <form id="my-alerts-form">
+      <div class="form-group"><label>${s.labelPhoneCheck}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
+      <button class="btn btn-primary" type="submit">${s.btnShowAlerts}</button>
+    </form>
+    <div id="my-alerts-list"></div>`;
+  document.getElementById('back').onclick = renderHome;
+  bindControls();
+  document.getElementById('my-alerts-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const phone = new FormData(e.target).get('phone');
+    const list = document.getElementById('my-alerts-list');
+    try {
+      const reqs = await api('GET', `/requests?phone=${encodeURIComponent(phone)}`);
+      if (!reqs.length) {
+        list.innerHTML = `<div class="empty">${s.noMyAlerts}</div>`;
+        return;
+      }
+      list.innerHTML = reqs.map(r => `
+        <div class="card" id="card-${esc(r.ID)}">
+          <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
+          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
+          <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
+          <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
+        </div>`).join('');
+      list.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.onclick = async () => {
+          try {
+            await api('DELETE', `/requests/${btn.dataset.id}`, { phone: btn.dataset.phone });
+            const card = document.getElementById('card-' + btn.dataset.id);
+            card.style.opacity = '0.4';
+            btn.disabled = true;
+            document.getElementById('msg-' + btn.dataset.id).textContent = s.deleteOk;
+          } catch {
+            document.getElementById('msg-' + btn.dataset.id).textContent = s.deleteErr;
+          }
+        };
+      });
+    } catch (err) {
+      const div = document.createElement('div');
+      div.className = 'error';
+      div.textContent = err.message;
+      list.replaceChildren(div);
+    }
+  };
+  if (p.phone) document.getElementById('my-alerts-form').requestSubmit();
+}
+
+// ── Deep link from push notification ─────────────────────────────────────────
+
+async function renderItemDetail(type, item) {
+  const s = t();
+  const isRide = type === 'rides';
+  const title = isRide ? s.detailRideTitle : s.detailReqTitle;
+  const personLabel = isRide ? s.labelDriver : s.labelSearcher;
+  const name = isRide ? item.DriverName : item.SearcherName;
+  const phone = item.Phone;
+
+  app.innerHTML = `
+    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    <h2>${title}</h2>
+    <div class="card detail-card">
+      <div class="card-route">${esc(item.Origin)} → ${esc(item.Destination)}</div>
+      <div class="card-meta">${formatTime(item.DepartureAt)} <span class="tag">${s.flexLabel[item.Flexibility] || esc(item.Flexibility) + ' min'}</span></div>
+      <table class="detail-table">
+        <tr><td>${personLabel}</td><td><strong>${esc(name)}</strong></td></tr>
+        <tr><td>${s.labelContact}</td><td><a href="tel:${esc(phone)}">${esc(phone)}</a></td></tr>
+      </table>
+    </div>`;
+  document.getElementById('back').onclick = () => {
+    history.replaceState({}, '', '/');
+    renderHome();
+  };
+  bindControls();
+  history.replaceState({}, '', '/');
+}
+
+async function handleDeepLink() {
+  const m = window.location.pathname.match(/^\/(rides|requests)\/([^/]+)$/);
+  if (!m) return false;
+  const [, type, id] = m;
+  try {
+    const item = await api('GET', `/${type}/${id}`);
+    renderItemDetail(type, item);
+  } catch {
+    history.replaceState({}, '', '/');
+    renderHome();
+  }
+  return true;
+}
+
+(async () => {
+  if (!await handleDeepLink()) renderHome();
+})();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(console.error);

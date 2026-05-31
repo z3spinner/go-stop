@@ -37,6 +37,7 @@ type mockRequestRepoDelete struct {
 }
 
 func (m *mockRequestRepoDelete) Save(domain.Request) error { return nil }
+func (m *mockRequestRepoDelete) FindByPhone(string) ([]domain.Request, error) { return nil, nil }
 func (m *mockRequestRepoDelete) FindByID(id string) (domain.Request, error) {
 	r, ok := m.requests[id]
 	if !ok {

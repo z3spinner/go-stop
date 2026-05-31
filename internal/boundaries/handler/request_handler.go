@@ -12,21 +12,38 @@ import (
 )
 
 type RequestHandler struct {
-	postRequest   *usecase.PostRequest
-	deleteRequest *usecase.DeleteRequest
-	requestRepo   repository.RequestRepository
+	postRequest    *usecase.PostRequest
+	getMyRequests  *usecase.GetMyRequests
+	deleteRequest  *usecase.DeleteRequest
+	requestRepo    repository.RequestRepository
 }
 
 func NewRequestHandler(
 	postRequest *usecase.PostRequest,
+	getMyRequests *usecase.GetMyRequests,
 	deleteRequest *usecase.DeleteRequest,
 	requestRepo repository.RequestRepository,
 ) *RequestHandler {
 	return &RequestHandler{
 		postRequest:   postRequest,
+		getMyRequests: getMyRequests,
 		deleteRequest: deleteRequest,
 		requestRepo:   requestRepo,
 	}
+}
+
+func (h *RequestHandler) List(c *gin.Context) {
+	phone := c.Query("phone")
+	if phone == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "phone query parameter required"})
+		return
+	}
+	requests, err := h.getMyRequests.Execute(phone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, requests)
 }
 
 type postRequestBody struct {
