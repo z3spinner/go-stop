@@ -62,6 +62,7 @@ const STRINGS = {
     myAlertsTitle:    'My alerts',
     btnShowAlerts:    'Show my alerts',
     noMyAlerts:       'No active alerts found for this number.',
+    btnSeeMatches:    'See available rides →',
     alertCard:        (r) => `${r.Origin} → ${r.Destination}`,
     detailRideTitle:  'Ride available',
     detailReqTitle:   'Ride request',
@@ -164,6 +165,7 @@ const STRINGS = {
     myAlertsTitle:    'Mes alertes',
     btnShowAlerts:    'Voir mes alertes',
     noMyAlerts:       'Aucune alerte active trouvée pour ce numéro.',
+    btnSeeMatches:    'Voir les trajets disponibles →',
     alertCard:        (r) => `${r.Origin} → ${r.Destination}`,
     detailRideTitle:  'Trajet disponible',
     detailReqTitle:   'Demande de trajet',
@@ -268,6 +270,7 @@ const STRINGS = {
     myAlertsTitle:  'Mis alertas',
     btnShowAlerts:  'Ver mis alertas',
     noMyAlerts:     'No se encontraron alertas activas para este número.',
+    btnSeeMatches:  'Ver viajes disponibles →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
     detailRideTitle:'Viaje disponible',
     detailReqTitle: 'Solicitud de viaje',
@@ -349,6 +352,7 @@ const STRINGS = {
     myAlertsTitle:  'I miei avvisi',
     btnShowAlerts:  'Vedi i miei avvisi',
     noMyAlerts:     'Nessun avviso attivo trovato per questo numero.',
+    btnSeeMatches:  'Vedi i viaggi disponibili →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
     detailRideTitle:'Viaggio disponibile',
     detailReqTitle: 'Richiesta di passaggio',
@@ -430,6 +434,7 @@ const STRINGS = {
     myAlertsTitle:  'Meine Alerts',
     btnShowAlerts:  'Meine Alerts anzeigen',
     noMyAlerts:     'Keine aktiven Alerts für diese Nummer gefunden.',
+    btnSeeMatches:  'Verfügbare Fahrten anzeigen →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
     detailRideTitle:'Fahrt verfügbar',
     detailReqTitle: 'Mitfahrtgesuch',
@@ -511,6 +516,7 @@ const STRINGS = {
     myAlertsTitle:  'Mijn alerts',
     btnShowAlerts:  'Toon mijn alerts',
     noMyAlerts:     'Geen actieve alerts gevonden voor dit nummer.',
+    btnSeeMatches:  'Beschikbare ritten bekijken →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
     detailRideTitle:'Rit beschikbaar',
     detailReqTitle: 'Ritaanvraag',
@@ -552,6 +558,7 @@ let lang = detectLang();
 const t = () => STRINGS[lang];
 
 function toggleLang() {
+  // Keep for keyboard/accessibility fallback — cycles to next language
   const idx = LANG_CYCLE.indexOf(lang);
   lang = LANG_CYCLE[(idx + 1) % LANG_CYCLE.length];
   localStorage.setItem('lang', lang);
@@ -567,9 +574,42 @@ function renderFooter() {
   document.getElementById('btn-footer-privacy').onclick = showPrivacyModal;
 }
 
-// Shows the current language flag. Clicking cycles through all 6 languages.
+// Shows current flag. Clicking opens a dropdown to pick any of the 6 languages.
 function langToggle() {
-  return `<button class="btn-lang" id="btn-lang">${LANG_FLAGS[lang]} ${lang.toUpperCase()}</button>`;
+  const options = LANG_CYCLE.map(l =>
+    `<button class="lang-opt${l === lang ? ' lang-opt-active' : ''}" data-lang="${l}">${LANG_FLAGS[l]} ${l.toUpperCase()}</button>`
+  ).join('');
+  return `<div class="lang-picker" id="lang-picker">
+    <button class="btn-lang" id="btn-lang">${LANG_FLAGS[lang]} ${lang.toUpperCase()}</button>
+    <div class="lang-dropdown hidden" id="lang-dropdown">${options}</div>
+  </div>`;
+}
+
+function bindLangPicker() {
+  const btn = document.getElementById('btn-lang');
+  const dropdown = document.getElementById('lang-dropdown');
+  if (!btn || !dropdown) return;
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('hidden');
+  };
+  dropdown.querySelectorAll('.lang-opt').forEach(opt => {
+    opt.onclick = (e) => {
+      e.stopPropagation();
+      lang = opt.dataset.lang;
+      localStorage.setItem('lang', lang);
+      dropdown.classList.add('hidden');
+      renderFooter();
+      renderHome();
+    };
+  });
+  document.addEventListener('click', function onClickOutside(e) {
+    const picker = document.getElementById('lang-picker');
+    if (!picker || !picker.contains(e.target)) {
+      document.getElementById('lang-dropdown')?.classList.add('hidden');
+      document.removeEventListener('click', onClickOutside);
+    }
+  });
 }
 
 function aboutIcon() {
@@ -653,8 +693,7 @@ function destinationList(id, destinations) {
 }
 
 function bindControls() {
-  const langBtn = document.getElementById('btn-lang');
-  if (langBtn) langBtn.onclick = toggleLang;
+  bindLangPicker();
   const aboutBtn = document.getElementById('btn-about');
   if (aboutBtn) aboutBtn.onclick = showAboutModal;
 }
@@ -968,23 +1007,40 @@ async function renderPostRide() {
   };
 }
 
-async function renderSearchRides() {
+// autoQuery = { origin, destination, departureAt } — pre-fills and auto-submits when provided
+async function renderSearchRides(autoQuery = null) {
   pushRoute('/search');
   const s = t();
-  const ls = getLastSearch();
+  const ls = autoQuery || getLastSearch();
   const dests = await getDestinations();
+
+  // Convert ISO departureAt to datetime-local string for the input
+  let deptInputVal = '';
+  if (autoQuery && autoQuery.departureAt) {
+    try {
+      const d = new Date(autoQuery.departureAt);
+      const pad = n => String(n).padStart(2, '0');
+      deptInputVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch {}
+  }
+
   app.innerHTML = `
     ${pageBar()}
     <h2>${s.findTitle}</h2>
     <form id="search-form">
-      <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(ls.origin)}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
-      <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(ls.destination)}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
-      <div class="form-group"><label class="label-optional">${s.labelSearchTime}</label><input name="departure_at" type="datetime-local"></div>
+      <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(ls.origin || '')}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
+      <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(ls.destination || '')}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
+      <div class="form-group"><label class="label-optional">${s.labelSearchTime}</label><input name="departure_at" type="datetime-local" value="${esc(deptInputVal)}"></div>
       <button class="btn btn-primary" type="submit">${s.btnSearch}</button>
     </form>
     <div id="results"></div>`;
-  document.getElementById('back').onclick = renderHome;
+  document.getElementById('back').onclick = autoQuery ? renderMyAlerts : renderHome;
   bindControls();
+
+  // Auto-submit when navigating from an alert
+  if (autoQuery) {
+    document.getElementById('search-form').requestSubmit();
+  }
   document.getElementById('search-form').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -1262,9 +1318,19 @@ function renderMyAlerts() {
         <div class="card" id="card-${esc(r.ID)}">
           <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
           <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
-          <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
+          <div class="alert-actions">
+            <button class="btn-see-matches" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}" data-dept="${esc(r.DepartureAt)}">${s.btnSeeMatches}</button>
+            <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
+          </div>
           <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
         </div>`).join('');
+      list.querySelectorAll('.btn-see-matches').forEach(btn => {
+        btn.onclick = () => renderSearchRides({
+          origin: btn.dataset.origin,
+          destination: btn.dataset.dest,
+          departureAt: btn.dataset.dept,
+        });
+      });
       list.querySelectorAll('.btn-delete').forEach(btn => {
         btn.onclick = async () => {
           try {
