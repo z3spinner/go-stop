@@ -891,10 +891,10 @@ async function loadHomeStats() {
     const stats = await api('GET', '/stats');
     if (!stats.top_routes || !stats.top_routes.length) return;
     const rows = stats.top_routes.map(r =>
-      `<div class="stats-row">
+      `<button class="stats-row stats-row-btn" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}">
         <span class="stats-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
         <span class="stats-count">${s.statsRouteCount(r.Count)}</span>
-      </div>`
+      </button>`
     ).join('');
     document.getElementById('home-stats').innerHTML = `
       <div class="stats-widget">
@@ -903,6 +903,9 @@ async function loadHomeStats() {
         <button class="btn-all-stats" id="btn-all-stats">${s.btnAllStats}</button>
       </div>`;
     document.getElementById('btn-all-stats').onclick = renderStats;
+    document.querySelectorAll('.stats-row-btn').forEach(btn => {
+      btn.onclick = () => renderSearchRides({ origin: btn.dataset.origin, destination: btn.dataset.dest, departureAt: '' });
+    });
   } catch {
     // silently omit if unavailable
   }
