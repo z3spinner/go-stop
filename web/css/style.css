@@ -165,3 +165,37 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .notif-icon { font-size: 2.5rem; margin-bottom: 12px; }
 .notif-prompt h2 { margin: 0 0 8px; }
 .notif-prompt p { color: var(--gray-600); margin: 0 0 28px; }
+
+.btn-ghost {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  color: var(--gray-600);
+  cursor: pointer;
+  margin-top: 4px;
+  border-radius: var(--radius);
+}
+.btn-ghost:hover { background: var(--gray-100); color: var(--gray-900); }
+
+.btn-notify-route {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: none;
+  font-size: 0.9rem;
+  color: var(--blue);
+  cursor: pointer;
+  text-align: center;
+  margin-top: 8px;
+}
+.btn-notify-route:hover { text-decoration: underline; }
+
+.notify-route-bar { margin-top: 8px; border-top: 1px solid var(--gray-100); padding-top: 4px; }
+
+.delete-msg { font-size: 0.85rem; color: var(--gray-600); margin-top: 4px; }
+
+.section-hint { color: var(--gray-600); font-size: 0.9rem; margin: -8px 0 16px; }

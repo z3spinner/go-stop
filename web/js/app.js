@@ -34,7 +34,19 @@ const STRINGS = {
     notifBody:       'Allow notifications to be alerted when a matching ride or passenger is found.',
     notifEnable:     'Enable notifications',
     notifSkip:       'No thanks',
-    notifDenied:     'Notifications blocked in browser settings.',
+    notifDenied:      'Notifications blocked in browser settings.',
+    btnMyRides:       'My rides',
+    myRidesTitle:     'My rides',
+    labelPhoneCheck:  'Your phone number',
+    btnShowRides:     'Show my rides',
+    noMyRides:        'No active rides found for this number.',
+    btnDelete:        'Delete',
+    deleteOk:         'Deleted.',
+    deleteErr:        'Could not delete — is that the right phone number?',
+    btnNotifyRoute:   '🔔 Notify me of new rides on this route',
+    notifRouteTitle:  'Get notified',
+    notifRouteBody:   'We\'ll alert you when a ride matching this route is posted. Enter your details below.',
+    notifRouteSet:    '✓ You\'ll be notified when a matching ride appears.',
     privacyBody:    `<h3>What we collect</h3>
 <p>When you post a ride or request we store: your name, phone number, origin, destination, departure time, and flexibility window. Nothing else.</p>
 <h3>How long we keep it</h3>
@@ -84,7 +96,19 @@ const STRINGS = {
     notifBody:       'Activez les notifications pour être alerté(e) dès qu\'un trajet ou passager correspondant est trouvé.',
     notifEnable:     'Activer les notifications',
     notifSkip:       'Non merci',
-    notifDenied:     'Notifications bloquées dans les paramètres du navigateur.',
+    notifDenied:      'Notifications bloquées dans les paramètres du navigateur.',
+    btnMyRides:       'Mes trajets',
+    myRidesTitle:     'Mes trajets',
+    labelPhoneCheck:  'Votre numéro de téléphone',
+    btnShowRides:     'Voir mes trajets',
+    noMyRides:        'Aucun trajet actif trouvé pour ce numéro.',
+    btnDelete:        'Supprimer',
+    deleteOk:         'Supprimé.',
+    deleteErr:        'Impossible de supprimer — numéro incorrect ?',
+    btnNotifyRoute:   '🔔 Me prévenir des nouveaux trajets sur ce parcours',
+    notifRouteTitle:  'Recevoir des alertes',
+    notifRouteBody:   'Vous serez alerté(e) dès qu\'un trajet correspondant à ce parcours est publié. Indiquez vos coordonnées.',
+    notifRouteSet:    '✓ Vous serez alerté(e) dès qu\'un trajet correspondant apparaît.',
     privacyBody:    `<h3>Ce que nous collectons</h3>
 <p>Lorsque vous publiez un trajet ou une demande, nous enregistrons : votre prénom, numéro de téléphone, lieu de départ, destination, heure de départ et flexibilité. Rien d'autre.</p>
 <h3>Durée de conservation</h3>
@@ -300,9 +324,11 @@ function renderHome() {
       <p class="tagline">${s.tagline}</p>
       <button class="btn btn-primary" id="btn-driver">${s.btnDriver}</button>
       <button class="btn btn-secondary" id="btn-searcher">${s.btnSearcher}</button>
+      <button class="btn btn-ghost" id="btn-my-rides">${s.btnMyRides}</button>
     </div>`;
   document.getElementById('btn-driver').onclick = renderPostRide;
   document.getElementById('btn-searcher').onclick = renderSearchRides;
+  document.getElementById('btn-my-rides').onclick = renderMyRides;
   bindControls();
 }
 
@@ -378,8 +404,10 @@ async function renderSearchRides() {
       if (!rides.length) {
         results.innerHTML = `
           <div class="empty"><p>${s.noRides}</p>
-          <button class="btn btn-secondary" id="btn-post-req">${s.btnWaitingReq}</button></div>`;
+          <button class="btn btn-secondary" id="btn-post-req">${s.btnWaitingReq}</button>
+          <button class="btn btn-notify-route" id="btn-notify-route">${s.btnNotifyRoute}</button></div>`;
         document.getElementById('btn-post-req').onclick = () => renderPostRequest(origin, dest);
+        document.getElementById('btn-notify-route').onclick = () => renderNotifyRoute(origin, dest);
         return;
       }
       results.innerHTML = rides.map(r => `
@@ -389,7 +417,9 @@ async function renderSearchRides() {
           <div class="card-contact">
             <strong>${esc(r.DriverName)}</strong> — <a href="tel:${esc(r.Phone)}">${esc(r.Phone)}</a>
           </div>
-        </div>`).join('');
+        </div>`).join('') +
+        `<div class="notify-route-bar"><button class="btn-notify-route" id="btn-notify-route">${s.btnNotifyRoute}</button></div>`;
+      document.getElementById('btn-notify-route').onclick = () => renderNotifyRoute(origin, dest);
     } catch (err) {
       const div = document.createElement('div');
       div.className = 'error';
@@ -440,6 +470,115 @@ async function renderPostRequest(origin = '', destination = '') {
         flexibility: parseInt(fd.get('flexibility')),
       });
       renderNotificationPrompt(phone, renderHome);
+    } catch (err) {
+      document.getElementById('err').textContent = err.message;
+    }
+  };
+}
+
+// ── My rides ──────────────────────────────────────────────────────────────────
+
+function renderMyRides() {
+  const s = t();
+  const p = getProfile();
+  app.innerHTML = `
+    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    <h2>${s.myRidesTitle}</h2>
+    <form id="my-rides-form">
+      <div class="form-group"><label>${s.labelPhoneCheck}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
+      <button class="btn btn-primary" type="submit">${s.btnShowRides}</button>
+    </form>
+    <div id="my-rides-list"></div>`;
+  document.getElementById('back').onclick = renderHome;
+  bindControls();
+  document.getElementById('my-rides-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const phone = new FormData(e.target).get('phone');
+    const list = document.getElementById('my-rides-list');
+    try {
+      const rides = await api('GET', `/rides?phone=${encodeURIComponent(phone)}`);
+      if (!rides.length) {
+        list.innerHTML = `<div class="empty">${s.noMyRides}</div>`;
+        return;
+      }
+      list.innerHTML = rides.map(r => `
+        <div class="card" id="card-${esc(r.ID)}">
+          <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
+          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
+          <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
+          <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
+        </div>`).join('');
+      list.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.onclick = async () => {
+          try {
+            await api('DELETE', `/rides/${btn.dataset.id}`, { phone: btn.dataset.phone });
+            const card = document.getElementById('card-' + btn.dataset.id);
+            card.style.opacity = '0.4';
+            btn.disabled = true;
+            document.getElementById('msg-' + btn.dataset.id).textContent = s.deleteOk;
+          } catch {
+            document.getElementById('msg-' + btn.dataset.id).textContent = s.deleteErr;
+          }
+        };
+      });
+    } catch (err) {
+      const div = document.createElement('div');
+      div.className = 'error';
+      div.textContent = err.message;
+      list.replaceChildren(div);
+    }
+  };
+  // Auto-submit if phone is pre-filled
+  if (p.phone) document.getElementById('my-rides-form').requestSubmit();
+}
+
+// ── Notify me on route ────────────────────────────────────────────────────────
+
+async function renderNotifyRoute(origin, destination) {
+  const s = t();
+  const p = getProfile();
+  const dests = await getDestinations();
+  app.innerHTML = `
+    <div class="top-bar"><button class="btn-back" id="back">${s.btnBack}</button>${langToggle()}${privacyIcon()}</div>
+    <h2>${s.notifRouteTitle}</h2>
+    <p class="section-hint">${s.notifRouteBody}</p>
+    <form id="notify-form">
+      <div class="form-group"><label>${s.labelName}</label><input name="searcher_name" value="${esc(p.name)}" required></div>
+      <div class="form-group"><label>${s.labelPhone}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
+      <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(origin)}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
+      <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(destination)}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
+      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" value="${defaultDeparture()}" required></div>
+      <div class="form-group">
+        <label>${s.labelFlex}</label>
+        <select name="flexibility">
+          <option value="0">${s.flexExact}</option>
+          <option value="30" selected>${s.flex30}</option>
+          <option value="60">${s.flex60}</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" type="submit">${s.notifEnable}</button>
+      <div class="error" id="err"></div>
+    </form>`;
+  document.getElementById('back').onclick = () => renderSearchRides();
+  bindControls();
+  document.getElementById('notify-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const phone = fd.get('phone');
+    saveProfile(fd.get('searcher_name'), phone);
+    try {
+      await api('POST', '/requests', {
+        searcher_name: fd.get('searcher_name'),
+        phone,
+        origin: fd.get('origin'),
+        destination: fd.get('destination'),
+        departure_at: new Date(fd.get('departure_at')).toISOString(),
+        flexibility: parseInt(fd.get('flexibility')),
+      });
+      renderNotificationPrompt(phone, () => {
+        app.innerHTML = `<div class="notif-prompt"><div class="notif-icon">✓</div><p>${s.notifRouteSet}</p><button class="btn btn-secondary" id="btn-home">${s.btnBack}</button></div>`;
+        document.getElementById('btn-home').onclick = renderHome;
+      });
     } catch (err) {
       document.getElementById('err').textContent = err.message;
     }

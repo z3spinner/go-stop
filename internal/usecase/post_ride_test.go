@@ -32,6 +32,7 @@ func (m *mockRideRepo) FindByID(id string) (domain.Ride, error) {
 	return r, nil
 }
 func (m *mockRideRepo) FindAll() ([]domain.Ride, error)  { return m.saved, nil }
+func (m *mockRideRepo) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return nil, nil
 }

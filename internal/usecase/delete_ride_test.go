@@ -22,6 +22,7 @@ func (m *mockRideRepoDelete) FindByID(id string) (domain.Ride, error) {
 	return r, nil
 }
 func (m *mockRideRepoDelete) FindAll() ([]domain.Ride, error)                                     { return nil, nil }
+func (m *mockRideRepoDelete) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoDelete) FindByOriginAndDestination(string, string) ([]domain.Ride, error)    { return nil, nil }
 func (m *mockRideRepoDelete) FindMatching(domain.Request) ([]domain.Ride, error)                  { return nil, nil }
 func (m *mockRideRepoDelete) Delete(id string) error {

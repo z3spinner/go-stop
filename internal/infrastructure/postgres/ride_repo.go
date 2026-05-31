@@ -41,6 +41,18 @@ func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 	return collectRides(rows)
 }
 
+func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
+	rows, err := r.pool.Query(context.Background(),
+		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+		 FROM rides WHERE phone = $1 AND expires_at > NOW() ORDER BY departure_at ASC`,
+		phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return collectRides(rows)
+}
+
 func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at

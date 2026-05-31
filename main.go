@@ -33,6 +33,7 @@ func main() {
 	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifier)
 	postRequest := usecase.NewPostRequest(requestRepo, rideRepo, subRepo, notifier)
 	getRides := usecase.NewGetRides(rideRepo)
+	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
@@ -42,7 +43,7 @@ func main() {
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)
 
-	rideH := handler.NewRideHandler(postRide, getRides, searchRides, deleteRide, rideRepo)
+	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, rideRepo)
 	requestH := handler.NewRequestHandler(postRequest, deleteRequest, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)

@@ -14,6 +14,7 @@ import (
 type RideHandler struct {
 	postRide    *usecase.PostRide
 	getRides    *usecase.GetRides
+	getMyRides  *usecase.GetMyRides
 	searchRides *usecase.SearchRides
 	deleteRide  *usecase.DeleteRide
 	rideRepo    repository.RideRepository
@@ -22,6 +23,7 @@ type RideHandler struct {
 func NewRideHandler(
 	postRide *usecase.PostRide,
 	getRides *usecase.GetRides,
+	getMyRides *usecase.GetMyRides,
 	searchRides *usecase.SearchRides,
 	deleteRide *usecase.DeleteRide,
 	rideRepo repository.RideRepository,
@@ -29,6 +31,7 @@ func NewRideHandler(
 	return &RideHandler{
 		postRide:    postRide,
 		getRides:    getRides,
+		getMyRides:  getMyRides,
 		searchRides: searchRides,
 		deleteRide:  deleteRide,
 		rideRepo:    rideRepo,
@@ -74,12 +77,16 @@ func (h *RideHandler) Post(c *gin.Context) {
 func (h *RideHandler) List(c *gin.Context) {
 	origin := c.Query("origin")
 	destination := c.Query("destination")
+	phone := c.Query("phone")
 
 	var rides []domain.Ride
 	var err error
-	if origin != "" && destination != "" {
+	switch {
+	case phone != "":
+		rides, err = h.getMyRides.Execute(phone)
+	case origin != "" && destination != "":
 		rides, err = h.searchRides.Execute(origin, destination)
-	} else {
+	default:
 		rides, err = h.getRides.Execute()
 	}
 	if err != nil {

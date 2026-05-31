@@ -14,6 +14,7 @@ type expiringRideRepo struct {
 func (r *expiringRideRepo) Save(domain.Ride) error                              { return nil }
 func (r *expiringRideRepo) FindByID(string) (domain.Ride, error)               { return domain.Ride{}, nil }
 func (r *expiringRideRepo) FindAll() ([]domain.Ride, error)                     { return nil, nil }
+func (r *expiringRideRepo) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (r *expiringRideRepo) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil
 }

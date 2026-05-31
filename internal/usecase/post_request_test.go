@@ -16,6 +16,7 @@ type mockRideRepoWithMatch struct {
 func (m *mockRideRepoWithMatch) Save(domain.Ride) error                              { return nil }
 func (m *mockRideRepoWithMatch) FindByID(string) (domain.Ride, error)               { return domain.Ride{}, errors.New("not found") }
 func (m *mockRideRepoWithMatch) FindAll() ([]domain.Ride, error)                     { return nil, nil }
+func (m *mockRideRepoWithMatch) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoWithMatch) FindByOriginAndDestination(string, string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoWithMatch) FindMatching(domain.Request) ([]domain.Ride, error) { return m.matchResult, nil }
 func (m *mockRideRepoWithMatch) Delete(string) error                                 { return nil }
