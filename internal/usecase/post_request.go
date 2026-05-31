@@ -1,0 +1,51 @@
+package usecase
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/z3spinner/go-stop/internal/boundaries/notification"
+	"github.com/z3spinner/go-stop/internal/boundaries/repository"
+	"github.com/z3spinner/go-stop/internal/domain"
+)
+
+type PostRequest struct {
+	requests repository.RequestRepository
+	rides    repository.RideRepository
+	subs     repository.SubscriptionRepository
+	notifier notification.Notifier
+}
+
+func NewPostRequest(
+	requests repository.RequestRepository,
+	rides repository.RideRepository,
+	subs repository.SubscriptionRepository,
+	notifier notification.Notifier,
+) *PostRequest {
+	return &PostRequest{requests: requests, rides: rides, subs: subs, notifier: notifier}
+}
+
+func (uc *PostRequest) Execute(req domain.Request) error {
+	req.ID = uuid.New().String()
+	req.PostedAt = time.Now()
+	req.Date = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day(), 0, 0, 0, 0, req.DepartureAt.Location())
+	req.ExpiresAt = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day()+1, 0, 0, 0, 0, req.DepartureAt.Location())
+
+	if err := uc.requests.Save(req); err != nil {
+		return err
+	}
+
+	matching, err := uc.rides.FindMatching(req)
+	if err != nil {
+		return err
+	}
+
+	for _, ride := range matching {
+		sub, err := uc.subs.FindByPhone(ride.Phone)
+		if err != nil {
+			continue
+		}
+		_ = NotifyDriver(sub, req, uc.notifier)
+	}
+	return nil
+}
