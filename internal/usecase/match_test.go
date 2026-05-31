@@ -8,8 +8,6 @@ import (
 	"github.com/z3spinner/go-stop/internal/usecase"
 )
 
-var baseDate = time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
-
 func departure(hour, min int) time.Time {
 	return time.Date(2026, 6, 1, hour, min, 0, 0, time.UTC)
 }
