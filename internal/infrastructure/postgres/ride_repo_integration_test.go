@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
 )
@@ -14,8 +15,9 @@ func TestRideRepo_SaveAndFindByID(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewRideRepo(testPool)
 
+	testID := uuid.New().String()
 	ride := domain.Ride{
-		ID:          "test-ride-1",
+		ID:          testID,
 		DriverName:  "Alice",
 		Phone:       "555-0001",
 		Origin:      "Village A",
@@ -31,7 +33,7 @@ func TestRideRepo_SaveAndFindByID(t *testing.T) {
 		t.Fatalf("Save: %v", err)
 	}
 
-	got, err := repo.FindByID("test-ride-1")
+	got, err := repo.FindByID(testID)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -47,8 +49,9 @@ func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewRideRepo(testPool)
 
+	activeID := uuid.New().String()
 	_ = repo.Save(domain.Ride{
-		ID: "active-1", DriverName: "Alice", Phone: "1",
+		ID: activeID, DriverName: "Alice", Phone: "1",
 		Origin: "A", Destination: "B",
 		Date:        time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2030, 1, 1, 9, 0, 0, 0, time.UTC),
@@ -56,7 +59,7 @@ func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 		ExpiresAt:   time.Date(2030, 1, 2, 0, 0, 0, 0, time.UTC),
 	})
 	_ = repo.Save(domain.Ride{
-		ID: "expired-1", DriverName: "Bob", Phone: "2",
+		ID: uuid.New().String(), DriverName: "Bob", Phone: "2",
 		Origin: "A", Destination: "B",
 		Date:        time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2020, 1, 1, 9, 0, 0, 0, time.UTC),
@@ -71,8 +74,8 @@ func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 	if len(rides) != 1 {
 		t.Errorf("expected 1 active ride, got %d", len(rides))
 	}
-	if rides[0].ID != "active-1" {
-		t.Errorf("expected active-1, got %s", rides[0].ID)
+	if rides[0].ID != activeID {
+		t.Errorf("expected %s, got %s", activeID, rides[0].ID)
 	}
 }
 
@@ -82,7 +85,7 @@ func TestRideRepo_FindMatching_WindowOverlap(t *testing.T) {
 
 	// Ride: 09:00 ±30 min → window 08:30–09:30
 	_ = repo.Save(domain.Ride{
-		ID: "ride-1", DriverName: "Alice", Phone: "1",
+		ID: uuid.New().String(), DriverName: "Alice", Phone: "1",
 		Origin: "Village A", Destination: "Station",
 		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2030, 6, 1, 9, 0, 0, 0, time.UTC),
@@ -115,7 +118,7 @@ func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 
 	// Ride: 09:00 exact
 	_ = repo.Save(domain.Ride{
-		ID: "ride-2", DriverName: "Alice", Phone: "1",
+		ID: uuid.New().String(), DriverName: "Alice", Phone: "1",
 		Origin: "Village A", Destination: "Station",
 		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2030, 6, 1, 9, 0, 0, 0, time.UTC),
@@ -146,8 +149,9 @@ func TestRideRepo_Delete(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewRideRepo(testPool)
 
+	deleteID := uuid.New().String()
 	_ = repo.Save(domain.Ride{
-		ID: "to-delete", DriverName: "Alice", Phone: "1",
+		ID: deleteID, DriverName: "Alice", Phone: "1",
 		Origin: "A", Destination: "B",
 		Date:        time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2030, 1, 1, 9, 0, 0, 0, time.UTC),
@@ -155,10 +159,10 @@ func TestRideRepo_Delete(t *testing.T) {
 		ExpiresAt:   time.Date(2030, 1, 2, 0, 0, 0, 0, time.UTC),
 	})
 
-	if err := repo.Delete("to-delete"); err != nil {
+	if err := repo.Delete(deleteID); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
-	_, err := repo.FindByID("to-delete")
+	_, err := repo.FindByID(deleteID)
 	if err == nil {
 		t.Error("expected not found after delete")
 	}

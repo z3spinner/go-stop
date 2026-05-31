@@ -58,8 +58,8 @@ func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
 		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
 		 FROM rides
 		 WHERE origin = $1 AND destination = $2 AND date = $3 AND expires_at > NOW()
-		   AND (departure_at - (flexibility * interval '1 minute')) <= ($4 + ($5 * interval '1 minute'))
-		   AND (departure_at + (flexibility * interval '1 minute')) >= ($4 - ($5 * interval '1 minute'))`,
+		   AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5 * interval '1 minute'))
+		   AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5 * interval '1 minute'))`,
 		req.Origin, req.Destination, req.Date, req.DepartureAt, int(req.Flexibility))
 	if err != nil {
 		return nil, err

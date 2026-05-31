@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
 )
@@ -14,8 +15,9 @@ func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewRequestRepo(testPool)
 
+	testID := uuid.New().String()
 	req := domain.Request{
-		ID:           "test-req-1",
+		ID:           testID,
 		SearcherName: "Bob",
 		Phone:        "555-0002",
 		Origin:       "Village A",
@@ -31,7 +33,7 @@ func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 		t.Fatalf("Save: %v", err)
 	}
 
-	got, err := repo.FindByID("test-req-1")
+	got, err := repo.FindByID(testID)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -49,7 +51,7 @@ func TestRequestRepo_FindMatching_WindowOverlap(t *testing.T) {
 
 	// Request: 09:15 ±30 min → window 08:45–09:45
 	_ = repo.Save(domain.Request{
-		ID: "req-1", SearcherName: "Bob", Phone: "2",
+		ID: uuid.New().String(), SearcherName: "Bob", Phone: "2",
 		Origin: "Village A", Destination: "Station",
 		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2030, 6, 1, 9, 15, 0, 0, time.UTC),

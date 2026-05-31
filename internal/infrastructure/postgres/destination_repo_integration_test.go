@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
 )
@@ -17,7 +18,7 @@ func TestDestinationRepo_GetAll_DeduplicatesAndSorts(t *testing.T) {
 	destRepo := postgres.NewDestinationRepo(testPool)
 
 	_ = rideRepo.Save(domain.Ride{
-		ID: "d1", DriverName: "A", Phone: "1",
+		ID: uuid.New().String(), DriverName: "A", Phone: "1",
 		Origin: "Village A", Destination: "Station",
 		Date:        time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2030, 1, 1, 9, 0, 0, 0, time.UTC),
@@ -25,7 +26,7 @@ func TestDestinationRepo_GetAll_DeduplicatesAndSorts(t *testing.T) {
 		ExpiresAt:   time.Date(2030, 1, 2, 0, 0, 0, 0, time.UTC),
 	})
 	_ = reqRepo.Save(domain.Request{
-		ID: "r1", SearcherName: "B", Phone: "2",
+		ID: uuid.New().String(), SearcherName: "B", Phone: "2",
 		Origin: "Town B", Destination: "Village A",
 		Date:        time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
 		DepartureAt: time.Date(2030, 1, 1, 9, 0, 0, 0, time.UTC),
