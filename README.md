@@ -97,4 +97,4 @@ The test override (`docker-compose.test.yml`) replaces the persistent volume wit
 
 ## License
 
-MIT
+[GNU Affero General Public License v3.0](LICENSE) — any modifications must be made available under the same license, including when the software is run as a network service.
