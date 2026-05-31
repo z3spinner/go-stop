@@ -33,7 +33,7 @@ func NewRequestHandler(
 }
 
 func (h *RequestHandler) List(c *gin.Context) {
-	phone := c.Query("phone")
+	phone := c.GetHeader("X-Phone")
 	if phone == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "phone query parameter required"})
 		return

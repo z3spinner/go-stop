@@ -77,7 +77,7 @@ func (h *RideHandler) Post(c *gin.Context) {
 func (h *RideHandler) List(c *gin.Context) {
 	origin := c.Query("origin")
 	destination := c.Query("destination")
-	phone := c.Query("phone")
+	phone := c.GetHeader("X-Phone")
 
 	var rides []domain.Ride
 	var err error

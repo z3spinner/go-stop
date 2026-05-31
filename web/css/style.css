@@ -224,3 +224,29 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .detail-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.95rem; }
 .detail-table td { padding: 6px 4px; vertical-align: top; }
 .detail-table td:first-child { color: var(--gray-600); width: 40%; }
+
+.trip-type-group { margin-bottom: 8px; }
+.trip-type-toggle { display: flex; gap: 0; margin-top: 6px; }
+.trip-type-btn {
+  flex: 1;
+  padding: 9px;
+  border: 1px solid var(--gray-300);
+  background: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--gray-600);
+  transition: background 0.15s;
+}
+.trip-type-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.trip-type-btn:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
+.trip-type-btn.active { background: var(--blue); color: white; border-color: var(--blue); font-weight: 600; }
+
+.return-section {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  padding: 14px 14px 4px;
+  margin-bottom: 16px;
+}
+.return-section-title { font-weight: 600; font-size: 0.9rem; color: var(--gray-600); margin-bottom: 12px; }
+.hidden { display: none; }

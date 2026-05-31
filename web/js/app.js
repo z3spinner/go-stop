@@ -44,7 +44,13 @@ const STRINGS = {
     btnDelete:        'Delete',
     deleteOk:         'Deleted.',
     deleteErr:        'Could not delete — is that the right phone number?',
-    labelSearchTime:  'Around what time? (optional)',
+    labelSearchTime:   'Around what time? (optional)',
+    tripTypeLabel:     'Trip type',
+    tripOneWay:        'One way',
+    tripReturn:        'Return',
+    returnSection:     'Return journey',
+    labelReturnTime:   'Return departure time',
+    labelReturnFlex:   'Return flexibility',
     btnNotifyRoute:   '🔔 Notify me of new rides on this route',
     notifRouteTitle:  'Get notified',
     notifRouteBody:   'We\'ll alert you when a ride matching this route is posted. Enter your details below.',
@@ -91,7 +97,7 @@ const STRINGS = {
     labelName:      'Votre prénom',
     labelPhone:     'Numéro de téléphone',
     labelFrom:      'Départ',
-    labelTo:        'Arrivée',
+    labelTo:        'Destination',
     labelDatetime:  'Date et heure de départ',
     labelFlex:      'Flexibilité',
     flexExact:      'Exact',
@@ -118,7 +124,13 @@ const STRINGS = {
     btnDelete:        'Supprimer',
     deleteOk:         'Supprimé.',
     deleteErr:        'Impossible de supprimer — numéro incorrect ?',
-    labelSearchTime:  'Vers quelle heure ? (optionnel)',
+    labelSearchTime:   'Vers quelle heure ? (optionnel)',
+    tripTypeLabel:     'Type de trajet',
+    tripOneWay:        'Aller simple',
+    tripReturn:        'Aller-retour',
+    returnSection:     'Trajet retour',
+    labelReturnTime:   'Heure de départ retour',
+    labelReturnFlex:   'Flexibilité retour',
     btnNotifyRoute:   '🔔 Me prévenir des nouveaux trajets sur ce parcours',
     notifRouteTitle:  'Recevoir des alertes',
     notifRouteBody:   'Vous serez alerté(e) dès qu\'un trajet correspondant à ce parcours est publié. Indiquez vos coordonnées.',
@@ -219,8 +231,8 @@ function formatTime(iso) {
     + ' ' + s.at + ' ' + d.toLocaleTimeString(s.locale, { hour: '2-digit', minute: '2-digit' });
 }
 
-async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+async function api(method, path, body, extraHeaders) {
+  const opts = { method, headers: { 'Content-Type': 'application/json', ...extraHeaders } };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch('/api' + path, opts);
   if (res.status === 204) return null;
@@ -404,25 +416,76 @@ async function renderPostRide() {
           <option value="60">${s.flex60}</option>
         </select>
       </div>
+      <div class="form-group trip-type-group">
+        <label>${s.tripTypeLabel}</label>
+        <div class="trip-type-toggle">
+          <button type="button" class="trip-type-btn active" id="btn-oneway">${s.tripOneWay}</button>
+          <button type="button" class="trip-type-btn" id="btn-return">${s.tripReturn}</button>
+        </div>
+      </div>
+      <div id="return-section" class="return-section hidden">
+        <div class="return-section-title">${s.returnSection}</div>
+        <div class="form-group"><label>${s.labelReturnTime}</label><input name="return_departure_at" type="datetime-local"></div>
+        <div class="form-group">
+          <label>${s.labelReturnFlex}</label>
+          <select name="return_flexibility">
+            <option value="0">${s.flexExact}</option>
+            <option value="30" selected>${s.flex30}</option>
+            <option value="60">${s.flex60}</option>
+          </select>
+        </div>
+      </div>
       <button class="btn btn-primary" type="submit">${s.btnPostRide}</button>
       <div class="error" id="err"></div>
     </form>`;
   document.getElementById('back').onclick = renderHome;
   bindControls();
+
+  let isReturn = false;
+  document.getElementById('btn-oneway').onclick = () => {
+    isReturn = false;
+    document.getElementById('btn-oneway').classList.add('active');
+    document.getElementById('btn-return').classList.remove('active');
+    document.getElementById('return-section').classList.add('hidden');
+    document.querySelector('[name=return_departure_at]').required = false;
+  };
+  document.getElementById('btn-return').onclick = () => {
+    isReturn = true;
+    document.getElementById('btn-return').classList.add('active');
+    document.getElementById('btn-oneway').classList.remove('active');
+    const sec = document.getElementById('return-section');
+    sec.classList.remove('hidden');
+    const retInput = document.querySelector('[name=return_departure_at]');
+    retInput.required = true;
+    if (!retInput.value) retInput.value = defaultDeparture();
+  };
+
   document.getElementById('ride-form').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     const phone = fd.get('phone');
+    const origin = fd.get('origin');
+    const destination = fd.get('destination');
     saveProfile(fd.get('driver_name'), phone);
     try {
       await api('POST', '/rides', {
         driver_name: fd.get('driver_name'),
         phone,
-        origin: fd.get('origin'),
-        destination: fd.get('destination'),
+        origin,
+        destination,
         departure_at: new Date(fd.get('departure_at')).toISOString(),
         flexibility: parseInt(fd.get('flexibility')),
       });
+      if (isReturn) {
+        await api('POST', '/rides', {
+          driver_name: fd.get('driver_name'),
+          phone,
+          origin: destination,
+          destination: origin,
+          departure_at: new Date(fd.get('return_departure_at')).toISOString(),
+          flexibility: parseInt(fd.get('return_flexibility')),
+        });
+      }
       renderNotificationPrompt(phone, renderHome);
     } catch (err) {
       document.getElementById('err').textContent = err.message;
@@ -553,7 +616,7 @@ function renderMyRides() {
     const phone = new FormData(e.target).get('phone');
     const list = document.getElementById('my-rides-list');
     try {
-      const rides = await api('GET', `/rides?phone=${encodeURIComponent(phone)}`);
+      const rides = await api('GET', '/rides', null, { 'X-Phone': phone });
       if (!rides.length) {
         list.innerHTML = `<div class="empty">${s.noMyRides}</div>`;
         return;
@@ -662,7 +725,7 @@ function renderMyAlerts() {
     const phone = new FormData(e.target).get('phone');
     const list = document.getElementById('my-alerts-list');
     try {
-      const reqs = await api('GET', `/requests?phone=${encodeURIComponent(phone)}`);
+      const reqs = await api('GET', '/requests', null, { 'X-Phone': phone });
       if (!reqs.length) {
         list.innerHTML = `<div class="empty">${s.noMyAlerts}</div>`;
         return;
