@@ -157,3 +157,11 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .modal-body h3 { margin: 16px 0 4px; font-size: 0.95rem; }
 .modal-body p { margin: 0 0 8px; }
 .modal-body code { background: var(--gray-100); padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
+
+.notif-prompt {
+  text-align: center;
+  padding: 48px 0 32px;
+}
+.notif-icon { font-size: 2.5rem; margin-bottom: 12px; }
+.notif-prompt h2 { margin: 0 0 8px; }
+.notif-prompt p { color: var(--gray-600); margin: 0 0 28px; }

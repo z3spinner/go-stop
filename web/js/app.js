@@ -28,8 +28,13 @@ const STRINGS = {
     btnBack:        '← Back',
     noRides:        'No rides found.',
     btnWaitingReq:  'Post a waiting request',
-    privacyTitle:   'Privacy',
-    privacyClose:   'Close',
+    privacyTitle:    'Privacy',
+    privacyClose:    'Close',
+    notifTitle:      'Get notified of matches',
+    notifBody:       'Allow notifications to be alerted when a matching ride or passenger is found.',
+    notifEnable:     'Enable notifications',
+    notifSkip:       'No thanks',
+    notifDenied:     'Notifications blocked in browser settings.',
     privacyBody:    `<h3>What we collect</h3>
 <p>When you post a ride or request we store: your name, phone number, origin, destination, departure time, and flexibility window. Nothing else.</p>
 <h3>How long we keep it</h3>
@@ -73,8 +78,13 @@ const STRINGS = {
     btnBack:        '← Retour',
     noRides:        'Aucun trajet trouvé.',
     btnWaitingReq:  'Publier une demande',
-    privacyTitle:   'Confidentialité',
-    privacyClose:   'Fermer',
+    privacyTitle:    'Confidentialité',
+    privacyClose:    'Fermer',
+    notifTitle:      'Recevoir des alertes',
+    notifBody:       'Activez les notifications pour être alerté(e) dès qu\'un trajet ou passager correspondant est trouvé.',
+    notifEnable:     'Activer les notifications',
+    notifSkip:       'Non merci',
+    notifDenied:     'Notifications bloquées dans les paramètres du navigateur.',
     privacyBody:    `<h3>Ce que nous collectons</h3>
 <p>Lorsque vous publiez un trajet ou une demande, nous enregistrons : votre prénom, numéro de téléphone, lieu de départ, destination, heure de départ et flexibilité. Rien d'autre.</p>
 <h3>Durée de conservation</h3>
@@ -186,6 +196,71 @@ function bindControls() {
   if (privBtn) privBtn.onclick = showPrivacyModal;
 }
 
+// ── Push notifications ────────────────────────────────────────────────────────
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function trySubscribePush(phone) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const { publicKey } = await api('GET', '/vapid-public-key');
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+    const { endpoint, keys: { p256dh, auth } } = sub.toJSON();
+    await api('POST', '/subscriptions', { phone, endpoint, p256dh, auth });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Shows a "would you like notifications?" prompt after a successful post.
+// Calls onDone() when the user has either enabled or skipped.
+function renderNotificationPrompt(phone, onDone) {
+  const s = t();
+  const alreadyGranted = Notification.permission === 'granted';
+
+  if (alreadyGranted) {
+    // Already have permission — subscribe silently and move on.
+    trySubscribePush(phone).then(onDone);
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    onDone();
+    return;
+  }
+
+  app.innerHTML = `
+    <div class="notif-prompt">
+      <div class="notif-icon">🔔</div>
+      <h2>${s.notifTitle}</h2>
+      <p>${s.notifBody}</p>
+      <button class="btn btn-primary" id="btn-notif-yes">${s.notifEnable}</button>
+      <button class="btn btn-secondary" id="btn-notif-no">${s.notifSkip}</button>
+      <div class="error" id="notif-err"></div>
+    </div>`;
+
+  document.getElementById('btn-notif-yes').onclick = async () => {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      await trySubscribePush(phone);
+      onDone();
+    } else {
+      document.getElementById('notif-err').textContent = s.notifDenied;
+      setTimeout(onDone, 1500);
+    }
+  };
+  document.getElementById('btn-notif-no').onclick = onDone;
+}
+
 // ── User profile (localStorage) ───────────────────────────────────────────────
 
 function saveProfile(name, phone) {
@@ -257,17 +332,18 @@ async function renderPostRide() {
   document.getElementById('ride-form').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    saveProfile(fd.get('driver_name'), fd.get('phone'));
+    const phone = fd.get('phone');
+    saveProfile(fd.get('driver_name'), phone);
     try {
       await api('POST', '/rides', {
         driver_name: fd.get('driver_name'),
-        phone: fd.get('phone'),
+        phone,
         origin: fd.get('origin'),
         destination: fd.get('destination'),
         departure_at: new Date(fd.get('departure_at')).toISOString(),
         flexibility: parseInt(fd.get('flexibility')),
       });
-      renderHome();
+      renderNotificationPrompt(phone, renderHome);
     } catch (err) {
       document.getElementById('err').textContent = err.message;
     }
@@ -349,17 +425,18 @@ async function renderPostRequest(origin = '', destination = '') {
   document.getElementById('req-form').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    saveProfile(fd.get('searcher_name'), fd.get('phone'));
+    const phone = fd.get('phone');
+    saveProfile(fd.get('searcher_name'), phone);
     try {
       await api('POST', '/requests', {
         searcher_name: fd.get('searcher_name'),
-        phone: fd.get('phone'),
+        phone,
         origin: fd.get('origin'),
         destination: fd.get('destination'),
         departure_at: new Date(fd.get('departure_at')).toISOString(),
         flexibility: parseInt(fd.get('flexibility')),
       });
-      renderHome();
+      renderNotificationPrompt(phone, renderHome);
     } catch (err) {
       document.getElementById('err').textContent = err.message;
     }

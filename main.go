@@ -46,6 +46,7 @@ func main() {
 	requestH := handler.NewRequestHandler(postRequest, deleteRequest, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
+	vapidH := handler.NewVapidHandler(os.Getenv("VAPID_PUBLIC_KEY"))
 
 	go func() {
 		ticker := time.NewTicker(time.Hour)
@@ -85,6 +86,8 @@ func main() {
 
 		api.POST("/subscriptions", subH.Subscribe)
 		api.DELETE("/subscriptions/:phone", subH.Unsubscribe)
+
+		api.GET("/vapid-public-key", vapidH.GetPublicKey)
 	}
 
 	port := os.Getenv("PORT")
