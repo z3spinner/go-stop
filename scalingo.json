@@ -15,6 +15,10 @@
     "VAPID_EMAIL": {
       "description": "Contact email for Web Push — prefix with mailto: (e.g. mailto:you@example.com)",
       "required": true
+    },
+    "GIN_MODE": {
+      "description": "Set to 'release' for production",
+      "value": "release"
     }
   }
 }

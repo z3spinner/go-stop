@@ -61,6 +61,7 @@ func main() {
 	}()
 
 	r := gin.Default()
+	r.SetTrustedProxies(nil)
 	r.Static("/css", "./web/css")
 	r.Static("/js", "./web/js")
 	r.StaticFile("/manifest.json", "./web/manifest.json")
