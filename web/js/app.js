@@ -1015,7 +1015,7 @@ async function renderPostRide() {
           flexibility: parseInt(fd.get('return_flexibility')),
         });
       }
-      renderNotificationPrompt(phone, renderHome);
+      renderNotificationPrompt(phone, renderMyRides);
     } catch (err) {
       document.getElementById('err').textContent = err.message;
     }
