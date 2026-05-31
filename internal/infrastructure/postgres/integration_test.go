@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,11 +29,26 @@ func TestMain(m *testing.M) {
 	}
 	defer testPool.Close()
 
-	testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+	// Wait for schema to be ready — pg_isready passes before migrations finish on
+	// a fresh tmpfs container, so we poll until the tables actually exist.
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		_, err = testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	if err != nil {
+		panic("schema not ready after 30s: " + err.Error())
+	}
+
 	os.Exit(m.Run())
 }
 
 func truncate(t *testing.T) {
 	t.Helper()
-	testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+	if _, err := testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`); err != nil {
+		t.Fatalf("truncate: %v", err)
+	}
 }

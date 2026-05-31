@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -43,7 +44,19 @@ func TestMain(m *testing.M) {
 	}
 	defer handlerPool.Close()
 
-	handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+	var truncErr error
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+		if truncErr == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	if truncErr != nil {
+		panic("schema not ready after 30s: " + truncErr.Error())
+	}
+
 	os.Exit(m.Run())
 }
 

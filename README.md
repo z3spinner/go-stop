@@ -78,10 +78,13 @@ domain ← usecase ← boundaries ← infrastructure
 Requires a running PostgreSQL database:
 
 ```bash
-docker compose up db -d
+docker compose -f docker-compose.yml -f docker-compose.test.yml up db -d
 TEST_DATABASE_URL="postgres://gostop:gostop@localhost:5432/gostop?sslmode=disable" \
   go test -tags integration ./...
+docker compose -f docker-compose.yml -f docker-compose.test.yml down
 ```
+
+The test override (`docker-compose.test.yml`) replaces the persistent volume with `tmpfs` so data lives only in RAM and is discarded when the container stops. The plain `docker compose up` devstack keeps its data across restarts.
 
 ## License
 
