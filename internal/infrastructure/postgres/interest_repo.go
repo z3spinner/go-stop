@@ -15,22 +15,22 @@ func NewInterestRepo(pool *pgxpool.Pool) *InterestRepo { return &InterestRepo{po
 
 func (r *InterestRepo) Save(i domain.Interest) error {
 	_, err := r.pool.Exec(context.Background(),
-		`INSERT INTO interests (id, ride_id, searcher_phone, status)
-		 VALUES ($1, $2, $3, $4)
+		`INSERT INTO interests (id, ride_id, searcher_phone, searcher_name, status)
+		 VALUES ($1, $2, $3, $4, $5)
 		 ON CONFLICT (ride_id, searcher_phone) DO NOTHING`,
-		i.ID, i.RideID, i.SearcherPhone, i.Status)
+		i.ID, i.RideID, i.SearcherPhone, i.SearcherName, i.Status)
 	return err
 }
 
 func (r *InterestRepo) FindByID(id string) (domain.Interest, error) {
 	row := r.pool.QueryRow(context.Background(),
-		`SELECT id, ride_id, searcher_phone, status, created_at FROM interests WHERE id = $1`, id)
+		`SELECT id, ride_id, searcher_phone, searcher_name, status, created_at FROM interests WHERE id = $1`, id)
 	return scanInterest(row)
 }
 
 func (r *InterestRepo) FindByRideAndSearcher(rideID, searcherPhone string) (domain.Interest, error) {
 	row := r.pool.QueryRow(context.Background(),
-		`SELECT id, ride_id, searcher_phone, status, created_at
+		`SELECT id, ride_id, searcher_phone, searcher_name, status, created_at
 		 FROM interests WHERE ride_id = $1 AND searcher_phone = $2`,
 		rideID, searcherPhone)
 	return scanInterest(row)
@@ -38,7 +38,7 @@ func (r *InterestRepo) FindByRideAndSearcher(rideID, searcherPhone string) (doma
 
 func (r *InterestRepo) FindByRide(rideID string) ([]domain.Interest, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, ride_id, searcher_phone, status, created_at
+		`SELECT id, ride_id, searcher_phone, searcher_name, status, created_at
 		 FROM interests WHERE ride_id = $1 ORDER BY created_at ASC`, rideID)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (r *InterestRepo) Accept(id string) error {
 
 func scanInterest(row pgx.Row) (domain.Interest, error) {
 	var i domain.Interest
-	err := row.Scan(&i.ID, &i.RideID, &i.SearcherPhone, &i.Status, &i.CreatedAt)
+	err := row.Scan(&i.ID, &i.RideID, &i.SearcherPhone, &i.SearcherName, &i.Status, &i.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Interest{}, errors.New("interest not found")
@@ -78,6 +78,6 @@ func scanInterest(row pgx.Row) (domain.Interest, error) {
 
 func scanInterestRow(rows pgx.Rows) (domain.Interest, error) {
 	var i domain.Interest
-	err := rows.Scan(&i.ID, &i.RideID, &i.SearcherPhone, &i.Status, &i.CreatedAt)
+	err := rows.Scan(&i.ID, &i.RideID, &i.SearcherPhone, &i.SearcherName, &i.Status, &i.CreatedAt)
 	return i, err
 }

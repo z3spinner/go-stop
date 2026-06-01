@@ -225,6 +225,7 @@ func (h *RideHandler) ListInterests(c *gin.Context) {
 		return
 	}
 	type interestResponse struct {
+		SearcherName  string `json:"searcher_name,omitempty"`
 		ID            string `json:"id"`
 		Status        string `json:"status"`
 		SearcherPhone string `json:"searcher_phone,omitempty"`
@@ -234,6 +235,7 @@ func (h *RideHandler) ListInterests(c *gin.Context) {
 		out[i] = interestResponse{ID: interest.ID, Status: interest.Status}
 		if interest.Status == "accepted" {
 			out[i].SearcherPhone = interest.SearcherPhone
+			out[i].SearcherName = interest.SearcherName
 		}
 	}
 	c.JSON(http.StatusOK, out)

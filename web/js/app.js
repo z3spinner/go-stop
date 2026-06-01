@@ -916,7 +916,7 @@ async function handleInterestClick(btn) {
   }
   try {
     btn.disabled = true;
-    const res = await api('POST', `/rides/${rideID}/interest`, { phone });
+    const res = await api('POST', `/rides/${rideID}/interest`, { phone, name: p.name || '' });
     localStorage.setItem('interest_' + rideID, res.id);
     btn.textContent = s.interestPending;
     const stateEl = document.getElementById('int-state-' + rideID);
@@ -1035,6 +1035,26 @@ async function renderHome() {
   bindControls();
   loadHomeStats();
   loadHomeFeed();
+  loadPendingInterestBadge();
+}
+
+async function loadPendingInterestBadge() {
+  const p = getProfile();
+  if (!p.phone) return;
+  try {
+    const myRides = await api('GET', '/rides', null, { 'X-Phone': p.phone });
+    if (!myRides || !myRides.length) return;
+    let pending = 0;
+    await Promise.all(myRides.map(r =>
+      api('GET', `/rides/${r.ID}/interests`, null, { 'X-Phone': p.phone })
+        .then(interests => { pending += (interests || []).filter(i => i.status === 'pending').length; })
+        .catch(() => {})
+    ));
+    if (pending > 0) {
+      const btn = document.getElementById('btn-my-rides');
+      if (btn) btn.innerHTML += ` <span class="interest-badge">${pending}</span>`;
+    }
+  } catch {}
 }
 
 async function loadHomeStats() {
@@ -1459,8 +1479,9 @@ function renderMyRides() {
             interests.map(i => `
               <div class="interest-row" id="irow-${esc(i.id)}">
                 ${i.status === 'pending'
-                  ? `<button class="btn-accept-interest" data-id="${esc(i.id)}" data-phone="${esc(phone)}">${s.btnAccept}</button>`
-                  : `<span class="interest-accepted">${s.contactRevealed}: <a href="tel:${esc(i.searcher_phone)}">${esc(i.searcher_phone)}</a></span>`
+                  ? `<div class="interest-pending-info">${i.searcher_name ? `<strong>${esc(i.searcher_name)}</strong> — ` : ''}${s.btnInterest.toLowerCase()}</div>
+                     <button class="btn-accept-interest" data-id="${esc(i.id)}" data-phone="${esc(phone)}">${s.btnAccept}</button>`
+                  : `<span class="interest-accepted">${s.contactRevealed}${i.searcher_name ? ` (${esc(i.searcher_name)})` : ''}: <a href="tel:${esc(i.searcher_phone)}">${esc(i.searcher_phone)}</a></span>`
                 }
               </div>`).join('');
           el.querySelectorAll('.btn-accept-interest').forEach(btn => {
@@ -1468,8 +1489,9 @@ function renderMyRides() {
               try {
                 btn.disabled = true;
                 const res = await api('POST', `/interests/${btn.dataset.id}/accept`, { phone: btn.dataset.phone });
-                document.getElementById('irow-' + btn.dataset.id).innerHTML =
-                  `<span class="interest-accepted">${s.contactRevealed}: <a href="tel:${esc(res.searcher_phone)}">${esc(res.searcher_phone)}</a></span>`;
+                const nameTag = res.searcher_name ? ` (${esc(res.searcher_name)})` : '';
+                  document.getElementById('irow-' + btn.dataset.id).innerHTML =
+                  `<span class="interest-accepted">${s.contactRevealed}${nameTag}: <a href="tel:${esc(res.searcher_phone)}">${esc(res.searcher_phone)}</a></span>`;
               } catch { btn.disabled = false; }
             };
           });

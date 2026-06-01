@@ -28,6 +28,7 @@ func NewInterestHandler(
 
 type expressInterestRequest struct {
 	Phone string `json:"phone" binding:"required"`
+	Name  string `json:"name"`
 }
 
 func (h *InterestHandler) Express(c *gin.Context) {
@@ -36,7 +37,7 @@ func (h *InterestHandler) Express(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	interest, err := h.expressInterest.Execute(c.Param("id"), normalizePhone(req.Phone))
+	interest, err := h.expressInterest.Execute(c.Param("id"), normalizePhone(req.Phone), req.Name)
 	if err != nil {
 		if err.Error() == "searcher cannot be the driver" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

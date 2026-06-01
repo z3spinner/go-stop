@@ -80,7 +80,7 @@ func TestExpressInterest_CreatesInterestAndNotifiesDriver(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewExpressInterest(rides, interests, subs, n)
-	interest, err := uc.Execute("ride-1", "555-searcher")
+	interest, err := uc.Execute("ride-1", "555-searcher", "Bob")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -116,7 +116,7 @@ func TestExpressInterest_SkipsPushIfDriverHasNoSubscription(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewExpressInterest(rides, interests, subs, n)
-	_, err := uc.Execute("ride-1", "555-searcher")
+	_, err := uc.Execute("ride-1", "555-searcher", "Bob")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -137,7 +137,7 @@ func TestExpressInterest_RejectsIfSearcherIsDriver(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewExpressInterest(rides, interests, subs, n)
-	_, err := uc.Execute("ride-1", "555-same")
+	_, err := uc.Execute("ride-1", "555-same", "Self")
 
 	if err == nil {
 		t.Error("expected error when searcher is the driver")
@@ -151,7 +151,7 @@ func TestExpressInterest_ReturnsErrorIfRideNotFound(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewExpressInterest(rides, interests, subs, n)
-	_, err := uc.Execute("nonexistent", "555-searcher")
+	_, err := uc.Execute("nonexistent", "555-searcher", "")
 
 	if err == nil {
 		t.Error("expected error for missing ride")

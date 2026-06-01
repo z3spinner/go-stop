@@ -537,3 +537,15 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 
 .contact-revealed { margin-top: 6px; font-size: 0.9rem; }
 .contact-revealed a { color: var(--blue); font-weight: 500; }
+
+.interest-badge {
+  display: inline-block;
+  background: var(--red);
+  color: white;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  line-height: 1.4;
+  vertical-align: middle;
+}

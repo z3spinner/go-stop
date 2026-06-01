@@ -26,7 +26,7 @@ func NewExpressInterest(
 	return &ExpressInterest{rides: rides, interests: interests, subs: subs, notifier: notifier}
 }
 
-func (uc *ExpressInterest) Execute(rideID, searcherPhone string) (domain.Interest, error) {
+func (uc *ExpressInterest) Execute(rideID, searcherPhone, searcherName string) (domain.Interest, error) {
 	ride, err := uc.rides.FindByID(rideID)
 	if err != nil {
 		return domain.Interest{}, err
@@ -39,6 +39,7 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone string) (domain.Interes
 		ID:            uuid.New().String(),
 		RideID:        rideID,
 		SearcherPhone: searcherPhone,
+		SearcherName:  searcherName,
 		Status:        "pending",
 	}
 	if err := uc.interests.Save(interest); err != nil {
@@ -53,7 +54,7 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone string) (domain.Interes
 	// Notify driver (best-effort)
 	if sub, err := uc.subs.FindByPhone(ride.Phone); err == nil {
 		msg := domain.Message{
-			Title:       "Quelqu'un est intéressé par votre trajet",
+			Title:       fmt.Sprintf("%s est intéressé(e) par votre trajet", interest.SearcherName),
 			Body:        fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
 			URL:         "/my-rides",
 			Origin:      ride.Origin,
