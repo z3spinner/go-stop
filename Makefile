@@ -4,3 +4,6 @@ test:
 
 test-unit:
 	go test ./internal/usecase/...
+
+sqlc:
+	sqlc generate
