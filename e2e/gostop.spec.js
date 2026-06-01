@@ -508,3 +508,27 @@ test('date+time search hides rides outside ±60 min window', async ({ page }) =>
   expect(ids).toContain(near);
   expect(ids).not.toContain(far);
 });
+
+// ── 23. Search fields survive page reload ─────────────────────────────────────
+test('reload preserves date-only search input', async ({ page }) => {
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest&search_date=2030-07-15`);
+  await page.reload();
+  await expect(page.locator('input[name=search_date]')).toHaveValue('2030-07-15');
+  await expect(page.locator('input[name=search_time]')).toHaveValue('');
+});
+
+test('reload preserves date+time search inputs', async ({ page }) => {
+  // 09:30 CEST = 07:30 UTC
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest&departure_at=2030-07-15T07%3A30%3A00Z`);
+  await page.reload();
+  await expect(page.locator('input[name=search_date]')).toHaveValue('2030-07-15');
+  const timeVal = await page.inputValue('input[name=search_time]');
+  expect(timeVal).toMatch(/^\d{2}:\d{2}$/); // non-empty HH:MM (exact value depends on timezone)
+});
+
+test('reload preserves time-only search input', async ({ page }) => {
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest&search_time=09%3A30`);
+  await page.reload();
+  await expect(page.locator('input[name=search_time]')).toHaveValue('09:30');
+  await expect(page.locator('input[name=search_date]')).toHaveValue('');
+});

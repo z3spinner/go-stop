@@ -1443,9 +1443,8 @@ async function renderSearchRides(autoQuery = null) {
 
   // Pre-fill date/time from autoQuery if provided
   let dateInputVal = '', timeInputVal = '';
-  if (autoQuery && autoQuery.searchDate) {
-    dateInputVal = autoQuery.searchDate; // already YYYY-MM-DD, no conversion needed
-  } else if (autoQuery && autoQuery.departureAt) {
+  if (autoQuery && autoQuery.departureAt) {
+    // Full datetime (date + time)
     try {
       const d = new Date(autoQuery.departureAt);
       const pad = n => String(n).padStart(2, '0');
@@ -1455,6 +1454,10 @@ async function renderSearchRides(autoQuery = null) {
       const h = pad(d.getHours()), m = pad(d.getMinutes());
       if (h !== '00' || m !== '00') timeInputVal = `${h}:${m}`;
     } catch {}
+  } else if (autoQuery && autoQuery.searchDate) {
+    dateInputVal = autoQuery.searchDate; // YYYY-MM-DD, no conversion needed
+  } else if (autoQuery && autoQuery.searchTime) {
+    timeInputVal = autoQuery.searchTime; // HH:MM, time only
   }
 
   app.innerHTML = `
@@ -2038,9 +2041,10 @@ async function handleDeepLink() {
     case '/post-ride':    await renderPostRide();    return true;
     case '/search': {
       const p = new URLSearchParams(window.location.search);
-      const autoQuery = (p.get('origin') || p.get('destination') || p.get('departure_at') || p.get('search_date'))
+      const autoQuery = (p.get('origin') || p.get('destination') || p.get('departure_at') || p.get('search_date') || p.get('search_time'))
         ? { origin: p.get('origin') || '', destination: p.get('destination') || '',
-            departureAt: p.get('departure_at') || '', searchDate: p.get('search_date') || '' }
+            departureAt: p.get('departure_at') || '', searchDate: p.get('search_date') || '',
+            searchTime: p.get('search_time') || '' }
         : null;
       await renderSearchRides(autoQuery);
       return true;
