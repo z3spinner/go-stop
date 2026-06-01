@@ -506,3 +506,31 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   cursor: pointer; padding: 4px 8px; text-decoration: underline; text-decoration-color: var(--gray-300);
 }
 .btn-footer-stats:hover { color: var(--gray-900); }
+
+/* Interest / contact consent UI */
+.btn-interest {
+  margin-top: 6px;
+  background: none;
+  border: 1px solid var(--blue);
+  border-radius: var(--radius);
+  color: var(--blue);
+  font-size: 0.85rem;
+  padding: 5px 10px;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-interest:hover { background: var(--blue); color: white; }
+.btn-interest:disabled { opacity: 0.5; cursor: default; background: none; color: var(--blue); }
+.interest-state { font-size: 0.8rem; color: var(--green); margin-top: 4px; }
+.interests-section { margin-top: 8px; }
+.interests-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--gray-600); margin-bottom: 4px; }
+.interest-row { padding: 4px 0; border-top: 1px solid var(--gray-100); }
+.interest-accepted { font-size: 0.85rem; color: var(--green); }
+.btn-accept-interest {
+  background: var(--green); color: white; border: none;
+  border-radius: var(--radius); padding: 6px 10px; font-size: 0.85rem;
+  cursor: pointer; width: 100%;
+}
+.btn-accept-interest:hover { opacity: 0.9; }
+.btn-accept-interest:disabled { opacity: 0.5; cursor: default; }

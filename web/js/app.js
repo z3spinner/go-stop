@@ -92,6 +92,13 @@ const STRINGS = {
     btnAllStats:     'All stats →',
     homeFeedTitle:   'Available now',
     noActiveRides:  'No rides posted yet.',
+    btnInterest:      "I'm interested",
+    interestSent:     "Request sent — you'll be notified when the driver accepts.",
+    interestPending:  'Waiting for driver',
+    pendingInterests: (n) => n === 1 ? '1 person interested' : `${n} people interested`,
+    btnAccept:        'Accept & share my number',
+    contactRevealed:  'Contact accepted',
+    theirNumber:      'Their number:',
     statsPageTitle:  'Stats',
     statsSearches:   'Searches',
     statsRidesPosted:'Rides posted',
@@ -206,6 +213,13 @@ const STRINGS = {
     btnAllStats:     'Toutes les stats →',
     homeFeedTitle:   'Disponibles maintenant',
     noActiveRides:  'Aucun trajet publié pour l\'instant.',
+    btnInterest:      'Je suis intéressé(e)',
+    interestSent:     "Demande envoyée — vous serez alerté(e) lorsque le conducteur accepte.",
+    interestPending:  'En attente du conducteur',
+    pendingInterests: (n) => n === 1 ? '1 personne intéressée' : `${n} personnes intéressées`,
+    btnAccept:        'Accepter et partager mon numéro',
+    contactRevealed:  'Contact accepté',
+    theirNumber:      'Leur numéro :',
     statsPageTitle:  'Statistiques',
     statsSearches:   'Recherches',
     statsRidesPosted:'Trajets publiés',
@@ -314,6 +328,13 @@ const STRINGS = {
     btnAllStats:    'Ver todas →',
     homeFeedTitle: 'Disponibles ahora',
     noActiveRides: 'Ningún viaje publicado todavía.',
+    btnInterest:      'Me interesa',
+    interestSent:     'Solicitud enviada — te avisaremos cuando el conductor acepte.',
+    interestPending:  'Esperando al conductor',
+    pendingInterests: (n) => n === 1 ? '1 persona interesada' : `${n} personas interesadas`,
+    btnAccept:        'Aceptar y compartir mi número',
+    contactRevealed:  'Contacto aceptado',
+    theirNumber:      'Su número:',
     statsPageTitle: 'Estadísticas',
     statsSearches:  'Búsquedas',
     statsRidesPosted:'Viajes publicados',
@@ -406,6 +427,13 @@ const STRINGS = {
     btnAllStats:    'Tutte le statistiche →',
     homeFeedTitle: 'Disponibili ora',
     noActiveRides: 'Nessun viaggio pubblicato.',
+    btnInterest:      'Sono interessato/a',
+    interestSent:     'Richiesta inviata — sarai avvisato/a quando il conducente accetta.',
+    interestPending:  'In attesa del conducente',
+    pendingInterests: (n) => n === 1 ? '1 persona interessata' : `${n} persone interessate`,
+    btnAccept:        'Accetta e condividi il mio numero',
+    contactRevealed:  'Contatto accettato',
+    theirNumber:      'Il loro numero:',
     statsPageTitle: 'Statistiche',
     statsSearches:  'Ricerche',
     statsRidesPosted:'Viaggi pubblicati',
@@ -498,6 +526,13 @@ const STRINGS = {
     btnAllStats:    'Alle Statistiken →',
     homeFeedTitle: 'Jetzt verfügbar',
     noActiveRides: 'Noch keine Fahrten veröffentlicht.',
+    btnInterest:      'Ich bin interessiert',
+    interestSent:     'Anfrage gesendet — du wirst benachrichtigt, wenn der Fahrer akzeptiert.',
+    interestPending:  'Warte auf Fahrer/in',
+    pendingInterests: (n) => n === 1 ? '1 interessierte Person' : `${n} interessierte Personen`,
+    btnAccept:        'Akzeptieren und Nummer teilen',
+    contactRevealed:  'Kontakt akzeptiert',
+    theirNumber:      'Ihre Nummer:',
     statsPageTitle: 'Statistiken',
     statsSearches:  'Suchen',
     statsRidesPosted:'Veröffentlichte Fahrten',
@@ -590,6 +625,13 @@ const STRINGS = {
     btnAllStats:    'Alle statistieken →',
     homeFeedTitle: 'Nu beschikbaar',
     noActiveRides: 'Nog geen ritten gepubliceerd.',
+    btnInterest:      'Ik ben geïnteresseerd',
+    interestSent:     'Verzoek verstuurd — je wordt gewaarschuwd als de bestuurder accepteert.',
+    interestPending:  'Wachten op bestuurder',
+    pendingInterests: (n) => n === 1 ? '1 geïnteresseerde' : `${n} geïnteresseerden`,
+    btnAccept:        'Accepteren en nummer delen',
+    contactRevealed:  'Contact geaccepteerd',
+    theirNumber:      'Hun nummer:',
     statsPageTitle: 'Statistieken',
     statsSearches:  'Zoekopdrachten',
     statsRidesPosted:'Gepubliceerde ritten',
@@ -862,6 +904,36 @@ function defaultDeparture() {
 
 // ── Views ─────────────────────────────────────────────────────────────────────
 
+async function handleInterestClick(btn) {
+  const s = t();
+  const rideID = btn.dataset.rideId;
+  const p = getProfile();
+  let phone = p.phone;
+  if (!phone) {
+    phone = window.prompt(s.labelPhone + ':');
+    if (!phone) return;
+    saveProfile('', phone);
+  }
+  try {
+    btn.disabled = true;
+    const res = await api('POST', `/rides/${rideID}/interest`, { phone });
+    localStorage.setItem('interest_' + rideID, res.id);
+    btn.textContent = s.interestPending;
+    const stateEl = document.getElementById('int-state-' + rideID);
+    if (stateEl) {
+      stateEl.textContent = s.interestSent;
+      stateEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    btn.disabled = false;
+    const stateEl = document.getElementById('int-state-' + rideID);
+    if (stateEl) {
+      stateEl.textContent = err.message;
+      stateEl.classList.remove('hidden');
+    }
+  }
+}
+
 function controls() {
   return `<div class="controls">${langToggle()}${aboutIcon()}</div>`;
 }
@@ -1005,13 +1077,15 @@ async function loadHomeFeed() {
       <div class="home-feed">
         <div class="home-feed-title">${s.homeFeedTitle}</div>
         ${rides.map(r => `
-          <div class="home-feed-card" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}">
+          <div class="home-feed-card">
             <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
             <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></span>
+            <button class="btn-interest" data-ride-id="${esc(r.ID)}">${s.btnInterest}</button>
+            <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>
           </div>`).join('')}
       </div>`;
-    el.querySelectorAll('.home-feed-card').forEach(card => {
-      card.onclick = () => renderSearchRides({ origin: card.dataset.origin, destination: card.dataset.dest, departureAt: '' });
+    el.querySelectorAll('.btn-interest').forEach(btn => {
+      btn.onclick = () => handleInterestClick(btn);
     });
   } catch {
     // silently omit
@@ -1179,7 +1253,8 @@ async function renderSearchRides(autoQuery = null) {
       function rideCard(r) {
         return `<div class="card card-compact">
           <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
-          <div class="card-contact"><strong>${esc(r.DriverName)}</strong><br><a href="tel:${esc(r.Phone)}">${esc(r.Phone)}</a></div>
+          <button class="btn-interest" data-ride-id="${esc(r.ID)}">${s.btnInterest}</button>
+          <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>
         </div>`;
       }
 
@@ -1206,6 +1281,9 @@ async function renderSearchRides(autoQuery = null) {
           </div>
         </div>`;
 
+      results.querySelectorAll('.btn-interest').forEach(btn => {
+        btn.onclick = () => handleInterestClick(btn);
+      });
       results.querySelectorAll('.col-notify').forEach(btn => {
         btn.onclick = () => renderNotifyRoute(btn.dataset.from, btn.dataset.to, btn.dataset.dept);
       });
@@ -1317,6 +1395,7 @@ function renderMyRides() {
             <div class="seekers-section" id="seekers-${esc(r.ID)}">
               <div class="seekers-loading">…</div>
             </div>
+            <div class="interests-section" id="interests-${esc(r.ID)}"></div>
             ${feedbackSection}
             <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
             <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
@@ -1344,6 +1423,32 @@ function renderMyRides() {
           const el = document.getElementById('seekers-' + r.ID);
           if (el) el.innerHTML = '';
         });
+      });
+
+      // Load interests (pending/accepted contact requests)
+      rides.forEach(r => {
+        api('GET', `/rides/${r.ID}/interests`, null, { 'X-Phone': phone }).then(interests => {
+          const el = document.getElementById('interests-' + r.ID);
+          if (!el || !interests || !interests.length) return;
+          el.innerHTML = `<div class="interests-title">${s.pendingInterests(interests.length)}</div>` +
+            interests.map(i => `
+              <div class="interest-row" id="irow-${esc(i.id)}">
+                ${i.status === 'pending'
+                  ? `<button class="btn-accept-interest" data-id="${esc(i.id)}" data-phone="${esc(phone)}">${s.btnAccept}</button>`
+                  : `<span class="interest-accepted">${s.contactRevealed}: <a href="tel:${esc(i.searcher_phone)}">${esc(i.searcher_phone)}</a></span>`
+                }
+              </div>`).join('');
+          el.querySelectorAll('.btn-accept-interest').forEach(btn => {
+            btn.onclick = async () => {
+              try {
+                btn.disabled = true;
+                const res = await api('POST', `/interests/${btn.dataset.id}/accept`, { phone: btn.dataset.phone });
+                document.getElementById('irow-' + btn.dataset.id).innerHTML =
+                  `<span class="interest-accepted">${s.contactRevealed}: <a href="tel:${esc(res.searcher_phone)}">${esc(res.searcher_phone)}</a></span>`;
+              } catch { btn.disabled = false; }
+            };
+          });
+        }).catch(() => {});
       });
 
       // Bind feedback buttons
@@ -1512,6 +1617,29 @@ function renderMyAlerts() {
   if (p.phone) document.getElementById('my-alerts-form').requestSubmit();
 }
 
+async function renderInterestContact(interestID) {
+  pushRoute('/interests/' + interestID);
+  const s = t();
+  app.innerHTML = `
+    ${pageBar()}
+    <h2>${s.contactRevealed}</h2>
+    <div id="contact-result"><p class="section-hint">…</p></div>`;
+  document.getElementById('back').onclick = renderHome;
+  bindControls();
+
+  const p = getProfile();
+  try {
+    const res = await api('GET', `/interests/${interestID}/contact`, null, { 'X-Phone': p.phone });
+    document.getElementById('contact-result').innerHTML = `
+      <div class="card">
+        <p class="card-contact">${s.theirNumber} <a href="tel:${esc(res.phone)}">${esc(res.phone)}</a></p>
+      </div>`;
+  } catch (err) {
+    document.getElementById('contact-result').innerHTML =
+      `<p class="error">${esc(err.message)}</p>`;
+  }
+}
+
 // ── Deep link from push notification ─────────────────────────────────────────
 
 async function renderItemDetail(type, item) {
@@ -1573,6 +1701,16 @@ async function handleDeepLink() {
     case '/my-alerts':    renderMyAlerts();          return true;
     case '/post-request': await renderPostRequest(); return true;
     case '/stats':        await renderStats();       return true;
+  }
+
+  // /interests/:id deep link
+  if (path.startsWith('/interests/')) {
+    const parts = path.split('/');
+    const id = parts[2];
+    if (id) {
+      await renderInterestContact(id);
+      return true;
+    }
   }
 
   return false;
