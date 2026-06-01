@@ -4,42 +4,22 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/z3spinner/go-stop/internal/infrastructure/postgres/sqlc/queries"
 )
 
-type DestinationRepo struct{ pool *pgxpool.Pool }
+type DestinationRepo struct{ q *queries.Queries }
 
-func NewDestinationRepo(pool *pgxpool.Pool) *DestinationRepo { return &DestinationRepo{pool: pool} }
+func NewDestinationRepo(pool *pgxpool.Pool) *DestinationRepo {
+	return &DestinationRepo{q: queries.New(pool)}
+}
 
-// GetAll returns known locations sorted by popularity (most-used first).
-// Combines active rides/requests with historical ride_stats so locations
-// persist after rides expire and popular routes surface at the top of dropdowns.
 func (r *DestinationRepo) GetAll() ([]string, error) {
-	rows, err := r.pool.Query(context.Background(),
-		// Group case-insensitively; MIN() picks one canonical form per location.
-		`SELECT MIN(location) AS location FROM (
-		   SELECT origin      AS location FROM rides
-		   UNION ALL SELECT destination FROM rides
-		   UNION ALL SELECT origin      FROM requests
-		   UNION ALL SELECT destination FROM requests
-		   UNION ALL SELECT origin      FROM ride_stats
-		   UNION ALL SELECT destination FROM ride_stats
-		 ) all_locs
-		 GROUP BY LOWER(location)
-		 ORDER BY COUNT(*) DESC, MIN(location) ASC`)
+	locs, err := r.q.ListDestinations(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var locations []string
-	for rows.Next() {
-		var loc string
-		if err := rows.Scan(&loc); err != nil {
-			return nil, err
-		}
-		locations = append(locations, loc)
+	if locs == nil {
+		return []string{}, nil
 	}
-	if locations == nil {
-		locations = []string{}
-	}
-	return locations, rows.Err()
+	return locs, nil
 }

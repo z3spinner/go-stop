@@ -848,6 +848,11 @@ function formatTime(iso) {
     + ' ' + s.at + ' ' + d.toLocaleTimeString(s.locale, { hour: '2-digit', minute: '2-digit' });
 }
 
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(t().locale, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 async function api(method, path, body, extraHeaders) {
   const opts = { method, headers: { 'Content-Type': 'application/json', ...extraHeaders } };
   if (body) opts.body = JSON.stringify(body);
