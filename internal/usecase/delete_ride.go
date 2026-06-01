@@ -3,11 +3,12 @@ package usecase
 import "github.com/z3spinner/go-stop/internal/boundaries/repository"
 
 type DeleteRide struct {
-	rides repository.RideRepository
+	rides     repository.RideRepository
+	notifQueue repository.NotificationQueueRepository
 }
 
-func NewDeleteRide(rides repository.RideRepository) *DeleteRide {
-	return &DeleteRide{rides: rides}
+func NewDeleteRide(rides repository.RideRepository, notifQueue repository.NotificationQueueRepository) *DeleteRide {
+	return &DeleteRide{rides: rides, notifQueue: notifQueue}
 }
 
 func (uc *DeleteRide) Execute(id, phone string) error {
@@ -18,5 +19,9 @@ func (uc *DeleteRide) Execute(id, phone string) error {
 	if ride.Phone != phone {
 		return ErrUnauthorized
 	}
-	return uc.rides.Delete(id)
+	if err := uc.rides.Delete(id); err != nil {
+		return err
+	}
+	_ = uc.notifQueue.DeleteForRide(id) // best-effort cleanup
+	return nil
 }

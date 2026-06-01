@@ -10,19 +10,21 @@ import (
 )
 
 type PostRide struct {
-	rides    repository.RideRepository
-	requests repository.RequestRepository
-	subs     repository.SubscriptionRepository
-	notifier notification.Notifier
+	rides      repository.RideRepository
+	requests   repository.RequestRepository
+	subs       repository.SubscriptionRepository
+	notifQueue repository.NotificationQueueRepository
+	notifier   notification.Notifier
 }
 
 func NewPostRide(
 	rides repository.RideRepository,
 	requests repository.RequestRepository,
 	subs repository.SubscriptionRepository,
+	notifQueue repository.NotificationQueueRepository,
 	notifier notification.Notifier,
 ) *PostRide {
-	return &PostRide{rides: rides, requests: requests, subs: subs, notifier: notifier}
+	return &PostRide{rides: rides, requests: requests, subs: subs, notifQueue: notifQueue, notifier: notifier}
 }
 
 func (uc *PostRide) Execute(ride domain.Ride) (domain.Ride, error) {
@@ -41,7 +43,10 @@ func (uc *PostRide) Execute(ride domain.Ride) (domain.Ride, error) {
 	}
 
 	for _, req := range matching {
+		// Enqueue for retry tracking regardless of subscription state
+		_ = uc.notifQueue.Enqueue(ride.ID, req.ID, req.Phone)
 		NotifySearcher(req.Phone, ride, uc.subs, uc.notifier)
+		_ = uc.notifQueue.MarkSentByRideAndRequest(ride.ID, req.ID)
 	}
 	return ride, nil
 }

@@ -40,7 +40,9 @@ func main() {
 		os.Getenv("VAPID_EMAIL"),
 	)
 
-	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifier)
+	notifQueueRepo := postgres.NewNotificationQueueRepo(pool)
+
+	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier)
 	postRequest := usecase.NewPostRequest(requestRepo, rideRepo, subRepo, notifier)
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
@@ -48,13 +50,15 @@ func main() {
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
-	deleteRide := usecase.NewDeleteRide(rideRepo)
+	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo)
 	deleteRequest := usecase.NewDeleteRequest(requestRepo)
 	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, interestRepo, subRepo, notifier)
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, requestRepo)
+	retryNotifications := usecase.NewRetryNotifications(notifQueueRepo, rideRepo, subRepo, notifier, 2, 3)
+	getPendingNotifications := usecase.NewGetPendingNotifications(notifQueueRepo, rideRepo)
 	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
 	getStats := usecase.NewGetStats(statRepo)
 	sendFeedbackReminders := usecase.NewSendFeedbackReminders(rideRepo, subRepo, notifier)
@@ -77,6 +81,7 @@ func main() {
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, pingSearcher, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
+	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
 	vapidH := handler.NewVapidHandler(os.Getenv("VAPID_PUBLIC_KEY"))
 
 	siteName := os.Getenv("SITE_NAME")
@@ -105,6 +110,9 @@ func main() {
 			}
 			if err := sendFeedbackReminders.Execute(); err != nil {
 				log.Printf("send feedback reminders: %v", err)
+			}
+			if err := retryNotifications.Execute(); err != nil {
+				log.Printf("retry notifications: %v", err)
 			}
 		}
 	}()
@@ -154,6 +162,8 @@ func main() {
 
 		api.POST("/subscriptions", subH.Subscribe)
 		api.DELETE("/subscriptions/:phone", subH.Unsubscribe)
+
+		api.GET("/notifications", notifQueueH.List)
 
 		api.GET("/vapid-public-key", vapidH.GetPublicKey)
 		api.GET("/config", configH.Get)

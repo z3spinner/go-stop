@@ -14,13 +14,19 @@ type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
+	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
 	DeleteExpiredRides(ctx context.Context) error
+	DeleteNotificationsForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
 	DeleteRide(ctx context.Context, id pgtype.UUID) error
 	DeleteSubscription(ctx context.Context, phone string) error
 	// Removes a specific device subscription (e.g. when push returns 410 Gone).
 	DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error
+	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) error
+	// Returns entries due for (re-)notification.
+	// Excludes entries where the searcher has already expressed interest.
+	FindPendingNotifications(ctx context.Context, arg FindPendingNotificationsParams) ([]NotificationQueue, error)
 	// Matches all alert modes inferred from NULL state of date/departure_at:
 	//   anytime: date IS NULL AND departure_at IS NULL
 	//   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match)
@@ -52,12 +58,16 @@ type Querier interface {
 	// Returns all interests made by a searcher, joined with ride info for display.
 	// Includes rides that may have expired (so the searcher can see their full history).
 	ListInterestsBySearcher(ctx context.Context, searcherPhone string) ([]ListInterestsBySearcherRow, error)
+	// Returns pending notifications for a searcher (for UI display).
+	ListNotificationsForSearcher(ctx context.Context, searcherPhone string) ([]NotificationQueue, error)
 	ListRequestsByPhone(ctx context.Context, phone string) ([]Request, error)
 	// grace_minutes: hides rides whose flex window ended more than N minutes ago
 	ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ride, error)
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)
 	ListRidesPendingFeedback(ctx context.Context) ([]Ride, error)
 	ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error)
+	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error
+	MarkNotificationSentByRideAndRequest(ctx context.Context, arg MarkNotificationSentByRideAndRequestParams) error
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)
 	SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error)
 	// Returns rides on the given date whose departure window (±flexibility) overlaps

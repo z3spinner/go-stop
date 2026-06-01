@@ -17,6 +17,16 @@ type Interest struct {
 	CreatedAt     pgtype.Timestamptz `db:"created_at"`
 }
 
+type NotificationQueue struct {
+	ID            pgtype.UUID        `db:"id"`
+	RideID        pgtype.UUID        `db:"ride_id"`
+	RequestID     pgtype.UUID        `db:"request_id"`
+	SearcherPhone string             `db:"searcher_phone"`
+	SentCount     int32              `db:"sent_count"`
+	LastSentAt    pgtype.Timestamptz `db:"last_sent_at"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at"`
+}
+
 type Request struct {
 	ID           pgtype.UUID        `db:"id"`
 	SearcherName string             `db:"searcher_name"`
