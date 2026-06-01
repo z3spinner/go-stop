@@ -924,6 +924,8 @@ async function handleInterestClick(btn) {
       stateEl.textContent = s.interestSent;
       stateEl.classList.remove('hidden');
     }
+    // Offer push notifications so the searcher is alerted when the driver accepts
+    renderNotificationPrompt(phone, () => {});
   } catch (err) {
     btn.disabled = false;
     const stateEl = document.getElementById('int-state-' + rideID);
