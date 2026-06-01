@@ -12,6 +12,8 @@ import (
 
 type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
+	// Returns interest counts for a set of ride IDs.
+	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
 	DeleteExpiredRequests(ctx context.Context) error
 	DeleteExpiredRides(ctx context.Context) error
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error

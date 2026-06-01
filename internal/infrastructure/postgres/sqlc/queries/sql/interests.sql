@@ -28,3 +28,10 @@ FROM interests i
 JOIN rides r ON r.id = i.ride_id
 WHERE i.searcher_phone = $1
 ORDER BY i.created_at DESC;
+
+-- name: CountInterestsByRides :many
+-- Returns interest counts for a set of ride IDs.
+SELECT ride_id, COUNT(*) AS count
+FROM interests
+WHERE ride_id = ANY($1::uuid[])
+GROUP BY ride_id;

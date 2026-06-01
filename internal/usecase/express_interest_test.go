@@ -60,6 +60,7 @@ func (m *mockInterestRepo) Accept(id string) error {
 	}
 	return nil
 }
+func (m *mockInterestRepo) CountByRides([]string) (map[string]int, error) { return nil, nil }
 
 // ExpressInterest tests
 

@@ -20,6 +20,39 @@ func (q *Queries) AcceptInterest(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const countInterestsByRides = `-- name: CountInterestsByRides :many
+SELECT ride_id, COUNT(*) AS count
+FROM interests
+WHERE ride_id = ANY($1::uuid[])
+GROUP BY ride_id
+`
+
+type CountInterestsByRidesRow struct {
+	RideID pgtype.UUID `db:"ride_id"`
+	Count  int64       `db:"count"`
+}
+
+// Returns interest counts for a set of ride IDs.
+func (q *Queries) CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error) {
+	rows, err := q.db.Query(ctx, countInterestsByRides, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountInterestsByRidesRow{}
+	for rows.Next() {
+		var i CountInterestsByRidesRow
+		if err := rows.Scan(&i.RideID, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getInterestByID = `-- name: GetInterestByID :one
 SELECT id, ride_id, searcher_phone, searcher_name, status, created_at
 FROM interests WHERE id = $1

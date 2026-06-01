@@ -111,6 +111,7 @@ const STRINGS = {
     interestPending:  'Waiting for driver',
     btnResend:        'Request again',
     pendingInterests: (n) => n === 1 ? '1 person interested' : `${n} people interested`,
+    interestCount: (n) => n === 1 ? '1 request' : `${n} requests`,
     btnAccept:        'Accept & share my number',
     contactRevealed:  'Contact accepted',
     theirNumber:      'Their number:',
@@ -250,6 +251,7 @@ const STRINGS = {
     interestPending:  'En attente du conducteur',
     btnResend:        'Redemander',
     pendingInterests: (n) => n === 1 ? '1 personne intéressée' : `${n} personnes intéressées`,
+    interestCount: (n) => n === 1 ? '1 demande' : `${n} demandes`,
     btnAccept:        'Accepter et partager mon numéro',
     contactRevealed:  'Contact accepté',
     theirNumber:      'Leur numéro :',
@@ -383,6 +385,7 @@ const STRINGS = {
     interestPending:  'Esperando al conductor',
     btnResend:        'Volver a solicitar',
     pendingInterests: (n) => n === 1 ? '1 persona interesada' : `${n} personas interesadas`,
+    interestCount: (n) => n === 1 ? '1 solicitud' : `${n} solicitudes`,
     btnAccept:        'Aceptar y compartir mi número',
     contactRevealed:  'Contacto aceptado',
     theirNumber:      'Su número:',
@@ -500,6 +503,7 @@ const STRINGS = {
     interestPending:  'In attesa del conducente',
     btnResend:        'Richiedere di nuovo',
     pendingInterests: (n) => n === 1 ? '1 persona interessata' : `${n} persone interessate`,
+    interestCount: (n) => n === 1 ? '1 richiesta' : `${n} richieste`,
     btnAccept:        'Accetta e condividi il mio numero',
     contactRevealed:  'Contatto accettato',
     theirNumber:      'Il loro numero:',
@@ -617,6 +621,7 @@ const STRINGS = {
     interestPending:  'Warte auf Fahrer/in',
     btnResend:        'Erneut anfragen',
     pendingInterests: (n) => n === 1 ? '1 interessierte Person' : `${n} interessierte Personen`,
+    interestCount: (n) => n === 1 ? '1 Anfrage' : `${n} Anfragen`,
     btnAccept:        'Akzeptieren und Nummer teilen',
     contactRevealed:  'Kontakt akzeptiert',
     theirNumber:      'Ihre Nummer:',
@@ -734,6 +739,7 @@ const STRINGS = {
     interestPending:  'Wachten op bestuurder',
     btnResend:        'Opnieuw aanvragen',
     pendingInterests: (n) => n === 1 ? '1 geïnteresseerde' : `${n} geïnteresseerden`,
+    interestCount: (n) => n === 1 ? '1 verzoek' : `${n} verzoeken`,
     btnAccept:        'Accepteren en nummer delen',
     contactRevealed:  'Contact geaccepteerd',
     theirNumber:      'Hun nummer:',
@@ -1352,7 +1358,7 @@ async function loadHomeFeed() {
         ${rides.map(r => `
           <div class="home-feed-card">
             <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
-            <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}</span>
+            <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}${r.InterestCount > 0 ? ' <span class="tag tag-interest-count">' + s.interestCount(r.InterestCount) + '</span>' : ''}</span>
             ${contactOrInterestBtn(r, contacts, s)}
           </div>`).join('')}
       </div>`;
@@ -1554,7 +1560,7 @@ async function renderSearchRides(autoQuery = null) {
 
       function rideCard(r) {
         return `<div class="card card-compact">
-          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}</div>
+          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}${r.InterestCount > 0 ? ' <span class="tag tag-interest-count">' + s.interestCount(r.InterestCount) + '</span>' : ''}</div>
           ${contactOrInterestBtn(r, contacts, s)}
         </div>`;
       }

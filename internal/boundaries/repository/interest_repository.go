@@ -8,4 +8,6 @@ type InterestRepository interface {
 	FindByRideAndSearcher(rideID, searcherPhone string) (domain.Interest, error)
 	FindByRide(rideID string) ([]domain.Interest, error)
 	Accept(id string) error
+	// CountByRides returns a map of ride ID → interest count for the given ride IDs.
+	CountByRides(rideIDs []string) (map[string]int, error)
 }

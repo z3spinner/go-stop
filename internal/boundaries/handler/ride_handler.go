@@ -13,16 +13,17 @@ import (
 
 // publicRide is returned for public search/feed requests. Phone is absent; DriverName is visible.
 type publicRide struct {
-	ID            string    `json:"ID"`
-	DriverName    string    `json:"DriverName"`
-	Origin        string    `json:"Origin"`
-	Destination   string    `json:"Destination"`
-	Date          time.Time `json:"Date"`
-	DepartureAt   time.Time `json:"DepartureAt"`
-	Flexibility   int       `json:"Flexibility"`
-	PostedAt      time.Time `json:"PostedAt"`
-	ExpiresAt     time.Time `json:"ExpiresAt"`
-	FeedbackGiven bool      `json:"FeedbackGiven"`
+	ID             string    `json:"ID"`
+	DriverName     string    `json:"DriverName"`
+	Origin         string    `json:"Origin"`
+	Destination    string    `json:"Destination"`
+	Date           time.Time `json:"Date"`
+	DepartureAt    time.Time `json:"DepartureAt"`
+	Flexibility    int       `json:"Flexibility"`
+	PostedAt       time.Time `json:"PostedAt"`
+	ExpiresAt      time.Time `json:"ExpiresAt"`
+	FeedbackGiven  bool      `json:"FeedbackGiven"`
+	InterestCount  int       `json:"InterestCount"`
 }
 
 func toPublicRides(rides []domain.Ride) []publicRide {
@@ -42,6 +43,24 @@ func toPublicRides(rides []domain.Ride) []publicRide {
 		}
 	}
 	return out
+}
+
+func attachInterestCounts(rides []publicRide, interestRepo repository.InterestRepository) []publicRide {
+	if len(rides) == 0 {
+		return rides
+	}
+	ids := make([]string, len(rides))
+	for i, r := range rides {
+		ids[i] = r.ID
+	}
+	counts, err := interestRepo.CountByRides(ids)
+	if err != nil {
+		return rides // best-effort: return without counts on error
+	}
+	for i := range rides {
+		rides[i].InterestCount = counts[rides[i].ID]
+	}
+	return rides
 }
 
 type RideHandler struct {
@@ -170,7 +189,7 @@ func (h *RideHandler) List(c *gin.Context) {
 	if phone != "" {
 		c.JSON(http.StatusOK, rides)
 	} else {
-		c.JSON(http.StatusOK, toPublicRides(rides))
+		c.JSON(http.StatusOK, attachInterestCounts(toPublicRides(rides), h.interestRepo))
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres/sqlc/queries"
@@ -79,4 +80,20 @@ func (r *InterestRepo) FindBySearcherPhone(phone string) ([]domain.InterestWithR
 		}
 	}
 	return out, nil
+}
+
+func (r *InterestRepo) CountByRides(rideIDs []string) (map[string]int, error) {
+	uuids := make([]pgtype.UUID, len(rideIDs))
+	for i, id := range rideIDs {
+		uuids[i] = uuidFrom(id)
+	}
+	rows, err := r.q.CountInterestsByRides(context.Background(), uuids)
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[string]int, len(rows))
+	for _, row := range rows {
+		counts[uuidTo(row.RideID)] = int(row.Count)
+	}
+	return counts, nil
 }
