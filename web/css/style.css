@@ -102,7 +102,7 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   margin-bottom: 16px;
 }
 .page-bar { justify-content: space-between; }
-.controls { display: flex; gap: 8px; align-items: center; }
+.controls { display: flex; gap: 4px; align-items: center; }
 .label-optional { color: var(--gray-600); font-weight: 400; }
 
 .btn-privacy {
