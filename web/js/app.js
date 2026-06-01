@@ -962,8 +962,12 @@ async function handleInterestClick(btn) {
       stateEl.textContent = s.interestSent;
       stateEl.classList.remove('hidden');
     }
-    // Offer push notifications so the searcher is alerted when the driver accepts
-    renderNotificationPrompt(phone, () => {});
+    // Offer push notifications so the searcher is alerted when the driver accepts.
+    // Use a modal (not full-page replacement) so the user stays on the current view.
+    const bellState = document.getElementById('btn-bell')?.dataset.notifState;
+    if (bellState !== 'enabled') {
+      showNotifModal(bellState || 'default');
+    }
   } catch (err) {
     btn.disabled = false;
     const stateEl = document.getElementById('int-state-' + rideID);
