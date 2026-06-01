@@ -359,3 +359,73 @@ test('reloading a search page stays on search', async ({ page }) => {
   await expect(page).toHaveURL(/search\?origin=Saillans/);
   await expect(page.locator('input[name=origin]')).toHaveValue('Saillans');
 });
+
+// ── 15. Two-column results layout ─────────────────────────────────────────────
+test('search shows forward and return columns', async ({ page }) => {
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest`);
+  await page.waitForSelector('.results-col-header');
+
+  const headers = await page.locator('.results-col-header').allTextContents();
+  expect(headers.length).toBe(2);
+  expect(headers[0]).toMatch(/Saillans.*Crest/);
+  expect(headers[1]).toMatch(/Crest.*Saillans/);
+});
+
+// ── 16. Notify me button appears in empty column ───────────────────────────────
+test('"notify me" appears when a direction has no rides', async ({ page }) => {
+  // Saillans→Crest has rides (test 3 posted one), Crest→Saillans is empty
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest`);
+  await page.waitForSelector('.results-col-header');
+
+  // At least one column should have the notify button (likely the return direction)
+  await expect(page.locator('.col-notify').first()).toBeVisible();
+});
+
+// ── 17. Notify me appears after results too ───────────────────────────────────
+test('"notify me" also appears below ride results', async ({ page }) => {
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest`);
+  await page.waitForSelector('.card');
+
+  // The notify button should exist in the forward column that has results
+  const notifyBtns = await page.locator('.col-notify').count();
+  expect(notifyBtns).toBeGreaterThan(0);
+});
+
+// ── 18. Completely unknown route shows both columns empty with notify buttons ──
+test('unknown route shows both columns empty with notify buttons', async ({ page }) => {
+  await page.goto(`${BASE}/search?origin=NullIsland&destination=Nowhere`);
+  await page.waitForSelector('.col-notify');
+
+  const notifyBtns = await page.locator('.col-notify').count();
+  expect(notifyBtns).toBe(2); // one per direction
+  await expect(page.locator('.col-empty').first()).toBeVisible();
+});
+
+// ── 19. Date filter pre-fills notification alert ───────────────────────────────
+test('date in search pre-fills the notification alert form', async ({ page }) => {
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest&departure_at=2030-06-15T09%3A00%3A00.000Z`);
+  await page.waitForSelector('.col-notify');
+
+  // Click the notify button
+  await page.locator('.col-notify').first().click();
+  await page.waitForSelector('#notify-form');
+
+  // The date field should be pre-filled from the departure_at param
+  const dateVal = await page.inputValue('input[name=alert_date]');
+  expect(dateVal).toBe('2030-06-15');
+});
+
+// ── 20. Date+time in search pre-fills both fields in alert form ────────────────
+test('date+time in search pre-fills both fields in notification alert', async ({ page }) => {
+  await page.goto(`${BASE}/search?origin=Saillans&destination=Crest&departure_at=2030-06-15T09%3A00%3A00.000Z`);
+  await page.waitForSelector('.col-notify');
+
+  await page.locator('.col-notify').first().click();
+  await page.waitForSelector('#notify-form');
+
+  const dateVal = await page.inputValue('input[name=alert_date]');
+  const timeVal = await page.inputValue('input[name=alert_time]');
+  expect(dateVal).toBe('2030-06-15');
+  // Time is converted to local timezone — verify format not exact value
+  expect(timeVal).toMatch(/^\d{2}:\d{2}$/);
+});
