@@ -759,3 +759,86 @@ func TestHTTP_Alert_DailyMode_MatchesTimeOnAnyDate(t *testing.T) {
 		t.Errorf("daily mode: expected 0 matches for ride outside time window, got %d", len(noMatch))
 	}
 }
+
+func TestHTTP_Search_GraceWindowFiltering(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	now := time.Now().UTC()
+	fmtRFC3339 := func(d time.Time) string { return d.Format(time.RFC3339) }
+
+	// Ride 1: departed 2 hours ago — beyond 60-min grace window → should be HIDDEN
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Past", "phone": "5570001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": fmtRFC3339(now.Add(-2 * time.Hour)), "flexibility": 0,
+	})
+
+	// Ride 2: departed 30 minutes ago — within 60-min grace window → should be SHOWN
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Recent", "phone": "5570002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": fmtRFC3339(now.Add(-30 * time.Minute)), "flexibility": 0,
+	})
+
+	// Ride 3: departing in 1 hour — future → should be SHOWN
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Future", "phone": "5570003",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": fmtRFC3339(now.Add(time.Hour)), "flexibility": 0,
+	})
+
+	// Ride 4: departed 45 minutes ago with 30-min flexibility window —
+	// effective end = 45min ago + 30min = 15 min ago, still within 60-min grace → SHOWN
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "FlexRecent", "phone": "5570004",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": fmtRFC3339(now.Add(-45 * time.Minute)), "flexibility": 30,
+	})
+
+	// Ride 5: departed 2 hours ago with 30-min flexibility —
+	// effective end = 2h ago + 30min = 90min ago, beyond 60-min grace → HIDDEN
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "FlexPast", "phone": "5570005",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": fmtRFC3339(now.Add(-2 * time.Hour)), "flexibility": 30,
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/rides?origin=Saillans&destination=Crest", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var rides []map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &rides)
+
+	names := make([]string, 0, len(rides))
+	for _, ride := range rides {
+		if n, ok := ride["DriverName"].(string); ok {
+			names = append(names, n)
+		}
+	}
+
+	for _, must := range []string{"Recent", "Future", "FlexRecent"} {
+		found := false
+		for _, n := range names {
+			if n == must {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected %q in search results, got: %v", must, names)
+		}
+	}
+	for _, mustNot := range []string{"Past", "FlexPast"} {
+		for _, n := range names {
+			if n == mustNot {
+				t.Errorf("expected %q to be hidden by grace window, but it appeared in results: %v", mustNot, names)
+				break
+			}
+		}
+	}
+}
