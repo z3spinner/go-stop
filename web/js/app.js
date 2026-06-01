@@ -46,7 +46,8 @@ const STRINGS = {
     deleteErr:        'Could not delete — is that the right phone number?',
     seekersTitle:     'People looking for this ride',
     noSeekers:        'No one waiting yet.',
-    labelSearchTime:   'Around what time? (optional)',
+    labelSearchDate:   'Date (optional)',
+    labelSearchTime:   'Time (optional)',
     colOutbound:       'Outbound',
     colReturn:         'Return',
     noRidesCol:        'No rides available.',
@@ -151,7 +152,8 @@ const STRINGS = {
     deleteErr:        'Impossible de supprimer — numéro incorrect ?',
     seekersTitle:     'Personnes cherchant ce trajet',
     noSeekers:        'Personne en attente.',
-    labelSearchTime:   'Vers quelle heure ? (optionnel)',
+    labelSearchDate:   'Date (optionnel)',
+    labelSearchTime:   'Heure (optionnel)',
     colOutbound:       'Aller',
     colReturn:         'Retour',
     noRidesCol:        'Aucun trajet disponible.',
@@ -258,7 +260,8 @@ const STRINGS = {
     deleteErr:      '¿Número de teléfono incorrecto?',
     seekersTitle: 'Personas que buscan este viaje',
     noSeekers:    'Nadie en espera todavía.',
-    labelSearchTime: '¿A qué hora? (opcional)',
+    labelSearchDate: 'Fecha (opcional)',
+    labelSearchTime: 'Hora (opcional)',
     colOutbound:    'Ida',
     colReturn:      'Vuelta',
     noRidesCol:     'No hay viajes disponibles.',
@@ -342,7 +345,8 @@ const STRINGS = {
     deleteErr:      'Numero di telefono errato?',
     seekersTitle: 'Persone che cercano questo viaggio',
     noSeekers:    'Nessuno in attesa.',
-    labelSearchTime:'A che ora? (opzionale)',
+    labelSearchDate:'Data (opzionale)',
+    labelSearchTime:'Ora (opzionale)',
     colOutbound:    'Andata',
     colReturn:      'Ritorno',
     noRidesCol:     'Nessun viaggio disponibile.',
@@ -426,7 +430,8 @@ const STRINGS = {
     deleteErr:      'Falsche Telefonnummer?',
     seekersTitle: 'Personen, die diese Fahrt suchen',
     noSeekers:    'Noch niemand wartet.',
-    labelSearchTime:'Ungefähre Uhrzeit? (optional)',
+    labelSearchDate:'Datum (optional)',
+    labelSearchTime:'Uhrzeit (optional)',
     colOutbound:    'Hinfahrt',
     colReturn:      'Rückfahrt',
     noRidesCol:     'Keine Fahrten verfügbar.',
@@ -510,7 +515,8 @@ const STRINGS = {
     deleteErr:      'Verkeerd telefoonnummer?',
     seekersTitle: 'Mensen die deze rit zoeken',
     noSeekers:    'Nog niemand in afwachting.',
-    labelSearchTime:'Rond welk tijdstip? (optioneel)',
+    labelSearchDate:'Datum (optioneel)',
+    labelSearchTime:'Tijdstip (optioneel)',
     colOutbound:    'Heen',
     colReturn:      'Terug',
     noRidesCol:     'Geen ritten beschikbaar.',
@@ -936,7 +942,7 @@ async function renderPostRide() {
       <div class="form-group"><label>${s.labelPhone}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
       <div class="form-group"><label>${s.labelFrom}</label><input name="origin" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
       <div class="form-group"><label>${s.labelTo}</label><input name="destination" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
-      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" value="${defaultDeparture()}" required></div>
+      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" step="300" value="${defaultDeparture()}" required></div>
       <div class="form-group">
         <label>${s.labelFlex}</label>
         <select name="flexibility">
@@ -1029,13 +1035,15 @@ async function renderSearchRides(autoQuery = null) {
   const ls = autoQuery || getLastSearch();
   const dests = await getDestinations();
 
-  // Convert ISO departureAt to datetime-local string for the input
-  let deptInputVal = '';
+  // Pre-fill date/time from autoQuery if provided
+  let dateInputVal = '', timeInputVal = '';
   if (autoQuery && autoQuery.departureAt) {
     try {
       const d = new Date(autoQuery.departureAt);
       const pad = n => String(n).padStart(2, '0');
-      deptInputVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      dateInputVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const h = pad(d.getHours()), m = pad(d.getMinutes());
+      if (h !== '00' || m !== '00') timeInputVal = `${h}:${m}`;
     } catch {}
   }
 
@@ -1045,7 +1053,10 @@ async function renderSearchRides(autoQuery = null) {
     <form id="search-form">
       <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(ls.origin || '')}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
       <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(ls.destination || '')}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
-      <div class="form-group"><label class="label-optional">${s.labelSearchTime}</label><input name="departure_at" type="datetime-local" value="${esc(deptInputVal)}"></div>
+      <div class="search-datetime-row">
+        <div class="form-group search-date-group"><label class="label-optional">${s.labelSearchDate}</label><input name="search_date" type="date" value="${esc(dateInputVal)}"></div>
+        <div class="form-group search-time-group"><label class="label-optional">${s.labelSearchTime}</label><input name="search_time" type="time" step="300" value="${esc(timeInputVal)}"></div>
+      </div>
       <button class="btn btn-primary" type="submit">${s.btnSearch}</button>
     </form>
     <div id="results"></div>`;
@@ -1057,13 +1068,20 @@ async function renderSearchRides(autoQuery = null) {
     const fd = new FormData(e.target);
     const origin = fd.get('origin');
     const dest = fd.get('destination');
-    const deptRaw = fd.get('departure_at');
+    const searchDate = fd.get('search_date'); // e.g. "2026-06-20"
+    const searchTime = fd.get('search_time'); // e.g. "09:00" or ""
+    // Build a combined ISO string only when at least a date is given
+    let deptISO = '';
+    if (searchDate) {
+      const localStr = searchTime ? `${searchDate}T${searchTime}` : `${searchDate}T00:00`;
+      deptISO = new Date(localStr).toISOString();
+    }
     saveLastSearch(origin, dest);
-    // Update URL to reflect search state so it's shareable and survives reload
-    const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${deptRaw ? `&departure_at=${encodeURIComponent(new Date(deptRaw).toISOString())}` : ''}`;
+    // Update URL for shareability
+    const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${deptISO ? `&departure_at=${encodeURIComponent(deptISO)}` : ''}`;
     history.replaceState({ path: '/search' }, '', '/search' + searchQS);
     const results = document.getElementById('results');
-    const timeParam = deptRaw ? `&departure_at=${encodeURIComponent(new Date(deptRaw).toISOString())}` : '';
+    const timeParam = deptISO ? `&departure_at=${encodeURIComponent(deptISO)}` : '';
     const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${timeParam}`;
     const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${timeParam}`;
     try {
@@ -1077,7 +1095,7 @@ async function renderSearchRides(autoQuery = null) {
       }
 
       function colNotify(fromLoc, toLoc) {
-        return `<button class="btn-notify-route col-notify" data-from="${esc(fromLoc)}" data-to="${esc(toLoc)}" data-dept="${esc(deptRaw)}">${s.btnNotifyRoute}</button>`;
+        return `<button class="btn-notify-route col-notify" data-from="${esc(fromLoc)}" data-to="${esc(toLoc)}" data-dept="${esc(deptISO)}">${s.btnNotifyRoute}</button>`;
       }
 
       function colEmpty(fromLoc, toLoc) {
@@ -1130,7 +1148,7 @@ async function renderPostRequest(origin = '', destination = '') {
       <div class="form-group"><label>${s.labelPhone}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
       <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(origin)}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
       <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(destination)}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
-      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" value="${defaultDeparture()}" required></div>
+      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" step="300" value="${defaultDeparture()}" required></div>
       <div class="form-group">
         <label>${s.labelFlex}</label>
         <select name="flexibility">
@@ -1301,7 +1319,7 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
       <div class="form-group"><label>${s.labelPhone}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
       <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(origin)}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
       <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(destination)}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
-      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" value="${esc(deptValue)}" required></div>
+      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" step="300" value="${esc(deptValue)}" required></div>
       <div class="form-group">
         <label>${s.labelFlex}</label>
         <select name="flexibility">

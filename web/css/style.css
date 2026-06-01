@@ -454,3 +454,8 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 }
 .seeker-meta { color: var(--gray-600); font-size: 0.8rem; }
 .seeker-phone { color: var(--blue); }
+
+.search-datetime-row { display: flex; gap: 12px; }
+.search-date-group { flex: 2; margin-bottom: 16px; }
+.search-time-group { flex: 1; margin-bottom: 16px; }
+@media (max-width: 360px) { .search-datetime-row { flex-direction: column; } }
