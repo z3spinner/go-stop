@@ -960,7 +960,7 @@ async function loadHomeFeed() {
           <div class="home-feed-card" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}">
             <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
             <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></span>
-            <span class="home-feed-driver">${esc(r.DriverName)} · <a href="tel:${esc(r.Phone)}">${esc(r.Phone)}</a></span>
+            <span class="home-feed-driver">${esc(r.DriverName)}</span>
           </div>`).join('')}
       </div>`;
     el.querySelectorAll('.home-feed-card').forEach(card => {
