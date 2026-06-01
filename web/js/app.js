@@ -1442,7 +1442,10 @@ async function renderSearchRides(autoQuery = null) {
     try {
       const d = new Date(autoQuery.departureAt);
       const pad = n => String(n).padStart(2, '0');
-      dateInputVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      // Suppress sentinel date used by daily-mode alerts (1970-01-01)
+      if (d.getFullYear() > 1970) {
+        dateInputVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      }
       const h = pad(d.getHours()), m = pad(d.getMinutes());
       if (h !== '00' || m !== '00') timeInputVal = `${h}:${m}`;
     } catch {}
@@ -1748,7 +1751,9 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
     const d = new Date(deptValue);
     if (!isNaN(d)) {
       const pad = n => String(n).padStart(2, '0');
-      initDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      if (d.getFullYear() > 1970) {
+        initDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      }
       initTime = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
   }
@@ -1899,7 +1904,7 @@ function renderMyAlerts() {
           <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
           <div class="card-meta">${meta}</div>
           <div class="alert-actions">
-            <button class="btn-see-matches" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}" data-dept="${esc(r.DepartureAt)}">${s.btnSeeMatches}</button>
+            <button class="btn-see-matches" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}" data-dept="${esc(noDate && !noDept ? '' : r.DepartureAt)}">${s.btnSeeMatches}</button>
             <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
           </div>
           <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
