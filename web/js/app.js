@@ -73,6 +73,8 @@ const STRINGS = {
     labelSearcher:    'Passenger',
     labelDeparture:   'Departure',
     labelContact:     'Contact',
+    notifEnabled:    'Notifications enabled ✓ — you\'ll be alerted for new rides and accepted contacts.',
+    notifDeniedTip:  'Notifications are blocked. Enable them in your browser settings and reload.',
     footerPrivacy:    'Privacy',
     aboutTitle:       'About Go Stop',
     aboutBody:        (siteName) => `<p><strong>Go Stop</strong> is a local ride-sharing platform, positioned between hitchhiking and carpooling. It connects drivers offering one-time trips with people looking for a lift. Direct contact by phone — no accounts required.</p>
@@ -196,6 +198,8 @@ const STRINGS = {
     labelSearcher:    'Passager',
     labelDeparture:   'Départ',
     labelContact:     'Contact',
+    notifEnabled:    'Notifications activées ✓ — vous serez alerté(e) pour les nouveaux trajets et les contacts acceptés.',
+    notifDeniedTip:  'Notifications bloquées. Activez-les dans les paramètres de votre navigateur puis rechargez.',
     footerPrivacy:    'Confidentialité',
     aboutTitle:       'À propos de Go Stop',
     aboutBody:        (siteName) => `<p><strong>Go Stop</strong> est une plateforme locale de covoiturage, à mi-chemin entre l'autostop et le covoiturage formel. Elle met en relation des conducteurs qui proposent un trajet ponctuel et des personnes qui cherchent un stop.</p>
@@ -321,6 +325,8 @@ const STRINGS = {
     labelSearcher:  'Pasajero',
     labelDeparture: 'Salida',
     labelContact:   'Contacto',
+    notifEnabled:  'Notificaciones activadas ✓',
+    notifDeniedTip:'Notificaciones bloqueadas. Actívalas en la configuración del navegador.',
     footerPrivacy:  'Privacidad',
     aboutTitle:     'Acerca de Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> es una plataforma local de viajes compartidos, entre el autostop y el carpooling. Conecta a conductores que ofrecen un viaje puntual con personas que buscan transporte. Contacto directo por teléfono — sin cuentas.</p><h3>Tu comunidad</h3><p>Esta instancia está desplegada para <strong>${esc(siteName)}</strong>.</p><h3>Desplegar para tu comunidad</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Desplegar en Scalingo</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -423,6 +429,8 @@ const STRINGS = {
     labelSearcher:  'Passeggero',
     labelDeparture: 'Partenza',
     labelContact:   'Contatto',
+    notifEnabled:  'Notifiche attivate ✓',
+    notifDeniedTip:'Notifiche bloccate. Attivale nelle impostazioni del browser.',
     footerPrivacy:  'Privacy',
     aboutTitle:     'Informazioni su Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> è una piattaforma locale di condivisione viaggi, tra l'autostop e il carpooling formale. Mette in contatto conducenti che offrono un viaggio con chi cerca un passaggio. Contatto diretto per telefono — nessun account richiesto.</p><h3>La tua comunità</h3><p>Questa istanza è distribuita per <strong>${esc(siteName)}</strong>.</p><h3>Distribuisci per la tua comunità</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Distribuisci su Scalingo</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -525,6 +533,8 @@ const STRINGS = {
     labelSearcher:  'Mitfahrer/in',
     labelDeparture: 'Abfahrt',
     labelContact:   'Kontakt',
+    notifEnabled:  'Benachrichtigungen aktiviert ✓',
+    notifDeniedTip:'Benachrichtigungen gesperrt. Aktiviere sie in den Browsereinstellungen.',
     footerPrivacy:  'Datenschutz',
     aboutTitle:     'Über Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> ist eine lokale Mitfahrplattform zwischen Trampen und formalem Carpooling. Sie verbindet Fahrer, die eine einmalige Fahrt anbieten, mit Menschen, die eine Mitfahrt suchen. Direkter Kontakt per Telefon — keine Accounts erforderlich.</p><h3>Deine Gemeinschaft</h3><p>Diese Instanz ist für <strong>${esc(siteName)}</strong> bereitgestellt.</p><h3>Für deine Gemeinschaft bereitstellen</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Auf Scalingo bereitstellen</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -627,6 +637,8 @@ const STRINGS = {
     labelSearcher:  'Passagier',
     labelDeparture: 'Vertrek',
     labelContact:   'Contact',
+    notifEnabled:  'Meldingen ingeschakeld ✓',
+    notifDeniedTip:'Meldingen geblokkeerd. Schakel ze in via de browserinstellingen.',
     footerPrivacy:  'Privacy',
     aboutTitle:     'Over Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> is een lokaal ritdeelplatform, tussen liften en formeel carpoolen. Het verbindt bestuurders die een eenmalige rit aanbieden met mensen die een rit zoeken. Direct contact per telefoon — geen accounts vereist.</p><h3>Jouw gemeenschap</h3><p>Deze instantie is uitgerold voor <strong>${esc(siteName)}</strong>.</p><h3>Uitrollen voor jouw gemeenschap</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Uitrollen op Scalingo</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -817,6 +829,9 @@ function bindControls() {
   bindLangPicker();
   const aboutBtn = document.getElementById('btn-about');
   if (aboutBtn) aboutBtn.onclick = showAboutModal;
+  const bellBtn = document.getElementById('btn-bell');
+  if (bellBtn) bellBtn.onclick = handleBellClick;
+  updateBellState(); // async, updates colour after render
 }
 
 // ── Push notifications ────────────────────────────────────────────────────────
@@ -954,8 +969,58 @@ async function handleInterestClick(btn) {
   }
 }
 
+function bellIcon() {
+  return `<button class="btn-bell" id="btn-bell" aria-label="Notifications">🔔</button>`;
+}
+
+async function updateBellState() {
+  const btn = document.getElementById('btn-bell');
+  if (!btn) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    btn.style.display = 'none';
+    return;
+  }
+  const perm = Notification.permission;
+  let subscribed = false;
+  if (perm === 'granted') {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      subscribed = sub !== null;
+    } catch {}
+  }
+  btn.classList.remove('bell-enabled', 'bell-disabled');
+  btn.classList.add(subscribed ? 'bell-enabled' : 'bell-disabled');
+  btn.dataset.notifState = subscribed ? 'enabled' : (perm === 'denied' ? 'denied' : 'default');
+}
+
+async function handleBellClick() {
+  const s = t();
+  const state = document.getElementById('btn-bell')?.dataset.notifState;
+  if (state === 'enabled') {
+    alert(s.notifEnabled || 'Notifications are enabled ✓');
+    return;
+  }
+  if (state === 'denied') {
+    alert(s.notifDeniedTip || 'Notifications are blocked in your browser settings. Please enable them there.');
+    return;
+  }
+  const p = getProfile();
+  if (!p.phone) {
+    const phone = window.prompt((s.labelPhone || 'Phone') + ':');
+    if (!phone) return;
+    saveProfile('', phone);
+    p.phone = phone;
+  }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') {
+    await trySubscribePush(p.phone);
+    updateBellState();
+  }
+}
+
 function controls() {
-  return `<div class="controls">${langToggle()}${aboutIcon()}</div>`;
+  return `<div class="controls">${langToggle()}${bellIcon()}${aboutIcon()}</div>`;
 }
 
 function topBar() {
