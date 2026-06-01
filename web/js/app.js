@@ -1443,11 +1443,12 @@ async function renderSearchRides(autoQuery = null) {
 
   // Pre-fill date/time from autoQuery if provided
   let dateInputVal = '', timeInputVal = '';
-  if (autoQuery && autoQuery.departureAt) {
+  if (autoQuery && autoQuery.searchDate) {
+    dateInputVal = autoQuery.searchDate; // already YYYY-MM-DD, no conversion needed
+  } else if (autoQuery && autoQuery.departureAt) {
     try {
       const d = new Date(autoQuery.departureAt);
       const pad = n => String(n).padStart(2, '0');
-      // Suppress sentinel date used by daily-mode alerts (1970-01-01)
       if (d.getFullYear() > 1970) {
         dateInputVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
       }
@@ -1479,20 +1480,25 @@ async function renderSearchRides(autoQuery = null) {
     const dest = fd.get('destination');
     const searchDate = fd.get('search_date'); // e.g. "2026-06-20"
     const searchTime = fd.get('search_time'); // e.g. "09:00" or ""
-    // Build a combined ISO string only when at least a date is given
-    let deptISO = '';
-    if (searchDate) {
-      const localStr = searchTime ? `${searchDate}T${searchTime}` : `${searchDate}T00:00`;
-      deptISO = new Date(localStr).toISOString();
+    // Use search_date for date-only; departure_at (ISO) for date+time
+    let deptISO = '';       // full datetime — used only when time is set
+    let searchDateParam = ''; // date-only param
+    if (searchDate && searchTime) {
+      deptISO = new Date(`${searchDate}T${searchTime}`).toISOString();
+    } else if (searchDate) {
+      searchDateParam = searchDate; // keep as YYYY-MM-DD, no UTC conversion
     }
     saveLastSearch(origin, dest);
     // Update URL for shareability
-    const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${deptISO ? `&departure_at=${encodeURIComponent(deptISO)}` : ''}`;
+    const extraQS = deptISO ? `&departure_at=${encodeURIComponent(deptISO)}`
+                  : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}` : '';
+    const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${extraQS}`;
     history.replaceState({ path: '/search' }, '', '/search' + searchQS);
     const results = document.getElementById('results');
-    const timeParam = deptISO ? `&departure_at=${encodeURIComponent(deptISO)}` : '';
-    const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${timeParam}`;
-    const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${timeParam}`;
+    const apiParam = deptISO ? `&departure_at=${encodeURIComponent(deptISO)}`
+                   : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}` : '';
+    const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${apiParam}`;
+    const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${apiParam}`;
     try {
       const [rides, returnRides] = await Promise.all([api('GET', fwdUrl), api('GET', retUrl)]);
       const contacts = await loadAcceptedContacts([...rides, ...returnRides]);
@@ -2030,8 +2036,9 @@ async function handleDeepLink() {
     case '/post-ride':    await renderPostRide();    return true;
     case '/search': {
       const p = new URLSearchParams(window.location.search);
-      const autoQuery = (p.get('origin') || p.get('destination') || p.get('departure_at'))
-        ? { origin: p.get('origin') || '', destination: p.get('destination') || '', departureAt: p.get('departure_at') || '' }
+      const autoQuery = (p.get('origin') || p.get('destination') || p.get('departure_at') || p.get('search_date'))
+        ? { origin: p.get('origin') || '', destination: p.get('destination') || '',
+            departureAt: p.get('departure_at') || '', searchDate: p.get('search_date') || '' }
         : null;
       await renderSearchRides(autoQuery);
       return true;

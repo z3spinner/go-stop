@@ -458,12 +458,11 @@ test('search with date filter only shows rides on that date', async ({ page }) =
   expect(r1.ID).toBeTruthy();
   expect(r2.ID).toBeTruthy();
 
-  // Search with departure_at = targetDate (midnight UTC → same date)
-  const deptParam = encodeURIComponent(`${targetDate}T00:00:00.000Z`);
-  const rides = await page.evaluate(async ({ origin, dest, dept }) => {
-    const r = await fetch(`/api/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&departure_at=${dept}`);
+  // Search with search_date = targetDate (date-only, no time)
+  const rides = await page.evaluate(async ({ origin, dest, date }) => {
+    const r = await fetch(`/api/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&search_date=${encodeURIComponent(date)}`);
     return r.json();
-  }, { origin, dest, dept: deptParam });
+  }, { origin, dest, date: targetDate });
 
   const ids = rides.map(r => r.ID);
   expect(ids).toContain(r1.ID);       // target date → should appear
