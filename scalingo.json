@@ -20,6 +20,10 @@
       "description": "Set to 'release' for production",
       "value": "release"
     },
+    "RIDE_GRACE_MINUTES": {
+      "description": "Minutes after a ride's flex window closes before it disappears from listings (default: 60)",
+      "value": "60"
+    },
     "SITE_NAME": {
       "description": "Display name for this community's instance (default: Go-Stop)",
       "value": "Go-Stop"

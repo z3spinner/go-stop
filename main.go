@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,13 @@ func main() {
 	}
 	defer pool.Close()
 
-	rideRepo := postgres.NewRideRepo(pool)
+	graceMins := 60
+	if v := os.Getenv("RIDE_GRACE_MINUTES"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			graceMins = n
+		}
+	}
+	rideRepo := postgres.NewRideRepo(pool, graceMins)
 	requestRepo := postgres.NewRequestRepo(pool)
 	destRepo := postgres.NewDestinationRepo(pool)
 	subRepo := postgres.NewSubscriptionRepo(pool)

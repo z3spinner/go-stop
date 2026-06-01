@@ -13,7 +13,7 @@ import (
 
 func TestRideRepo_SaveAndFindByID(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool)
+	repo := postgres.NewRideRepo(testPool, 60)
 
 	testID := uuid.New().String()
 	ride := domain.Ride{
@@ -47,7 +47,7 @@ func TestRideRepo_SaveAndFindByID(t *testing.T) {
 
 func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool)
+	repo := postgres.NewRideRepo(testPool, 60)
 
 	activeID := uuid.New().String()
 	_ = repo.Save(domain.Ride{
@@ -81,7 +81,7 @@ func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 
 func TestRideRepo_FindMatching_WindowOverlap(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool)
+	repo := postgres.NewRideRepo(testPool, 60)
 
 	// Ride: 09:00 ±30 min → window 08:30–09:30
 	_ = repo.Save(domain.Ride{
@@ -114,7 +114,7 @@ func TestRideRepo_FindMatching_WindowOverlap(t *testing.T) {
 
 func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool)
+	repo := postgres.NewRideRepo(testPool, 60)
 
 	// Ride: 09:00 exact
 	_ = repo.Save(domain.Ride{
@@ -147,7 +147,7 @@ func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 
 func TestRideRepo_Delete(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool)
+	repo := postgres.NewRideRepo(testPool, 60)
 
 	deleteID := uuid.New().String()
 	_ = repo.Save(domain.Ride{

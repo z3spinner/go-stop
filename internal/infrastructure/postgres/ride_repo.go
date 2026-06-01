@@ -3,15 +3,30 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/z3spinner/go-stop/internal/domain"
 )
 
-type RideRepo struct{ pool *pgxpool.Pool }
+type RideRepo struct {
+	pool      *pgxpool.Pool
+	graceMins int // rides hidden from public listings once their flex window + this many minutes has passed
+}
 
-func NewRideRepo(pool *pgxpool.Pool) *RideRepo { return &RideRepo{pool: pool} }
+func NewRideRepo(pool *pgxpool.Pool, graceMins int) *RideRepo {
+	return &RideRepo{pool: pool, graceMins: graceMins}
+}
+
+// graceClause returns a SQL fragment that hides rides whose departure window
+// ended more than graceMins ago. Safe to embed: graceMins is a server-side integer.
+func (r *RideRepo) graceClause() string {
+	return fmt.Sprintf(
+		"AND departure_at + (flexibility * interval '1 minute') + interval '%d minutes' > NOW()",
+		r.graceMins,
+	)
+}
 
 func (r *RideRepo) Save(ride domain.Ride) error {
 	_, err := r.pool.Exec(context.Background(),
@@ -32,11 +47,11 @@ func (r *RideRepo) FindByID(id string) (domain.Ride, error) {
 
 func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+fmt.Sprintf(`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 		 FROM rides
 		 WHERE expires_at > NOW()
-		   AND departure_at + (flexibility * interval '1 minute') + interval '1 hour' > NOW()
-		 ORDER BY departure_at ASC`)
+		   %s
+		 ORDER BY departure_at ASC`, r.graceClause()))
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +73,9 @@ func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
 
 func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
-		 FROM rides WHERE origin = $1 AND destination = $2 AND expires_at > NOW() ORDER BY departure_at ASC`,
+fmt.Sprintf(`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+		 FROM rides WHERE origin = $1 AND destination = $2 AND expires_at > NOW()
+		   %s ORDER BY departure_at ASC`, r.graceClause()),
 		origin, destination)
 	if err != nil {
 		return nil, err
