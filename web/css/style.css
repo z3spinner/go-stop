@@ -459,3 +459,34 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .search-date-group { flex: 2; margin-bottom: 16px; }
 .search-time-group { flex: 1; margin-bottom: 16px; }
 @media (max-width: 360px) { .search-datetime-row { flex-direction: column; } }
+
+/* Home page ride feed */
+.home-feed {
+  margin-top: 24px;
+  border-top: 1px solid var(--gray-300);
+  padding-top: 16px;
+}
+.home-feed-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-600);
+  margin-bottom: 10px;
+}
+.home-feed-empty { font-size: 0.85rem; color: var(--gray-600); font-style: italic; }
+.home-feed-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--gray-100);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: background 0.1s;
+}
+.home-feed-card:hover { background: var(--gray-50); }
+.home-feed-route { font-weight: 600; font-size: 0.95rem; }
+.home-feed-meta  { font-size: 0.8rem; color: var(--gray-600); }
+.home-feed-driver { font-size: 0.85rem; color: var(--gray-600); }
+.home-feed-driver a { color: var(--blue); }

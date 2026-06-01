@@ -90,6 +90,8 @@ const STRINGS = {
     statsEmpty:      'No confirmed rides yet this week.',
     statsAllTime:    (n) => `All time: ${n} confirmed`,
     btnAllStats:     'All stats →',
+    homeFeedTitle:   'Available now',
+    noActiveRides:  'No rides posted yet.',
     statsPageTitle:  'Stats',
     statsRouteCount: (n) => `${n} ✓`,
     privacyBody:    `<h3>What we collect</h3>
@@ -197,6 +199,8 @@ const STRINGS = {
     statsEmpty:      'Aucun trajet confirmé cette semaine.',
     statsAllTime:    (n) => `Depuis le début : ${n} confirmés`,
     btnAllStats:     'Toutes les stats →',
+    homeFeedTitle:   'Disponibles maintenant',
+    noActiveRides:  'Aucun trajet publié pour l\'instant.',
     statsPageTitle:  'Statistiques',
     statsRouteCount: (n) => `${n} ✓`,
     privacyBody:    `<h3>Ce que nous collectons</h3>
@@ -298,6 +302,8 @@ const STRINGS = {
     statsEmpty:     'Aún no hay viajes confirmados esta semana.',
     statsAllTime:   (n) => `Total: ${n} confirmados`,
     btnAllStats:    'Ver todas →',
+    homeFeedTitle: 'Disponibles ahora',
+    noActiveRides: 'Ningún viaje publicado todavía.',
     statsPageTitle: 'Estadísticas',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Qué recopilamos</h3><p>Al publicar un viaje o búsqueda guardamos: nombre, teléfono, origen, destino, hora y flexibilidad. Nada más.</p><h3>Cuánto tiempo</h3><p>Los viajes y búsquedas se <strong>eliminan automáticamente</strong> al final del día de salida.</p><h3>Quién ve tu teléfono</h3><p>Tu número es visible para cualquier persona que vea tu anuncio. Es intencional — así se contactan las partes directamente.</p><h3>Cookies y almacenamiento local</h3><p>Sin cookies. Go Stop no usa rastreadores ni analíticas. Tu nombre, teléfono e idioma se guardan solo en tu dispositivo (<code>localStorage</code>).</p><h3>Terceros</h3><p>No se comparten datos con terceros. Las notificaciones push viajan mediante el estándar Web Push a través del servicio push de tu navegador.</p>`,
@@ -383,6 +389,8 @@ const STRINGS = {
     statsEmpty:     'Nessun viaggio confermato questa settimana.',
     statsAllTime:   (n) => `Totale: ${n} confermati`,
     btnAllStats:    'Tutte le statistiche →',
+    homeFeedTitle: 'Disponibili ora',
+    noActiveRides: 'Nessun viaggio pubblicato.',
     statsPageTitle: 'Statistiche',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Cosa raccogliamo</h3><p>Quando pubblichi un viaggio o una ricerca, salviamo: nome, telefono, origine, destinazione, orario e flessibilità. Nient'altro.</p><h3>Per quanto tempo</h3><p>Viaggi e ricerche vengono <strong>eliminati automaticamente</strong> alla fine del giorno di partenza.</p><h3>Chi vede il tuo numero</h3><p>Il tuo numero è visibile a chiunque veda il tuo annuncio. È intenzionale — è così che le parti si contattano direttamente.</p><h3>Cookie e memorizzazione locale</h3><p>Nessun cookie. Go Stop non utilizza tracker né analytics. Nome, telefono e lingua vengono salvati solo sul tuo dispositivo (<code>localStorage</code>).</p><h3>Terze parti</h3><p>Nessun dato viene condiviso con terze parti. Le notifiche push viaggiano tramite il protocollo Web Push attraverso il servizio push del tuo browser.</p>`,
@@ -468,6 +476,8 @@ const STRINGS = {
     statsEmpty:     'Noch keine bestätigten Fahrten diese Woche.',
     statsAllTime:   (n) => `Gesamt: ${n} bestätigt`,
     btnAllStats:    'Alle Statistiken →',
+    homeFeedTitle: 'Jetzt verfügbar',
+    noActiveRides: 'Noch keine Fahrten veröffentlicht.',
     statsPageTitle: 'Statistiken',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Was wir speichern</h3><p>Beim Veröffentlichen einer Fahrt oder Anfrage speichern wir: Name, Telefon, Startort, Ziel, Uhrzeit und Flexibilität. Nichts weiter.</p><h3>Wie lange</h3><p>Fahrten und Anfragen werden am Ende des Abfahrtstages <strong>automatisch gelöscht</strong>.</p><h3>Wer deine Nummer sieht</h3><p>Deine Nummer ist für jeden sichtbar, der deine Anzeige ansieht. Das ist beabsichtigt — so kontaktieren sich die Parteien direkt.</p><h3>Cookies und lokale Speicherung</h3><p>Keine Cookies. Go Stop verwendet keine Tracker oder Analysen. Name, Telefon und Sprache werden nur auf deinem Gerät gespeichert (<code>localStorage</code>).</p><h3>Drittanbieter</h3><p>Es werden keine Daten an Dritte weitergegeben. Push-Benachrichtigungen werden über den Web-Push-Standard über den Push-Dienst deines Browsers gesendet.</p>`,
@@ -553,6 +563,8 @@ const STRINGS = {
     statsEmpty:     'Nog geen bevestigde ritten deze week.',
     statsAllTime:   (n) => `Totaal: ${n} bevestigd`,
     btnAllStats:    'Alle statistieken →',
+    homeFeedTitle: 'Nu beschikbaar',
+    noActiveRides: 'Nog geen ritten gepubliceerd.',
     statsPageTitle: 'Statistieken',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Wat we opslaan</h3><p>Bij het publiceren van een rit of zoekopdracht slaan we op: naam, telefoon, vertrekplaats, bestemming, tijd en flexibiliteit. Niets meer.</p><h3>Hoe lang</h3><p>Ritten en zoekopdrachten worden aan het einde van de vertrekdag <strong>automatisch verwijderd</strong>.</p><h3>Wie jouw nummer ziet</h3><p>Jouw nummer is zichtbaar voor iedereen die jouw advertentie bekijkt. Dit is opzettelijk — zo nemen de partijen direct contact op.</p><h3>Cookies en lokale opslag</h3><p>Geen cookies. Go Stop gebruikt geen trackers of analyses. Naam, telefoon en taal worden alleen op jouw apparaat opgeslagen (<code>localStorage</code>).</p><h3>Derden</h3><p>Er worden geen gegevens gedeeld met derden. Pushmeldingen worden verzonden via de Web Push-standaard via de pushdienst van jouw browser.</p>`,
@@ -894,13 +906,15 @@ async function renderHome() {
         <button class="btn-ghost-inline" id="btn-my-alerts">${s.btnMyAlerts}</button>
       </div>
     </div>
-    <div id="home-stats"></div>`;
+    <div id="home-stats"></div>
+    <div id="home-feed"></div>`;
   document.getElementById('btn-driver').onclick = renderPostRide;
   document.getElementById('btn-searcher').onclick = renderSearchRides;
   document.getElementById('btn-my-rides').onclick = renderMyRides;
   document.getElementById('btn-my-alerts').onclick = renderMyAlerts;
   bindControls();
   loadHomeStats();
+  loadHomeFeed();
 }
 
 async function loadHomeStats() {
@@ -926,6 +940,34 @@ async function loadHomeStats() {
     });
   } catch {
     // silently omit if unavailable
+  }
+}
+
+async function loadHomeFeed() {
+  const s = t();
+  try {
+    const rides = await api('GET', '/rides');
+    const el = document.getElementById('home-feed');
+    if (!el) return;
+    if (!rides || !rides.length) {
+      el.innerHTML = `<div class="home-feed"><p class="home-feed-empty">${s.noActiveRides}</p></div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div class="home-feed">
+        <div class="home-feed-title">${s.homeFeedTitle}</div>
+        ${rides.map(r => `
+          <div class="home-feed-card" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}">
+            <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
+            <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></span>
+            <span class="home-feed-driver">${esc(r.DriverName)} · <a href="tel:${esc(r.Phone)}">${esc(r.Phone)}</a></span>
+          </div>`).join('')}
+      </div>`;
+    el.querySelectorAll('.home-feed-card').forEach(card => {
+      card.onclick = () => renderSearchRides({ origin: card.dataset.origin, destination: card.dataset.dest, departureAt: '' });
+    });
+  } catch {
+    // silently omit
   }
 }
 
