@@ -1170,8 +1170,8 @@ async function renderHome() {
         <button class="btn-ghost-inline" id="btn-my-alerts">${s.btnMyAlerts}</button>
       </div>
     </div>
-    <div id="home-stats"></div>
-    <div id="home-feed"></div>`;
+    <div id="home-feed"></div>
+    <div id="home-stats"></div>`;
   document.getElementById('btn-driver').onclick = renderPostRide;
   document.getElementById('btn-searcher').onclick = renderSearchRides;
   document.getElementById('btn-my-rides').onclick = renderMyRides;
