@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, notification_queue`)
 		if truncErr == nil {
 			break
 		}
@@ -123,7 +123,7 @@ func setupRouter() *gin.Engine {
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events`); err != nil {
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, notification_queue`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }
@@ -922,4 +922,128 @@ func TestHTTP_Search_TimeOnlyFilterExcludesOutsideWindow(t *testing.T) {
 	}
 	if !found(nearID) { t.Errorf("09:15 ride should appear in time-only 09:30 ±60min search") }
 	if  found(farID)  { t.Errorf("15:00 ride must NOT appear in time-only 09:30 ±60min search") }
+}
+
+// ── Notification queue tests ──────────────────────────────────────────────────
+
+func TestHTTP_NotificationQueue_EnqueuedOnRidePost(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Searcher posts an anytime alert
+	postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "5591001",
+		"origin": "Saillans", "destination": "Crest",
+	})
+
+	// Driver posts a matching ride
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5591002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2032-01-01T09:00:00Z", "flexibility": 0,
+	})
+
+	// Queue entry should exist
+	var count int
+	err := handlerPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM notification_queue WHERE searcher_phone = $1`, "5591001").Scan(&count)
+	if err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 queue entry for searcher, got %d", count)
+	}
+}
+
+func TestHTTP_NotificationQueue_DeletedWithRide(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "5592001",
+		"origin": "Saillans", "destination": "Crest",
+	})
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5592002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2032-01-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	// Verify enqueued
+	var count int
+	handlerPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM notification_queue WHERE ride_id = $1`, rideID).Scan(&count)
+	if count != 1 {
+		t.Fatalf("expected queue entry before delete, got %d", count)
+	}
+
+	// Delete the ride
+	b, _ := json.Marshal(map[string]string{"phone": "5592002"})
+	req2, _ := http.NewRequest(http.MethodDelete, "/api/rides/"+rideID, bytes.NewBuffer(b))
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 on delete, got %d", w2.Code)
+	}
+
+	// Queue entry must be gone
+	handlerPool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM notification_queue WHERE ride_id = $1`, rideID).Scan(&count)
+	if count != 0 {
+		t.Errorf("expected 0 queue entries after ride delete, got %d", count)
+	}
+}
+
+func TestHTTP_NotificationQueue_NotRetriedAfterInterest(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Post alert and ride
+	postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "5593001",
+		"origin": "Saillans", "destination": "Crest",
+	})
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5593002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2032-01-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	// Bob expresses interest
+	postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5593001", "name": "Bob",
+	})
+
+	// FindPending should return 0 (interest exists)
+	rows, err := handlerPool.Query(context.Background(),
+		`SELECT nq.id FROM notification_queue nq
+		 JOIN rides r ON r.id = nq.ride_id AND r.expires_at > NOW()
+		 JOIN requests q ON q.id = nq.request_id AND q.expires_at > NOW()
+		 WHERE nq.sent_count < 3
+		   AND (nq.last_sent_at IS NULL OR nq.last_sent_at < NOW() - INTERVAL '2 hours')
+		   AND NOT EXISTS (
+		     SELECT 1 FROM interests i
+		     WHERE i.ride_id = nq.ride_id AND i.searcher_phone = nq.searcher_phone
+		   )`)
+	if err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	defer rows.Close()
+	var pending []string
+	for rows.Next() {
+		var id string
+		rows.Scan(&id)
+		pending = append(pending, id)
+	}
+	if len(pending) != 0 {
+		t.Errorf("expected 0 pending after interest expressed, got %d", len(pending))
+	}
 }

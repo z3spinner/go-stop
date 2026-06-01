@@ -585,6 +585,99 @@ test('time-only search shows rides within ±60min window', async ({ page }) => {
   expect(ids).not.toContain(farID);
 });
 
+// ── 27. Notification queue — enqueued when ride matches alert ─────────────────
+test('ride matching an alert enqueues a notification', async ({ page }) => {
+  await page.goto(BASE);
+
+  const origin = `NQTest${Date.now()}`;
+  const dest   = `NQDest${Date.now()}`;
+
+  // Post an anytime alert
+  const alertResp = await page.evaluate(async ({ searcher, origin, dest }) => {
+    const r = await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: searcher.name, phone: searcher.phone, origin, destination: dest }),
+    });
+    return r.json();
+  }, { searcher: SEARCHER, origin, dest });
+  expect(alertResp.ID).toBeTruthy();
+
+  // Driver posts a matching ride
+  const rideResp = await page.evaluate(async ({ driver, origin, dest }) => {
+    const r = await fetch('/api/rides', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driver_name: driver.name, phone: driver.phone,
+        origin, destination: dest, flexibility: 0,
+        departure_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+      }),
+    });
+    return r.json();
+  }, { driver: DRIVER, origin, dest });
+  expect(rideResp.ID).toBeTruthy();
+
+  // Searcher fetches their pending notifications
+  const notifs = await page.evaluate(async ({ phone }) => {
+    const r = await fetch('/api/notifications', { headers: { 'X-Phone': phone } });
+    return r.json();
+  }, { phone: SEARCHER.phone });
+
+  expect(notifs.length).toBeGreaterThan(0);
+  const match = notifs.find(n => n.ride_id === rideResp.ID);
+  expect(match).toBeDefined();
+  expect(match.driver_name).toBe(DRIVER.name);
+});
+
+// ── 28. Notification queue — cleared when ride is deleted ─────────────────────
+test('deleting a ride clears its notification queue entries', async ({ page }) => {
+  await page.goto(BASE);
+
+  const origin = `NQDel${Date.now()}`;
+  const dest   = `NQDelDest${Date.now()}`;
+
+  // Post alert and ride
+  await page.evaluate(async ({ searcher, origin, dest }) => {
+    await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: searcher.name, phone: searcher.phone, origin, destination: dest }),
+    });
+  }, { searcher: SEARCHER, origin, dest });
+
+  const rideID = await page.evaluate(async ({ driver, origin, dest }) => {
+    const r = await fetch('/api/rides', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driver_name: driver.name, phone: driver.phone,
+        origin, destination: dest, flexibility: 0,
+        departure_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+      }),
+    });
+    return (await r.json()).ID;
+  }, { driver: DRIVER, origin, dest });
+
+  // Confirm notification enqueued
+  const before = await page.evaluate(async ({ phone }) => {
+    const r = await fetch('/api/notifications', { headers: { 'X-Phone': phone } });
+    return r.json();
+  }, { phone: SEARCHER.phone });
+  expect(before.some(n => n.ride_id === rideID)).toBe(true);
+
+  // Delete the ride
+  await page.evaluate(async ({ id, phone }) => {
+    await fetch(`/api/rides/${id}`, {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+  }, { id: rideID, phone: DRIVER.phone });
+
+  // Notification should be gone
+  const after = await page.evaluate(async ({ phone }) => {
+    const r = await fetch('/api/notifications', { headers: { 'X-Phone': phone } });
+    return r.json();
+  }, { phone: SEARCHER.phone });
+  expect(after.some(n => n.ride_id === rideID)).toBe(false);
+});
+
 // ── 30. Driver can notify a matching searcher (Prévenir button) ───────────────
 test('driver sees Prévenir button next to matching searcher and can click it', async ({ page }) => {
   await page.goto(BASE);
@@ -637,7 +730,6 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
 
   // After pinging, Bob can see Alice's phone via the interest contact endpoint
   const contactResp = await page.evaluate(async ({ searcherPhone }) => {
-    // Find accepted interests for Bob via Mes demandes
     const interests = await fetch('/api/interests', {
       headers: { 'X-Phone': searcherPhone }
     }).then(r => r.json());
@@ -649,13 +741,10 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
     return { found: true, role: contact.role, hasPhone: !!contact.phone };
   }, { searcherPhone: SEARCHER.phone });
 
-  // Bob (searcher) should now see Alice's (driver) phone
   expect(contactResp.found).toBe(true);
   expect(contactResp.role).toBe('driver');
   expect(contactResp.hasPhone).toBe(true);
 
-  // Verify Bob can access Alice's phone directly via the interest contact endpoint
-  // (the driver_shared interest makes the driver's phone available to the searcher)
   const driversPhone = await page.evaluate(async ({ searcherPhone }) => {
     const interests = await fetch('/api/interests', {
       headers: { 'X-Phone': searcherPhone }
@@ -669,7 +758,6 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
   }, { searcherPhone: SEARCHER.phone });
   expect(driversPhone).toBeTruthy();
 
-  // Also verify the driver CANNOT get the searcher's phone via driver_shared interest
   const driverGetsSearcherPhone = await page.evaluate(async ({ driverPhone, searcherPhone }) => {
     const interests = await fetch('/api/interests', {
       headers: { 'X-Phone': searcherPhone }
@@ -690,20 +778,16 @@ test('Me page saves name and phone to localStorage', async ({ page }) => {
   await setFr(page);
   await page.reload();
 
-  // Click "Moi" link
   await page.click('#btn-me');
   await expect(page).toHaveURL(/\/me/);
   await expect(page.locator('h2')).toContainText(/Mon profil|My profile|profil/i);
 
-  // Fill in name and phone
   await page.fill('input[name=name]', 'Marie');
   await page.fill('input[name=phone]', '0644000001');
   await page.click('button[type=submit]');
 
-  // Confirmation appears
   await expect(page.locator('#me-saved')).toBeVisible({ timeout: 3000 });
 
-  // Values are persisted in localStorage
   const stored = await page.evaluate(() => ({
     name:  localStorage.getItem('user_name'),
     phone: localStorage.getItem('user_phone'),
@@ -733,7 +817,6 @@ test('Me page values pre-fill the post-ride form', async ({ page }) => {
   await setFr(page);
   await page.reload();
 
-  // Set profile via Me page
   await page.evaluate(() => renderMe());
   await page.waitForSelector('#me-form');
   await page.fill('input[name=name]', 'Sophie');
@@ -741,7 +824,6 @@ test('Me page values pre-fill the post-ride form', async ({ page }) => {
   await page.click('button[type=submit]');
   await page.waitForSelector('#me-saved:not([style*="none"])');
 
-  // Navigate to post-ride form — should pre-fill
   await page.click('#back');
   await page.waitForSelector('button.btn-primary');
   await page.click('button.btn-primary');
