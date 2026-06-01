@@ -59,7 +59,9 @@ func (m *mockStatRepo) Save(origin, destination string, rideDate time.Time, take
 	m.saved = append(m.saved, savedStat{origin, destination, rideDate, taken})
 	return nil
 }
-func (m *mockStatRepo) GetStats() (domain.Stats, error) { return m.stats, nil }
+func (m *mockStatRepo) RecordSearch(string, string) error { return nil }
+func (m *mockStatRepo) RecordRide(string, string) error   { return nil }
+func (m *mockStatRepo) GetStats() (domain.Stats, error)   { return m.stats, nil }
 
 func TestRecordFeedback_SavesStatAndMarksFeedbackGiven(t *testing.T) {
 	rides := &mockRideRepoFeedback{

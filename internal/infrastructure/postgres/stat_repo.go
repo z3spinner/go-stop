@@ -19,6 +19,31 @@ func (r *StatRepo) Save(origin, destination string, rideDate time.Time, taken bo
 	return err
 }
 
+func (r *StatRepo) RecordSearch(origin, destination string) error {
+	_, err := r.pool.Exec(context.Background(),
+		`INSERT INTO search_events (origin, destination) VALUES ($1, $2)`,
+		origin, destination)
+	return err
+}
+
+func (r *StatRepo) RecordRide(origin, destination string) error {
+	_, err := r.pool.Exec(context.Background(),
+		`INSERT INTO ride_events (origin, destination) VALUES ($1, $2)`,
+		origin, destination)
+	return err
+}
+
+func activityCounts(pool *pgxpool.Pool, table, timeCol string) (domain.ActivityCounts, error) {
+	var c domain.ActivityCounts
+	err := pool.QueryRow(context.Background(),
+		`SELECT
+		   COUNT(*) AS all_time,
+		   COUNT(*) FILTER (WHERE `+timeCol+` >= DATE_TRUNC('year',  NOW())) AS this_year,
+		   COUNT(*) FILTER (WHERE `+timeCol+` >= DATE_TRUNC('month', NOW())) AS this_month
+		 FROM `+table).Scan(&c.AllTime, &c.ThisYear, &c.ThisMonth)
+	return c, err
+}
+
 func (r *StatRepo) GetStats() (domain.Stats, error) {
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT origin, destination, COUNT(*) AS count
@@ -58,9 +83,20 @@ func (r *StatRepo) GetStats() (domain.Stats, error) {
 		return domain.Stats{}, err
 	}
 
+	searches, err := activityCounts(r.pool, "search_events", "searched_at")
+	if err != nil {
+		return domain.Stats{}, err
+	}
+	ridesPosted, err := activityCounts(r.pool, "ride_events", "posted_at")
+	if err != nil {
+		return domain.Stats{}, err
+	}
+
 	return domain.Stats{
 		TopRoutes:      topRoutes,
 		TotalConfirmed: totalConfirmed,
 		TotalThisWeek:  totalThisWeek,
+		Searches:       searches,
+		RidesPosted:    ridesPosted,
 	}, nil
 }

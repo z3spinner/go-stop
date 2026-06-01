@@ -18,6 +18,7 @@ type RideHandler struct {
 	searchRides          *usecase.SearchRides
 	deleteRide           *usecase.DeleteRide
 	getMatchingRequests  *usecase.GetMatchingRequests
+	statRepo             repository.StatRepository
 	rideRepo             repository.RideRepository
 }
 
@@ -28,6 +29,7 @@ func NewRideHandler(
 	searchRides *usecase.SearchRides,
 	deleteRide *usecase.DeleteRide,
 	getMatchingRequests *usecase.GetMatchingRequests,
+	statRepo repository.StatRepository,
 	rideRepo repository.RideRepository,
 ) *RideHandler {
 	return &RideHandler{
@@ -37,6 +39,7 @@ func NewRideHandler(
 		searchRides:         searchRides,
 		deleteRide:          deleteRide,
 		getMatchingRequests: getMatchingRequests,
+		statRepo:            statRepo,
 		rideRepo:            rideRepo,
 	}
 }
@@ -74,6 +77,10 @@ func (h *RideHandler) Post(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Record ride-posted event asynchronously (best-effort)
+	if h.statRepo != nil {
+		go func() { _ = h.statRepo.RecordRide(ride.Origin, ride.Destination) }()
+	}
 	c.JSON(http.StatusCreated, saved)
 }
 
@@ -90,6 +97,10 @@ func (h *RideHandler) List(c *gin.Context) {
 		rides, err = h.getMyRides.Execute(phone)
 	case origin != "" && destination != "":
 		rides, err = h.searchRides.Execute(origin, destination)
+		// Record search event asynchronously (best-effort, never blocks the response)
+		if h.statRepo != nil {
+			go func() { _ = h.statRepo.RecordSearch(origin, destination) }()
+		}
 	default:
 		rides, err = h.getRides.Execute()
 	}

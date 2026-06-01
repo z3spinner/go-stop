@@ -490,3 +490,19 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .home-feed-meta  { font-size: 0.8rem; color: var(--gray-600); }
 .home-feed-driver { font-size: 0.85rem; color: var(--gray-600); }
 .home-feed-driver a { color: var(--blue); }
+
+/* Activity stats on stats page */
+.activity-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+.activity-stat { background: var(--gray-50); border: 1px solid var(--gray-300); border-radius: var(--radius); padding: 12px; }
+.activity-stat-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray-600); margin-bottom: 8px; }
+.activity-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 0.85rem; border-bottom: 1px solid var(--gray-100); }
+.activity-row:last-child { border-bottom: none; }
+.activity-count { font-weight: 600; color: var(--blue); }
+@media (max-width: 360px) { .activity-stats { grid-template-columns: 1fr; } }
+
+/* Footer stats link */
+.btn-footer-stats {
+  background: none; border: none; font-size: 0.8rem; color: var(--gray-600);
+  cursor: pointer; padding: 4px 8px; text-decoration: underline; text-decoration-color: var(--gray-300);
+}
+.btn-footer-stats:hover { color: var(--gray-900); }

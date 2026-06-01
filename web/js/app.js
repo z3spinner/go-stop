@@ -93,6 +93,11 @@ const STRINGS = {
     homeFeedTitle:   'Available now',
     noActiveRides:  'No rides posted yet.',
     statsPageTitle:  'Stats',
+    statsSearches:   'Searches',
+    statsRidesPosted:'Rides posted',
+    statsAllTime2:   'All time',
+    statsThisYear:   'This year',
+    statsThisMonth:  'This month',
     statsRouteCount: (n) => `${n} ✓`,
     privacyBody:    `<h3>What we collect</h3>
 <p>When you post a ride or request we store: your name, phone number, origin, destination, departure time, and flexibility window. Nothing else.</p>
@@ -202,6 +207,11 @@ const STRINGS = {
     homeFeedTitle:   'Disponibles maintenant',
     noActiveRides:  'Aucun trajet publié pour l\'instant.',
     statsPageTitle:  'Statistiques',
+    statsSearches:   'Recherches',
+    statsRidesPosted:'Trajets publiés',
+    statsAllTime2:   'Depuis le début',
+    statsThisYear:   'Cette année',
+    statsThisMonth:  'Ce mois-ci',
     statsRouteCount: (n) => `${n} ✓`,
     privacyBody:    `<h3>Ce que nous collectons</h3>
 <p>Lorsque vous publiez un trajet ou une demande, nous enregistrons : votre prénom, numéro de téléphone, lieu de départ, destination, heure de départ et flexibilité. Rien d'autre.</p>
@@ -305,6 +315,11 @@ const STRINGS = {
     homeFeedTitle: 'Disponibles ahora',
     noActiveRides: 'Ningún viaje publicado todavía.',
     statsPageTitle: 'Estadísticas',
+    statsSearches:  'Búsquedas',
+    statsRidesPosted:'Viajes publicados',
+    statsAllTime2:  'En total',
+    statsThisYear:  'Este año',
+    statsThisMonth: 'Este mes',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Qué recopilamos</h3><p>Al publicar un viaje o búsqueda guardamos: nombre, teléfono, origen, destino, hora y flexibilidad. Nada más.</p><h3>Cuánto tiempo</h3><p>Los viajes y búsquedas se <strong>eliminan automáticamente</strong> al final del día de salida.</p><h3>Quién ve tu teléfono</h3><p>Tu número es visible para cualquier persona que vea tu anuncio. Es intencional — así se contactan las partes directamente.</p><h3>Cookies y almacenamiento local</h3><p>Sin cookies. Go Stop no usa rastreadores ni analíticas. Tu nombre, teléfono e idioma se guardan solo en tu dispositivo (<code>localStorage</code>).</p><h3>Terceros</h3><p>No se comparten datos con terceros. Las notificaciones push viajan mediante el estándar Web Push a través del servicio push de tu navegador.</p>`,
     flexLabel:      { 0: 'Exacto', 30: '±30 min', 60: '±60 min' },
@@ -392,6 +407,11 @@ const STRINGS = {
     homeFeedTitle: 'Disponibili ora',
     noActiveRides: 'Nessun viaggio pubblicato.',
     statsPageTitle: 'Statistiche',
+    statsSearches:  'Ricerche',
+    statsRidesPosted:'Viaggi pubblicati',
+    statsAllTime2:  'In totale',
+    statsThisYear:  'Quest\'anno',
+    statsThisMonth: 'Questo mese',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Cosa raccogliamo</h3><p>Quando pubblichi un viaggio o una ricerca, salviamo: nome, telefono, origine, destinazione, orario e flessibilità. Nient'altro.</p><h3>Per quanto tempo</h3><p>Viaggi e ricerche vengono <strong>eliminati automaticamente</strong> alla fine del giorno di partenza.</p><h3>Chi vede il tuo numero</h3><p>Il tuo numero è visibile a chiunque veda il tuo annuncio. È intenzionale — è così che le parti si contattano direttamente.</p><h3>Cookie e memorizzazione locale</h3><p>Nessun cookie. Go Stop non utilizza tracker né analytics. Nome, telefono e lingua vengono salvati solo sul tuo dispositivo (<code>localStorage</code>).</p><h3>Terze parti</h3><p>Nessun dato viene condiviso con terze parti. Le notifiche push viaggiano tramite il protocollo Web Push attraverso il servizio push del tuo browser.</p>`,
     flexLabel:      { 0: 'Esatto', 30: '±30 min', 60: '±60 min' },
@@ -479,6 +499,11 @@ const STRINGS = {
     homeFeedTitle: 'Jetzt verfügbar',
     noActiveRides: 'Noch keine Fahrten veröffentlicht.',
     statsPageTitle: 'Statistiken',
+    statsSearches:  'Suchen',
+    statsRidesPosted:'Veröffentlichte Fahrten',
+    statsAllTime2:  'Gesamt',
+    statsThisYear:  'Dieses Jahr',
+    statsThisMonth: 'Diesen Monat',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Was wir speichern</h3><p>Beim Veröffentlichen einer Fahrt oder Anfrage speichern wir: Name, Telefon, Startort, Ziel, Uhrzeit und Flexibilität. Nichts weiter.</p><h3>Wie lange</h3><p>Fahrten und Anfragen werden am Ende des Abfahrtstages <strong>automatisch gelöscht</strong>.</p><h3>Wer deine Nummer sieht</h3><p>Deine Nummer ist für jeden sichtbar, der deine Anzeige ansieht. Das ist beabsichtigt — so kontaktieren sich die Parteien direkt.</p><h3>Cookies und lokale Speicherung</h3><p>Keine Cookies. Go Stop verwendet keine Tracker oder Analysen. Name, Telefon und Sprache werden nur auf deinem Gerät gespeichert (<code>localStorage</code>).</p><h3>Drittanbieter</h3><p>Es werden keine Daten an Dritte weitergegeben. Push-Benachrichtigungen werden über den Web-Push-Standard über den Push-Dienst deines Browsers gesendet.</p>`,
     flexLabel:      { 0: 'Genau', 30: '±30 Min', 60: '±60 Min' },
@@ -566,6 +591,11 @@ const STRINGS = {
     homeFeedTitle: 'Nu beschikbaar',
     noActiveRides: 'Nog geen ritten gepubliceerd.',
     statsPageTitle: 'Statistieken',
+    statsSearches:  'Zoekopdrachten',
+    statsRidesPosted:'Gepubliceerde ritten',
+    statsAllTime2:  'Totaal',
+    statsThisYear:  'Dit jaar',
+    statsThisMonth: 'Deze maand',
     statsRouteCount:(n) => `${n} ✓`,
     privacyBody:    `<h3>Wat we opslaan</h3><p>Bij het publiceren van een rit of zoekopdracht slaan we op: naam, telefoon, vertrekplaats, bestemming, tijd en flexibiliteit. Niets meer.</p><h3>Hoe lang</h3><p>Ritten en zoekopdrachten worden aan het einde van de vertrekdag <strong>automatisch verwijderd</strong>.</p><h3>Wie jouw nummer ziet</h3><p>Jouw nummer is zichtbaar voor iedereen die jouw advertentie bekijkt. Dit is opzettelijk — zo nemen de partijen direct contact op.</p><h3>Cookies en lokale opslag</h3><p>Geen cookies. Go Stop gebruikt geen trackers of analyses. Naam, telefoon en taal worden alleen op jouw apparaat opgeslagen (<code>localStorage</code>).</p><h3>Derden</h3><p>Er worden geen gegevens gedeeld met derden. Pushmeldingen worden verzonden via de Web Push-standaard via de pushdienst van jouw browser.</p>`,
     flexLabel:      { 0: 'Exact', 30: '±30 min', 60: '±60 min' },
@@ -600,8 +630,9 @@ function renderFooter() {
   const s = t();
   const footer = document.getElementById('app-footer');
   if (!footer) return;
-  footer.innerHTML = `<button class="btn-footer-privacy" id="btn-footer-privacy">${s.footerPrivacy}</button>`;
+  footer.innerHTML = `<button class="btn-footer-privacy" id="btn-footer-privacy">${s.footerPrivacy}</button><button class="btn-footer-stats" id="btn-footer-stats">${s.statsPageTitle}</button>`;
   document.getElementById('btn-footer-privacy').onclick = showPrivacyModal;
+  document.getElementById('btn-footer-stats').onclick = renderStats;
 }
 
 // Shows current flag. Clicking opens a dropdown to pick any of the 6 languages.
@@ -880,10 +911,27 @@ async function renderStats() {
           </div>`).join('')
       : `<p class="section-hint">${s.statsEmpty}</p>`;
 
+    function activityTable(title, counts) {
+      if (!counts) return '';
+      return `
+        <div class="activity-stat">
+          <div class="activity-stat-title">${title}</div>
+          <div class="activity-stat-rows">
+            <div class="activity-row"><span>${s.statsThisMonth}</span><span class="activity-count">${counts.this_month}</span></div>
+            <div class="activity-row"><span>${s.statsThisYear}</span><span class="activity-count">${counts.this_year}</span></div>
+            <div class="activity-row"><span>${s.statsAllTime2}</span><span class="activity-count">${counts.all_time}</span></div>
+          </div>
+        </div>`;
+    }
+
     document.getElementById('stats-content').innerHTML = `
       ${totalLine}
       <div class="stats-week-title">${s.statsTitle}</div>
-      ${rows}`;
+      ${rows}
+      <div class="activity-stats">
+        ${activityTable(s.statsSearches, stats.searches)}
+        ${activityTable(s.statsRidesPosted, stats.rides_posted)}
+      </div>`;
   } catch (err) {
     document.getElementById('stats-content').innerHTML =
       `<p class="error">${esc(err.message)}</p>`;
