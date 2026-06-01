@@ -53,6 +53,9 @@ type Querier interface {
 	ListRidesPendingFeedback(ctx context.Context) ([]Ride, error)
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)
 	SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error)
+	// Returns rides on the given date whose departure window (±flexibility) overlaps
+	// the search time ± search_tolerance_minutes. Hides expired/past-grace rides.
+	SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDateTimeParams) ([]Ride, error)
 	SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

@@ -20,6 +20,7 @@ func (r *expiringRideRepo) FindByOriginAndDestination(string, string) ([]domain.
 	return nil, nil
 }
 func (r *expiringRideRepo) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
+func (r *expiringRideRepo) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
 func (r *expiringRideRepo) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (r *expiringRideRepo) Delete(string) error                                 { return nil }
 func (r *expiringRideRepo) DeleteExpired() error {

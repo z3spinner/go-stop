@@ -20,6 +20,7 @@ func (m *mockRideRepoSearch) FindByOriginAndDestination(o, d string) ([]domain.R
 	return m.resultsByRoute[o+"|"+d], nil
 }
 func (m *mockRideRepoSearch) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepoSearch) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoSearch) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoSearch) Delete(string) error                                 { return nil }
 func (m *mockRideRepoSearch) DeleteExpired() error                                { return nil }

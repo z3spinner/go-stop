@@ -469,3 +469,43 @@ test('search with date filter only shows rides on that date', async ({ page }) =
   expect(ids).toContain(r1.ID);       // target date → should appear
   expect(ids).not.toContain(r2.ID);   // other date  → must be hidden
 });
+
+// ── 22. Date+time search excludes rides outside the ±60min window ─────────────
+test('date+time search hides rides outside ±60 min window', async ({ page }) => {
+  await page.goto(BASE);
+
+  const origin = `TimeFilter${Date.now()}`;
+  const dest   = `TimeFilterDest${Date.now()}`;
+
+  // Post a near ride (09:00) and a far ride (15:00) on the same date
+  const [near, far] = await page.evaluate(async ({ driver, origin, dest }) => {
+    const post = async (dep) => {
+      const r = await fetch('/api/rides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driver_name: driver.name, phone: driver.phone,
+          origin, destination: dest, flexibility: 0,
+          departure_at: dep,
+        }),
+      });
+      return (await r.json()).ID;
+    };
+    return Promise.all([
+      post('2031-09-01T09:00:00Z'),   // near — within ±60 min of 09:30
+      post('2031-09-01T15:00:00Z'),   // far  — outside ±60 min of 09:30
+    ]);
+  }, { driver: DRIVER, origin, dest });
+
+  // Search with departure_at = 09:30 on 2031-09-01
+  const rides = await page.evaluate(async ({ o, d }) => {
+    const r = await fetch(
+      `/api/rides?origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&departure_at=2031-09-01T09%3A30%3A00Z`
+    );
+    return r.json();
+  }, { o: origin, d: dest });
+
+  const ids = rides.map(r => r.ID);
+  expect(ids).toContain(near);
+  expect(ids).not.toContain(far);
+});

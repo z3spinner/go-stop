@@ -15,18 +15,27 @@ func NewSearchRides(rides repository.RideRepository) *SearchRides {
 	return &SearchRides{rides: rides}
 }
 
-// Execute returns rides for a route. When departureAt is non-zero the results
-// are filtered to that calendar date only.
+const searchToleranceMins = 60 // rides within ±60 min of the search time are shown
+
+// Execute returns rides for a route.
+//   - No departureAt → all active rides on the route
+//   - Date only (time = 00:00:00 UTC) → all rides on that calendar date
+//   - Date + time → rides whose departure window overlaps search time ±60 min
 func (uc *SearchRides) Execute(origin, destination string, departureAt time.Time) ([]domain.Ride, error) {
 	var (
 		result []domain.Ride
 		err    error
 	)
-	if departureAt.IsZero() {
+	switch {
+	case departureAt.IsZero():
 		result, err = uc.rides.FindByOriginAndDestination(origin, destination)
-	} else {
+	case departureAt.UTC().Hour() == 0 && departureAt.UTC().Minute() == 0:
+		// Date-only search (frontend sends midnight UTC when no time is set)
 		date := time.Date(departureAt.Year(), departureAt.Month(), departureAt.Day(), 0, 0, 0, 0, departureAt.Location())
 		result, err = uc.rides.FindByOriginDestinationAndDate(origin, destination, date)
+	default:
+		// Date + time search
+		result, err = uc.rides.FindByOriginDestinationDateTime(origin, destination, departureAt, searchToleranceMins)
 	}
 	if err != nil {
 		return nil, err
