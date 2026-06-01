@@ -15,7 +15,8 @@ func NewDestinationRepo(pool *pgxpool.Pool) *DestinationRepo { return &Destinati
 // persist after rides expire and popular routes surface at the top of dropdowns.
 func (r *DestinationRepo) GetAll() ([]string, error) {
 	rows, err := r.pool.Query(context.Background(),
-		`SELECT location FROM (
+		// Group case-insensitively; MIN() picks one canonical form per location.
+		`SELECT MIN(location) AS location FROM (
 		   SELECT origin      AS location FROM rides
 		   UNION ALL SELECT destination FROM rides
 		   UNION ALL SELECT origin      FROM requests
@@ -23,8 +24,8 @@ func (r *DestinationRepo) GetAll() ([]string, error) {
 		   UNION ALL SELECT origin      FROM ride_stats
 		   UNION ALL SELECT destination FROM ride_stats
 		 ) all_locs
-		 GROUP BY location
-		 ORDER BY COUNT(*) DESC, location ASC`)
+		 GROUP BY LOWER(location)
+		 ORDER BY COUNT(*) DESC, MIN(location) ASC`)
 	if err != nil {
 		return nil, err
 	}

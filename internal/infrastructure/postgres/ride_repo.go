@@ -74,7 +74,7 @@ func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
 func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
 fmt.Sprintf(`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
-		 FROM rides WHERE origin = $1 AND destination = $2 AND expires_at > NOW()
+		 FROM rides WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2) AND expires_at > NOW()
 		   %s ORDER BY departure_at ASC`, r.graceClause()),
 		origin, destination)
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 		 FROM rides
-		 WHERE origin = $1 AND destination = $2 AND date = $3 AND expires_at > NOW()
+		 WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2) AND date = $3 AND expires_at > NOW()
 		   AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5 * interval '1 minute'))
 		   AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5 * interval '1 minute'))`,
 		req.Origin, req.Destination, req.Date, req.DepartureAt, int(req.Flexibility))

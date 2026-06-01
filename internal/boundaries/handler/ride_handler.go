@@ -64,8 +64,8 @@ func (h *RideHandler) Post(c *gin.Context) {
 	ride := domain.Ride{
 		DriverName:  req.DriverName,
 		Phone:       normalizePhone(req.Phone),
-		Origin:      req.Origin,
-		Destination: req.Destination,
+		Origin:      normalizeLocation(req.Origin),
+		Destination: normalizeLocation(req.Destination),
 		DepartureAt: dept,
 		Flexibility: domain.Flexibility(req.Flexibility),
 	}

@@ -70,8 +70,8 @@ func (h *RequestHandler) Post(c *gin.Context) {
 	req := domain.Request{
 		SearcherName: body.SearcherName,
 		Phone:        normalizePhone(body.Phone),
-		Origin:       body.Origin,
-		Destination:  body.Destination,
+		Origin:       normalizeLocation(body.Origin),
+		Destination:  normalizeLocation(body.Destination),
 		DepartureAt:  dept,
 		Flexibility:  domain.Flexibility(body.Flexibility),
 	}
