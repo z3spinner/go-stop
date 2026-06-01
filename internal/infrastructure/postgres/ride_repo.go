@@ -83,6 +83,20 @@ func (r *RideRepo) FindByOriginDestinationAndDate(origin, destination string, da
 	return ridesFromRows(rows), nil
 }
 
+func (r *RideRepo) FindByOriginAndTime(origin, destination string, searchTime time.Time, toleranceMins int) ([]domain.Ride, error) {
+	rows, err := r.q.SearchRidesByTime(context.Background(), queries.SearchRidesByTimeParams{
+		Lower:                  origin,
+		Lower_2:                destination,
+		Column3:                tsFrom(searchTime),
+		GraceMinutes:           r.graceMins,
+		SearchToleranceMinutes: int32(toleranceMins),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ridesFromRows(rows), nil
+}
+
 func (r *RideRepo) FindByOriginDestinationDateTime(origin, destination string, departureAt time.Time, toleranceMins int) ([]domain.Ride, error) {
 	date := time.Date(departureAt.Year(), departureAt.Month(), departureAt.Day(), 0, 0, 0, 0, departureAt.Location())
 	rows, err := r.q.SearchRidesByDateTime(context.Background(), queries.SearchRidesByDateTimeParams{

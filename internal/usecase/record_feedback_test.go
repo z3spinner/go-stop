@@ -30,6 +30,7 @@ func (m *mockRideRepoFeedback) FindByOriginAndDestination(string, string) ([]dom
 }
 func (m *mockRideRepoFeedback) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoFeedback) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepoFeedback) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoFeedback) FindMatching(domain.Request) ([]domain.Ride, error) {
 	return nil, nil
 }

@@ -56,6 +56,8 @@ type Querier interface {
 	// Returns rides on the given date whose departure window (±flexibility) overlaps
 	// the search time ± search_tolerance_minutes. Hides expired/past-grace rides.
 	SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDateTimeParams) ([]Ride, error)
+	// Time-only search: any date, departure window overlaps search_time ± tolerance.
+	SearchRidesByTime(ctx context.Context, arg SearchRidesByTimeParams) ([]Ride, error)
 	SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

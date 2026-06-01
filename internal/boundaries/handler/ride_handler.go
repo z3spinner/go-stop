@@ -131,17 +131,22 @@ func (h *RideHandler) List(c *gin.Context) {
 	case phone != "":
 		rides, err = h.getMyRides.Execute(phone)
 	case origin != "" && destination != "":
-		var searchDate, deptAt time.Time
-		if raw := c.Query("search_date"); raw != "" {
-			if parsed, err2 := time.Parse("2006-01-02", raw); err2 == nil {
-				searchDate = parsed
-			}
-		} else if raw := c.Query("departure_at"); raw != "" {
+		var searchDate, deptAt, searchTime time.Time
+		if raw := c.Query("departure_at"); raw != "" {
 			if parsed, err2 := time.Parse(time.RFC3339, raw); err2 == nil {
 				deptAt = parsed
 			}
+		} else if raw := c.Query("search_date"); raw != "" {
+			if parsed, err2 := time.Parse("2006-01-02", raw); err2 == nil {
+				searchDate = parsed
+			}
+		} else if raw := c.Query("search_time"); raw != "" {
+			// HH:MM — use a sentinel date (epoch) so the time component is non-zero
+			if parsed, err2 := time.Parse("15:04", raw); err2 == nil {
+				searchTime = time.Date(1970, 1, 1, parsed.Hour(), parsed.Minute(), 0, 0, time.UTC)
+			}
 		}
-		rides, err = h.searchRides.Execute(origin, destination, searchDate, deptAt)
+		rides, err = h.searchRides.Execute(origin, destination, searchDate, deptAt, searchTime)
 		// Record search event asynchronously (best-effort, never blocks the response)
 		if h.statRepo != nil {
 			go func() { _ = h.statRepo.RecordSearch(origin, destination) }()

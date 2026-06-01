@@ -882,3 +882,43 @@ func TestHTTP_Search_DateTimeFilterExcludesOutsideWindow(t *testing.T) {
 	if !found(nearID) { t.Errorf("09:00 ride should appear in 09:30 ±60min search") }
 	if  found(farID)  { t.Errorf("15:00 ride must NOT appear in 09:30 ±60min search") }
 }
+
+func TestHTTP_Search_TimeOnlyFilterExcludesOutsideWindow(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	post := func(phone, dept string) string {
+		w := postJSON(r, "/api/rides", map[string]interface{}{
+			"driver_name": "Driver", "phone": phone,
+			"origin": "Saillans", "destination": "Crest",
+			"departure_at": dept, "flexibility": 0,
+		})
+		var ride map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &ride)
+		return ride["ID"].(string)
+	}
+
+	// Two rides on different dates, one near the search time, one far away
+	nearID := post("5590001", "2031-10-01T09:15:00Z") // 09:15 — within ±60 min of 09:30
+	farID  := post("5590002", "2031-10-02T15:00:00Z") // 15:00 on a different date — outside window
+
+	// Search with time only (no date) — should match by time across all dates
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet,
+		"/api/rides?origin=Saillans&destination=Crest&search_time=09%3A30", nil)
+	r.ServeHTTP(w, req)
+
+	var rides []map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &rides)
+	ids := make([]string, 0, len(rides))
+	for _, ride := range rides {
+		ids = append(ids, ride["ID"].(string))
+	}
+
+	found := func(id string) bool {
+		for _, r := range ids { if r == id { return true } }
+		return false
+	}
+	if !found(nearID) { t.Errorf("09:15 ride should appear in time-only 09:30 ±60min search") }
+	if  found(farID)  { t.Errorf("15:00 ride must NOT appear in time-only 09:30 ±60min search") }
+}

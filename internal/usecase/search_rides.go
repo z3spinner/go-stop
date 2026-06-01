@@ -18,10 +18,11 @@ func NewSearchRides(rides repository.RideRepository) *SearchRides {
 const searchToleranceMins = 60 // rides within ±60 min of the search time are shown
 
 // Execute returns rides for a route.
-//   - searchDate and departureAt both zero → all active rides on the route
-//   - searchDate non-zero, departureAt zero → all rides on that calendar date
-//   - departureAt non-zero → rides within ±searchToleranceMins of that datetime
-func (uc *SearchRides) Execute(origin, destination string, searchDate, departureAt time.Time) ([]domain.Ride, error) {
+//   - all zero → all active rides
+//   - searchDate only → rides on that calendar date
+//   - departureAt (date+time) → rides within ±searchToleranceMins of that datetime
+//   - searchTime (time only, searchDate zero) → rides on any date whose departure window overlaps the time ±tolerance
+func (uc *SearchRides) Execute(origin, destination string, searchDate, departureAt, searchTime time.Time) ([]domain.Ride, error) {
 	var (
 		result []domain.Ride
 		err    error
@@ -31,6 +32,8 @@ func (uc *SearchRides) Execute(origin, destination string, searchDate, departure
 		result, err = uc.rides.FindByOriginDestinationDateTime(origin, destination, departureAt, searchToleranceMins)
 	case !searchDate.IsZero():
 		result, err = uc.rides.FindByOriginDestinationAndDate(origin, destination, searchDate)
+	case !searchTime.IsZero():
+		result, err = uc.rides.FindByOriginAndTime(origin, destination, searchTime, searchToleranceMins)
 	default:
 		result, err = uc.rides.FindByOriginAndDestination(origin, destination)
 	}

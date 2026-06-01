@@ -28,6 +28,17 @@ WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
 ORDER BY departure_at ASC;
 
+-- name: SearchRidesByTime :many
+-- Time-only search: any date, departure window overlaps search_time ± tolerance.
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+FROM rides
+WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+  AND expires_at > NOW()
+  AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
+  AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+  AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+ORDER BY departure_at ASC;
+
 -- name: SearchRidesByDateTime :many
 -- Returns rides on the given date whose departure window (±flexibility) overlaps
 -- the search time ± search_tolerance_minutes. Hides expired/past-grace rides.

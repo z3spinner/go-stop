@@ -1481,22 +1481,24 @@ async function renderSearchRides(autoQuery = null) {
     const searchDate = fd.get('search_date'); // e.g. "2026-06-20"
     const searchTime = fd.get('search_time'); // e.g. "09:00" or ""
     // Use search_date for date-only; departure_at (ISO) for date+time
-    let deptISO = '';       // full datetime — used only when time is set
-    let searchDateParam = ''; // date-only param
+    let deptISO = '';        // full datetime — date+time set
+    let searchDateParam = ''; // date only
+    let searchTimeParam = ''; // time only (no date)
     if (searchDate && searchTime) {
       deptISO = new Date(`${searchDate}T${searchTime}`).toISOString();
     } else if (searchDate) {
-      searchDateParam = searchDate; // keep as YYYY-MM-DD, no UTC conversion
+      searchDateParam = searchDate;
+    } else if (searchTime) {
+      searchTimeParam = searchTime; // HH:MM
     }
     saveLastSearch(origin, dest);
-    // Update URL for shareability
-    const extraQS = deptISO ? `&departure_at=${encodeURIComponent(deptISO)}`
-                  : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}` : '';
+    const extraQS = deptISO       ? `&departure_at=${encodeURIComponent(deptISO)}`
+                  : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}`
+                  : searchTimeParam ? `&search_time=${encodeURIComponent(searchTimeParam)}` : '';
     const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${extraQS}`;
     history.replaceState({ path: '/search' }, '', '/search' + searchQS);
     const results = document.getElementById('results');
-    const apiParam = deptISO ? `&departure_at=${encodeURIComponent(deptISO)}`
-                   : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}` : '';
+    const apiParam = extraQS;
     const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${apiParam}`;
     const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${apiParam}`;
     try {
