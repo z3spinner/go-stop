@@ -994,28 +994,60 @@ async function updateBellState() {
   btn.dataset.notifState = subscribed ? 'enabled' : (perm === 'denied' ? 'denied' : 'default');
 }
 
-async function handleBellClick() {
+function handleBellClick() {
   const s = t();
   const state = document.getElementById('btn-bell')?.dataset.notifState;
-  if (state === 'enabled') {
-    alert(s.notifEnabled || 'Notifications are enabled ✓');
-    return;
-  }
-  if (state === 'denied') {
-    alert(s.notifDeniedTip || 'Notifications are blocked in your browser settings. Please enable them there.');
-    return;
-  }
-  const p = getProfile();
-  if (!p.phone) {
-    const phone = window.prompt((s.labelPhone || 'Phone') + ':');
-    if (!phone) return;
-    saveProfile('', phone);
-    p.phone = phone;
-  }
-  const result = await Notification.requestPermission();
-  if (result === 'granted') {
-    await trySubscribePush(p.phone);
-    updateBellState();
+  showNotifModal(state);
+}
+
+function showNotifModal(state) {
+  const s = t();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const isEnabled = state === 'enabled';
+  const isDenied = state === 'denied';
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h2>${isEnabled ? '🔔 ' : ''}${s.notifTitle}</h2>
+        <button class="btn-modal-close" id="btn-notif-modal-close">${s.privacyClose}</button>
+      </div>
+      <div class="modal-body">
+        ${isEnabled
+          ? `<p>${s.notifEnabled}</p>`
+          : isDenied
+          ? `<p>${s.notifDeniedTip}</p>`
+          : `<p>${s.notifBody}</p>
+             <button class="btn btn-primary" id="btn-notif-modal-enable" style="margin-top:8px">${s.notifEnable}</button>
+             <button class="btn btn-secondary" id="btn-notif-modal-skip" style="margin-top:8px">${s.notifSkip}</button>`
+        }
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  document.getElementById('btn-notif-modal-close').onclick = () => overlay.remove();
+
+  if (!isEnabled && !isDenied) {
+    document.getElementById('btn-notif-modal-skip').onclick = () => overlay.remove();
+    document.getElementById('btn-notif-modal-enable').onclick = async () => {
+      overlay.remove();
+      const p = getProfile();
+      if (!p.phone) {
+        const phone = window.prompt(s.labelPhone + ':');
+        if (!phone) return;
+        saveProfile('', phone);
+        p.phone = phone;
+      }
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        await trySubscribePush(p.phone);
+        updateBellState();
+      } else if (result === 'denied') {
+        showNotifModal('denied');
+      }
+    };
   }
 }
 
