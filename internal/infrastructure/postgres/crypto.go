@@ -96,6 +96,36 @@ func (c *PhoneCrypto) Decrypt(stored string) (string, error) {
 	return string(plain), nil
 }
 
+// DecryptOrDetect decrypts a stored phone value and reports whether it was
+// legacy plaintext. Returns (plaintext, true, nil) for plaintext, or
+// (plaintext, false, nil) for correctly-encrypted values. Returns an error
+// only when the value looks like ciphertext but authentication fails — this
+// signals a wrong key.
+func (c *PhoneCrypto) DecryptOrDetect(stored string) (plain string, isLegacy bool, err error) {
+	if !c.Enabled() {
+		return stored, true, nil
+	}
+	data, decErr := base64.URLEncoding.DecodeString(stored)
+	if decErr != nil || len(data) < 12+16 {
+		// Not valid base64 or too short — must be legacy plaintext
+		return stored, true, nil
+	}
+	block, err := aes.NewCipher(c.key)
+	if err != nil {
+		return "", false, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", false, err
+	}
+	plainBytes, authErr := gcm.Open(nil, data[:12], data[12:], nil)
+	if authErr != nil {
+		// Valid base64 + right length but authentication failed → wrong key
+		return "", false, authErr
+	}
+	return string(plainBytes), false, nil
+}
+
 // deriveNonce computes a deterministic 12-byte nonce from HMAC-SHA256(key, phone).
 func (c *PhoneCrypto) deriveNonce(phone string) []byte {
 	mac := hmac.New(sha256.New, c.key)
