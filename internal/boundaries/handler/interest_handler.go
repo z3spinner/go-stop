@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/z3spinner/go-stop/internal/usecase"
@@ -37,7 +38,7 @@ func (h *InterestHandler) Express(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	interest, err := h.expressInterest.Execute(c.Param("id"), normalizePhone(req.Phone), req.Name)
+	interest, err := h.expressInterest.Execute(c.Param("id"), normalizePhone(req.Phone), strings.TrimSpace(req.Name))
 	if err != nil {
 		if err.Error() == "searcher cannot be the driver" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})

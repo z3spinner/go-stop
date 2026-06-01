@@ -121,10 +121,9 @@ func (h *RideHandler) Post(c *gin.Context) {
 }
 
 func (h *RideHandler) List(c *gin.Context) {
-	origin := c.Query("origin")
-	destination := c.Query("destination")
-	phone := c.GetHeader("X-Phone")
-	phone = normalizePhone(phone)
+	origin := normalizeLocation(c.Query("origin"))
+	destination := normalizeLocation(c.Query("destination"))
+	phone := normalizePhone(c.GetHeader("X-Phone"))
 
 	var rides []domain.Ride
 	var err error
