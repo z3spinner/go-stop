@@ -198,6 +198,7 @@ const STRINGS = {
     labelSearcher:    'Passager',
     labelDeparture:   'Départ',
     labelContact:     'Contact',
+    btnActivate:     'Activer',
     notifEnabled:    'Notifications activées ✓ — vous serez alerté(e) pour les nouveaux trajets et les contacts acceptés.',
     notifDeniedTip:  'Notifications bloquées. Activez-les dans les paramètres de votre navigateur puis rechargez.',
     footerPrivacy:    'Confidentialité',
@@ -325,6 +326,7 @@ const STRINGS = {
     labelSearcher:  'Pasajero',
     labelDeparture: 'Salida',
     labelContact:   'Contacto',
+    btnActivate:   'Activar',
     notifEnabled:  'Notificaciones activadas ✓',
     notifDeniedTip:'Notificaciones bloqueadas. Actívalas en la configuración del navegador.',
     footerPrivacy:  'Privacidad',
@@ -429,6 +431,7 @@ const STRINGS = {
     labelSearcher:  'Passeggero',
     labelDeparture: 'Partenza',
     labelContact:   'Contatto',
+    btnActivate:   'Attiva',
     notifEnabled:  'Notifiche attivate ✓',
     notifDeniedTip:'Notifiche bloccate. Attivale nelle impostazioni del browser.',
     footerPrivacy:  'Privacy',
@@ -533,6 +536,7 @@ const STRINGS = {
     labelSearcher:  'Mitfahrer/in',
     labelDeparture: 'Abfahrt',
     labelContact:   'Kontakt',
+    btnActivate:   'Aktivieren',
     notifEnabled:  'Benachrichtigungen aktiviert ✓',
     notifDeniedTip:'Benachrichtigungen gesperrt. Aktiviere sie in den Browsereinstellungen.',
     footerPrivacy:  'Datenschutz',
@@ -637,6 +641,7 @@ const STRINGS = {
     labelSearcher:  'Passagier',
     labelDeparture: 'Vertrek',
     labelContact:   'Contact',
+    btnActivate:   'Activeren',
     notifEnabled:  'Meldingen ingeschakeld ✓',
     notifDeniedTip:'Meldingen geblokkeerd. Schakel ze in via de browserinstellingen.',
     footerPrivacy:  'Privacy',
@@ -992,6 +997,18 @@ async function updateBellState() {
   btn.classList.remove('bell-enabled', 'bell-disabled');
   btn.classList.add(subscribed ? 'bell-enabled' : 'bell-disabled');
   btn.dataset.notifState = subscribed ? 'enabled' : (perm === 'denied' ? 'denied' : 'default');
+
+  const label = document.getElementById('bell-activate-label');
+  if (label) {
+    if (!subscribed) {
+      label.textContent = t().btnActivate || 'Activate';
+      label.classList.remove('hidden');
+      label.onclick = handleBellClick;
+    } else {
+      label.classList.add('hidden');
+      label.onclick = null;
+    }
+  }
 }
 
 function handleBellClick() {
@@ -1052,7 +1069,7 @@ function showNotifModal(state) {
 }
 
 function controls() {
-  return `<div class="controls">${langToggle()}<div class="controls-icons">${aboutIcon()}${bellIcon()}</div></div>`;
+  return `<div class="controls">${langToggle()}<div class="controls-icons">${aboutIcon()}${bellIcon()}<span class="bell-activate-label hidden" id="bell-activate-label"></span></div></div>`;
 }
 
 function topBar() {

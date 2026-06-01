@@ -581,3 +581,14 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   98% { transform: rotate(6deg); }
 }
 .bell-disabled { animation: bell-shake 5s ease-in-out infinite; }
+
+.bell-activate-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #d97706;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: -2px;
+  line-height: 1;
+}
+.bell-activate-label:hover { text-decoration: underline; }
