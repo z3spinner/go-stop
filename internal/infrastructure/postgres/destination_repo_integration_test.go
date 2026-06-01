@@ -38,11 +38,12 @@ func TestDestinationRepo_GetAll_DeduplicatesAndSorts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAll: %v", err)
 	}
-	// Expect 3 distinct locations: Station, Town B, Village A (sorted)
+	// Expect 3 distinct locations. Village A appears in both rides and requests
+	// so it ranks first by popularity; Station and Town B each appear once.
 	if len(locs) != 3 {
 		t.Errorf("expected 3 locations, got %d: %v", len(locs), locs)
 	}
-	if locs[0] != "Station" || locs[1] != "Town B" || locs[2] != "Village A" {
+	if locs[0] != "Village A" || locs[1] != "Station" || locs[2] != "Town B" {
 		t.Errorf("unexpected order or values: %v", locs)
 	}
 }
