@@ -52,6 +52,10 @@ test('stats page loads and back button returns home', async ({ page }) => {
 
 // ── 3. Post a ride ────────────────────────────────────────────────────────────
 test('driver posts a ride and is redirected to My Rides', async ({ page }) => {
+  // Grant notifications so renderNotificationPrompt calls onDone (renderMyRides) immediately
+  // rather than showing the prompt page (which happens when permission is 'default')
+  await page.context().grantPermissions(['notifications'], { origin: BASE });
+
   await page.goto(BASE);
   await setFr(page);
   await page.reload();
@@ -63,10 +67,18 @@ test('driver posts a ride and is redirected to My Rides', async ({ page }) => {
   await page.fill('input[name=phone]', DRIVER.phone);
   await page.fill('input[name=origin]', 'Saillans');
   await page.fill('input[name=destination]', 'Crest');
-  await page.fill('input[name=departure_at]', '2030-12-01T09:00');
-  await page.click('button[type=submit]');
+  // departure_at is pre-filled with defaultDeparture() — use as-is to avoid Chrome datetime-local quirks
 
-  await expect(page).toHaveURL(/my-rides/);
+  const [response] = await Promise.all([
+    page.waitForResponse(r => r.url().includes('/api/rides') && r.request().method() === 'POST'),
+    page.click('button[type=submit]'),
+  ]);
+  expect(response.status()).toBe(201);
+
+  await page.waitForFunction(
+    () => document.querySelector('h2')?.textContent?.match(/My rides|Mes trajets/i),
+    { timeout: 10000 }
+  );
   await expect(page.locator('.card-route', { hasText: 'Saillans → Crest' }).first()).toBeVisible();
 });
 
