@@ -120,3 +120,58 @@ func (q *Queries) ListInterestsByRide(ctx context.Context, rideID pgtype.UUID) (
 	}
 	return items, nil
 }
+
+const listInterestsBySearcher = `-- name: ListInterestsBySearcher :many
+SELECT i.id, i.ride_id, i.searcher_phone, i.searcher_name, i.status, i.created_at,
+       r.origin, r.destination, r.departure_at, r.driver_name
+FROM interests i
+JOIN rides r ON r.id = i.ride_id
+WHERE i.searcher_phone = $1
+ORDER BY i.created_at DESC
+`
+
+type ListInterestsBySearcherRow struct {
+	ID            pgtype.UUID        `db:"id"`
+	RideID        pgtype.UUID        `db:"ride_id"`
+	SearcherPhone string             `db:"searcher_phone"`
+	SearcherName  string             `db:"searcher_name"`
+	Status        string             `db:"status"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at"`
+	Origin        string             `db:"origin"`
+	Destination   string             `db:"destination"`
+	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
+	DriverName    string             `db:"driver_name"`
+}
+
+// Returns all interests made by a searcher, joined with ride info for display.
+// Includes rides that may have expired (so the searcher can see their full history).
+func (q *Queries) ListInterestsBySearcher(ctx context.Context, searcherPhone string) ([]ListInterestsBySearcherRow, error) {
+	rows, err := q.db.Query(ctx, listInterestsBySearcher, searcherPhone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListInterestsBySearcherRow{}
+	for rows.Next() {
+		var i ListInterestsBySearcherRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RideID,
+			&i.SearcherPhone,
+			&i.SearcherName,
+			&i.Status,
+			&i.CreatedAt,
+			&i.Origin,
+			&i.Destination,
+			&i.DepartureAt,
+			&i.DriverName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

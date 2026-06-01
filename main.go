@@ -71,7 +71,7 @@ func main() {
 	}
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, interestRepo)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
@@ -130,6 +130,7 @@ func main() {
 		api.GET("/rides/:id/interests",   rideH.ListInterests)
 		api.POST("/rides/:id/interest",   interestH.Express)
 		api.POST("/interests/:id/accept", interestH.Accept)
+		api.GET("/interests", interestH.ListMyRequests)
 		api.GET("/interests/:id/contact", interestH.GetContact)
 
 		api.POST("/requests", requestH.Post)

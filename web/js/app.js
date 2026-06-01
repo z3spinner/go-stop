@@ -38,6 +38,11 @@ const STRINGS = {
     notifSkip:       'No thanks',
     notifDenied:      'Notifications blocked in browser settings.',
     btnMyRides:       'My rides',
+    btnMyRequests:    'My requests',
+    myRequestsTitle:  'My requests',
+    noMyRequests:     'No contact requests yet.',
+    reqStatusPending: 'Pending',
+    reqStatusAccepted:'Accepted',
     myRidesTitle:     'My rides',
     labelPhoneCheck:  'Your phone number',
     btnShowRides:     'Show my rides',
@@ -70,6 +75,7 @@ const STRINGS = {
     btnMyAlerts:      'My alerts',
     myAlertsTitle:    'My alerts',
     btnShowAlerts:    'Show my alerts',
+    btnShowRequests:  'Show my requests',
     noMyAlerts:       'No active alerts found for this number.',
     btnSeeMatches:    'See available rides →',
     alertCard:        (r) => `${r.Origin} → ${r.Destination}`,
@@ -169,6 +175,11 @@ const STRINGS = {
     notifSkip:       'Non merci',
     notifDenied:      'Notifications bloquées dans les paramètres du navigateur.',
     btnMyRides:       'Mes trajets',
+    btnMyRequests:    'Mes demandes',
+    myRequestsTitle:  'Mes demandes',
+    noMyRequests:     'Aucune demande de contact pour l\'instant.',
+    reqStatusPending: 'En attente',
+    reqStatusAccepted:'Acceptée',
     myRidesTitle:     'Mes trajets',
     labelPhoneCheck:  'Votre numéro de téléphone',
     btnShowRides:     'Voir mes trajets',
@@ -201,6 +212,7 @@ const STRINGS = {
     btnMyAlerts:      'Mes alertes',
     myAlertsTitle:    'Mes alertes',
     btnShowAlerts:    'Voir mes alertes',
+    btnShowRequests:  'Voir mes demandes',
     noMyAlerts:       'Aucune alerte active trouvée pour ce numéro.',
     btnSeeMatches:    'Voir les trajets disponibles →',
     alertCard:        (r) => `${r.Origin} → ${r.Destination}`,
@@ -303,6 +315,11 @@ const STRINGS = {
     notifSkip:      'No, gracias',
     notifDenied:    'Notificaciones bloqueadas en la configuración del navegador.',
     btnMyRides:     'Mis viajes',
+    btnMyRequests:    'Mis solicitudes',
+    myRequestsTitle:  'Mis solicitudes',
+    noMyRequests:     'Sin solicitudes de contacto aún.',
+    reqStatusPending: 'Pendiente',
+    reqStatusAccepted:'Aceptada',
     myRidesTitle:   'Mis viajes',
     labelPhoneCheck:'Tu número de teléfono',
     btnShowRides:   'Ver mis viajes',
@@ -335,6 +352,7 @@ const STRINGS = {
     btnMyAlerts:    'Mis alertas',
     myAlertsTitle:  'Mis alertas',
     btnShowAlerts:  'Ver mis alertas',
+    btnShowRequests:  'Ver mis solicitudes',
     noMyAlerts:     'No se encontraron alertas activas para este número.',
     btnSeeMatches:  'Ver viajes disponibles →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
@@ -414,6 +432,11 @@ const STRINGS = {
     notifSkip:      'No grazie',
     notifDenied:    'Notifiche bloccate nelle impostazioni del browser.',
     btnMyRides:     'I miei viaggi',
+    btnMyRequests:    'Le mie richieste',
+    myRequestsTitle:  'Le mie richieste',
+    noMyRequests:     'Nessuna richiesta di contatto ancora.',
+    reqStatusPending: 'In attesa',
+    reqStatusAccepted:'Accettata',
     myRidesTitle:   'I miei viaggi',
     labelPhoneCheck:'Il tuo numero di telefono',
     btnShowRides:   'Vedi i miei viaggi',
@@ -446,6 +469,7 @@ const STRINGS = {
     btnMyAlerts:    'I miei avvisi',
     myAlertsTitle:  'I miei avvisi',
     btnShowAlerts:  'Vedi i miei avvisi',
+    btnShowRequests:  'Vedi le mie richieste',
     noMyAlerts:     'Nessun avviso attivo trovato per questo numero.',
     btnSeeMatches:  'Vedi i viaggi disponibili →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
@@ -525,6 +549,11 @@ const STRINGS = {
     notifSkip:      'Nein danke',
     notifDenied:    'Benachrichtigungen in den Browser-Einstellungen blockiert.',
     btnMyRides:     'Meine Fahrten',
+    btnMyRequests:    'Meine Anfragen',
+    myRequestsTitle:  'Meine Anfragen',
+    noMyRequests:     'Noch keine Kontaktanfragen.',
+    reqStatusPending: 'Ausstehend',
+    reqStatusAccepted:'Angenommen',
     myRidesTitle:   'Meine Fahrten',
     labelPhoneCheck:'Deine Telefonnummer',
     btnShowRides:   'Meine Fahrten anzeigen',
@@ -557,6 +586,7 @@ const STRINGS = {
     btnMyAlerts:    'Meine Alerts',
     myAlertsTitle:  'Meine Alerts',
     btnShowAlerts:  'Meine Alerts anzeigen',
+    btnShowRequests:  'Meine Anfragen anzeigen',
     noMyAlerts:     'Keine aktiven Alerts für diese Nummer gefunden.',
     btnSeeMatches:  'Verfügbare Fahrten anzeigen →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
@@ -636,6 +666,11 @@ const STRINGS = {
     notifSkip:      'Nee bedankt',
     notifDenied:    'Meldingen geblokkeerd in browserinstellingen.',
     btnMyRides:     'Mijn ritten',
+    btnMyRequests:    'Mijn verzoeken',
+    myRequestsTitle:  'Mijn verzoeken',
+    noMyRequests:     'Nog geen contactverzoeken.',
+    reqStatusPending: 'In behandeling',
+    reqStatusAccepted:'Geaccepteerd',
     myRidesTitle:   'Mijn ritten',
     labelPhoneCheck:'Jouw telefoonnummer',
     btnShowRides:   'Toon mijn ritten',
@@ -668,6 +703,7 @@ const STRINGS = {
     btnMyAlerts:    'Mijn alerts',
     myAlertsTitle:  'Mijn alerts',
     btnShowAlerts:  'Toon mijn alerts',
+    btnShowRequests:  'Mijn verzoeken weergeven',
     noMyAlerts:     'Geen actieve alerts gevonden voor dit nummer.',
     btnSeeMatches:  'Beschikbare ritten bekijken →',
     alertCard:      (r) => `${r.Origin} → ${r.Destination}`,
@@ -1204,6 +1240,8 @@ async function renderHome() {
         <button class="btn-ghost-inline" id="btn-my-rides">${s.btnMyRides}</button>
         <span class="ghost-sep">·</span>
         <button class="btn-ghost-inline" id="btn-my-alerts">${s.btnMyAlerts}</button>
+        <span class="ghost-sep">·</span>
+        <button class="btn-ghost-inline" id="btn-my-requests">${s.btnMyRequests}</button>
       </div>
     </div>
     <div id="home-feed"></div>
@@ -1212,6 +1250,7 @@ async function renderHome() {
   document.getElementById('btn-searcher').onclick = renderSearchRides;
   document.getElementById('btn-my-rides').onclick = renderMyRides;
   document.getElementById('btn-my-alerts').onclick = renderMyAlerts;
+  document.getElementById('btn-my-requests').onclick = renderMyRequests;
   bindControls();
   loadHomeStats();
   loadHomeFeed();
@@ -1961,6 +2000,63 @@ function renderMyAlerts() {
   if (p.phone) document.getElementById('my-alerts-form').requestSubmit();
 }
 
+
+// ── My requests (contact requests I've made as a searcher) ────────────────────
+
+async function renderMyRequests() {
+  pushRoute('/my-requests');
+  const s = t();
+  const p = getProfile();
+  app.innerHTML = `
+    ${pageBar()}
+    <h2>${s.myRequestsTitle}</h2>
+    <form id="my-requests-form">
+      <div class="form-group"><label>${s.labelPhoneCheck}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
+      <button class="btn btn-primary" type="submit">${s.btnShowRequests}</button>
+    </form>
+    <div id="my-requests-list"></div>`;
+  document.getElementById('back').onclick = renderHome;
+  bindControls();
+
+  document.getElementById('my-requests-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const phone = new FormData(e.target).get('phone');
+    const list = document.getElementById('my-requests-list');
+    try {
+      const interests = await api('GET', '/interests', null, { 'X-Phone': phone });
+      if (!interests.length) {
+        list.innerHTML = `<div class="empty">${s.noMyRequests}</div>`;
+        return;
+      }
+      list.innerHTML = interests.map(r => {
+        const isPending  = r.status === 'pending';
+        const statusTag  = isPending
+          ? `<span class="tag">${s.reqStatusPending}</span>`
+          : `<span class="tag tag-accepted">${s.reqStatusAccepted}</span>`;
+        const action = isPending
+          ? `<div class="interest-pending-label">${s.interestPending}</div>`
+          : `<a class="btn-contact-link" href="/interests/${esc(r.id)}">${s.contactRevealed} →</a>`;
+        return `
+        <div class="card" id="req-card-${esc(r.id)}">
+          <div class="card-route">${esc(r.origin)} → ${esc(r.destination)}</div>
+          <div class="card-meta">${formatTime(r.departure_at)} · <strong>${esc(r.driver_name)}</strong> ${statusTag}</div>
+          <div class="req-action">${action}</div>
+        </div>`;
+      }).join('');
+      // Clicking accepted link navigates to the contact page
+      list.querySelectorAll('.btn-contact-link').forEach(a => {
+        a.onclick = (e) => {
+          e.preventDefault();
+          const parts = a.href.split('/');
+          renderInterestContact(parts[parts.length - 1]);
+        };
+      });
+    } catch (err) {
+      list.innerHTML = `<div class="error">${esc(err.message)}</div>`;
+    }
+  };
+  if (p.phone) document.getElementById('my-requests-form').requestSubmit();
+}
 async function renderInterestContact(interestID) {
   pushRoute('/interests/' + interestID);
   const s = t();
@@ -2056,6 +2152,7 @@ async function handleDeepLink() {
     }
     case '/my-rides':     renderMyRides();           return true;
     case '/my-alerts':    renderMyAlerts();          return true;
+    case '/my-requests':  renderMyRequests();        return true;
     case '/post-request': await renderPostRequest(); return true;
     case '/stats':        await renderStats();       return true;
   }

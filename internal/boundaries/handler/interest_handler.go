@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
 	"github.com/z3spinner/go-stop/internal/usecase"
 )
 
@@ -13,17 +14,20 @@ type InterestHandler struct {
 	expressInterest    *usecase.ExpressInterest
 	acceptInterest     *usecase.AcceptInterest
 	getInterestContact *usecase.GetInterestContact
+	interestRepo       *postgres.InterestRepo
 }
 
 func NewInterestHandler(
 	expressInterest *usecase.ExpressInterest,
 	acceptInterest *usecase.AcceptInterest,
 	getInterestContact *usecase.GetInterestContact,
+	interestRepo *postgres.InterestRepo,
 ) *InterestHandler {
 	return &InterestHandler{
 		expressInterest:    expressInterest,
 		acceptInterest:     acceptInterest,
 		getInterestContact: getInterestContact,
+		interestRepo:       interestRepo,
 	}
 }
 
@@ -102,4 +106,41 @@ func (h *InterestHandler) GetContact(c *gin.Context) {
 		"destination":  info.Destination,
 		"departure_at": info.DepartureAt,
 	})
+}
+
+// ListMyRequests returns all contact requests made by the authenticated searcher.
+// GET /api/interests  (X-Phone header)
+func (h *InterestHandler) ListMyRequests(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	interests, err := h.interestRepo.FindBySearcherPhone(phone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	type row struct {
+		ID          string `json:"id"`
+		RideID      string `json:"ride_id"`
+		Status      string `json:"status"`
+		DriverName  string `json:"driver_name"`
+		Origin      string `json:"origin"`
+		Destination string `json:"destination"`
+		DepartureAt string `json:"departure_at"`
+	}
+	out := make([]row, len(interests))
+	for i, r := range interests {
+		out[i] = row{
+			ID:          r.ID,
+			RideID:      r.RideID,
+			Status:      r.Status,
+			DriverName:  r.DriverName,
+			Origin:      r.Origin,
+			Destination: r.Destination,
+			DepartureAt: r.DepartureAt.Format("2006-01-02T15:04:05Z"),
+		}
+	}
+	c.JSON(http.StatusOK, out)
 }

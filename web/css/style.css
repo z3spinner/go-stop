@@ -616,3 +616,7 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   line-height: 1;
 }
 .bell-activate-label:hover { text-decoration: underline; }
+.tag-accepted { background: #dcfce7; color: #166534; }
+.req-action { margin-top: 6px; }
+.btn-contact-link { color: var(--blue); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+.btn-contact-link:hover { text-decoration: underline; }

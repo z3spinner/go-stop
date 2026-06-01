@@ -55,3 +55,28 @@ func (r *InterestRepo) FindByRide(rideID string) ([]domain.Interest, error) {
 func (r *InterestRepo) Accept(id string) error {
 	return r.q.AcceptInterest(context.Background(), uuidFrom(id))
 }
+
+func (r *InterestRepo) FindBySearcherPhone(phone string) ([]domain.InterestWithRide, error) {
+	rows, err := r.q.ListInterestsBySearcher(context.Background(), phone)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.InterestWithRide, len(rows))
+	for i, row := range rows {
+		out[i] = domain.InterestWithRide{
+			Interest: domain.Interest{
+				ID:            uuidTo(row.ID),
+				RideID:        uuidTo(row.RideID),
+				SearcherPhone: row.SearcherPhone,
+				SearcherName:  row.SearcherName,
+				Status:        row.Status,
+				CreatedAt:     tsTo(row.CreatedAt),
+			},
+			Origin:      row.Origin,
+			Destination: row.Destination,
+			DepartureAt: tsTo(row.DepartureAt),
+			DriverName:  row.DriverName,
+		}
+	}
+	return out, nil
+}

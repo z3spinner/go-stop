@@ -46,6 +46,9 @@ type Querier interface {
 	// with historical ride_stats so locations persist after rides expire.
 	ListDestinations(ctx context.Context) ([]string, error)
 	ListInterestsByRide(ctx context.Context, rideID pgtype.UUID) ([]Interest, error)
+	// Returns all interests made by a searcher, joined with ride info for display.
+	// Includes rides that may have expired (so the searcher can see their full history).
+	ListInterestsBySearcher(ctx context.Context, searcherPhone string) ([]ListInterestsBySearcherRow, error)
 	ListRequestsByPhone(ctx context.Context, phone string) ([]Request, error)
 	// grace_minutes: hides rides whose flex window ended more than N minutes ago
 	ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ride, error)

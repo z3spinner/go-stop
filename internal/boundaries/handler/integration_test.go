@@ -90,7 +90,7 @@ func setupRouter() *gin.Engine {
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, interestRepo)
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
 	reqH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, reqRepo)
@@ -107,6 +107,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/rides/:id/interests", rideH.ListInterests)
 	r.POST("/api/rides/:id/interest", interestH.Express)
 	r.POST("/api/interests/:id/accept", interestH.Accept)
+	r.GET("/api/interests", interestH.ListMyRequests)
 	r.GET("/api/interests/:id/contact", interestH.GetContact)
 	r.POST("/api/requests", reqH.Post)
 	r.GET("/api/requests", reqH.List)
