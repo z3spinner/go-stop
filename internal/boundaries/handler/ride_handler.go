@@ -11,6 +11,37 @@ import (
 	"github.com/z3spinner/go-stop/internal/usecase"
 )
 
+// publicRide is returned for public search/feed requests. Phone and DriverName are absent.
+type publicRide struct {
+	ID            string    `json:"ID"`
+	Origin        string    `json:"Origin"`
+	Destination   string    `json:"Destination"`
+	Date          time.Time `json:"Date"`
+	DepartureAt   time.Time `json:"DepartureAt"`
+	Flexibility   int       `json:"Flexibility"`
+	PostedAt      time.Time `json:"PostedAt"`
+	ExpiresAt     time.Time `json:"ExpiresAt"`
+	FeedbackGiven bool      `json:"FeedbackGiven"`
+}
+
+func toPublicRides(rides []domain.Ride) []publicRide {
+	out := make([]publicRide, len(rides))
+	for i, r := range rides {
+		out[i] = publicRide{
+			ID:            r.ID,
+			Origin:        r.Origin,
+			Destination:   r.Destination,
+			Date:          r.Date,
+			DepartureAt:   r.DepartureAt,
+			Flexibility:   int(r.Flexibility),
+			PostedAt:      r.PostedAt,
+			ExpiresAt:     r.ExpiresAt,
+			FeedbackGiven: r.FeedbackGiven,
+		}
+	}
+	return out
+}
+
 type RideHandler struct {
 	postRide             *usecase.PostRide
 	getRides             *usecase.GetRides
@@ -19,6 +50,7 @@ type RideHandler struct {
 	deleteRide           *usecase.DeleteRide
 	getMatchingRequests  *usecase.GetMatchingRequests
 	statRepo             repository.StatRepository
+	interestRepo         repository.InterestRepository
 	rideRepo             repository.RideRepository
 }
 
@@ -30,6 +62,7 @@ func NewRideHandler(
 	deleteRide *usecase.DeleteRide,
 	getMatchingRequests *usecase.GetMatchingRequests,
 	statRepo repository.StatRepository,
+	interestRepo repository.InterestRepository,
 	rideRepo repository.RideRepository,
 ) *RideHandler {
 	return &RideHandler{
@@ -40,6 +73,7 @@ func NewRideHandler(
 		deleteRide:          deleteRide,
 		getMatchingRequests: getMatchingRequests,
 		statRepo:            statRepo,
+		interestRepo:        interestRepo,
 		rideRepo:            rideRepo,
 	}
 }
@@ -108,7 +142,11 @@ func (h *RideHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, rides)
+	if phone != "" {
+		c.JSON(http.StatusOK, rides)
+	} else {
+		c.JSON(http.StatusOK, toPublicRides(rides))
+	}
 }
 
 func (h *RideHandler) Get(c *gin.Context) {
@@ -164,4 +202,39 @@ func (h *RideHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *RideHandler) ListInterests(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	ride, err := h.rideRepo.FindByID(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	if ride.Phone != phone {
+		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+		return
+	}
+	interests, err := h.interestRepo.FindByRide(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	type interestResponse struct {
+		ID            string `json:"id"`
+		Status        string `json:"status"`
+		SearcherPhone string `json:"searcher_phone,omitempty"`
+	}
+	out := make([]interestResponse, len(interests))
+	for i, interest := range interests {
+		out[i] = interestResponse{ID: interest.ID, Status: interest.Status}
+		if interest.Status == "accepted" {
+			out[i].SearcherPhone = interest.SearcherPhone
+		}
+	}
+	c.JSON(http.StatusOK, out)
 }
