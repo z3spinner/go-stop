@@ -2,3 +2,6 @@
 .playwright-mcp/
 *.png
 .idea/
+node_modules/
+test-results/
+playwright-report/
