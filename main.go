@@ -26,12 +26,22 @@ func main() {
 			graceMins = n
 		}
 	}
-	rideRepo := postgres.NewRideRepo(pool, graceMins)
-	requestRepo := postgres.NewRequestRepo(pool)
+	phoneCrypto, err := postgres.NewPhoneCryptoFromEnv()
+	if err != nil {
+		log.Fatalf("phone encryption: %v", err)
+	}
+	if phoneCrypto.Enabled() {
+		log.Println("phone encryption enabled")
+	} else {
+		log.Println("phone encryption disabled (PHONE_ENCRYPTION_KEY not set)")
+	}
+
+	rideRepo := postgres.NewRideRepo(pool, graceMins, phoneCrypto)
+	requestRepo := postgres.NewRequestRepo(pool, phoneCrypto)
 	destRepo := postgres.NewDestinationRepo(pool)
-	subRepo := postgres.NewSubscriptionRepo(pool)
+	subRepo := postgres.NewSubscriptionRepo(pool, phoneCrypto)
 	statRepo := postgres.NewStatRepo(pool)
-	interestRepo := postgres.NewInterestRepo(pool)
+	interestRepo := postgres.NewInterestRepo(pool, phoneCrypto)
 
 	notifier := webpush.New(
 		os.Getenv("VAPID_PUBLIC_KEY"),

@@ -13,17 +13,44 @@ import (
 type RideRepo struct {
 	q         *queries.Queries
 	graceMins int32
+	crypto    *PhoneCrypto
 }
 
-func NewRideRepo(pool *pgxpool.Pool, graceMins int) *RideRepo {
-	return &RideRepo{q: queries.New(pool), graceMins: int32(graceMins)}
+func NewRideRepo(pool *pgxpool.Pool, graceMins int, crypto *PhoneCrypto) *RideRepo {
+	return &RideRepo{q: queries.New(pool), graceMins: int32(graceMins), crypto: crypto}
+}
+
+func (r *RideRepo) encPhone(phone string) (string, error)  { return r.crypto.Encrypt(phone) }
+func (r *RideRepo) decRide(row queries.Ride) (domain.Ride, error) {
+	ride := rideFromRow(row)
+	plain, err := r.crypto.Decrypt(ride.Phone)
+	if err != nil {
+		return domain.Ride{}, err
+	}
+	ride.Phone = plain
+	return ride, nil
+}
+func (r *RideRepo) decRides(rows []queries.Ride) ([]domain.Ride, error) {
+	out := make([]domain.Ride, len(rows))
+	for i, row := range rows {
+		ride, err := r.decRide(row)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = ride
+	}
+	return out, nil
 }
 
 func (r *RideRepo) Save(ride domain.Ride) error {
+	enc, err := r.encPhone(ride.Phone)
+	if err != nil {
+		return err
+	}
 	return r.q.InsertRide(context.Background(), queries.InsertRideParams{
 		ID:          uuidFrom(ride.ID),
 		DriverName:  ride.DriverName,
-		Phone:       ride.Phone,
+		Phone:       enc,
 		Origin:      ride.Origin,
 		Destination: ride.Destination,
 		Date:        dateFrom(ride.Date),
@@ -39,7 +66,7 @@ func (r *RideRepo) FindByID(id string) (domain.Ride, error) {
 	if err != nil {
 		return domain.Ride{}, errors.New("ride not found")
 	}
-	return rideFromRow(row), nil
+	return r.decRide(row)
 }
 
 func (r *RideRepo) FindAll() ([]domain.Ride, error) {
@@ -47,15 +74,19 @@ func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ridesFromRows(rows), nil
+	return r.decRides(rows)
 }
 
 func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
-	rows, err := r.q.ListRidesByPhone(context.Background(), phone)
+	enc, err := r.encPhone(phone)
 	if err != nil {
 		return nil, err
 	}
-	return ridesFromRows(rows), nil
+	rows, err := r.q.ListRidesByPhone(context.Background(), enc)
+	if err != nil {
+		return nil, err
+	}
+	return r.decRides(rows)
 }
 
 func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error) {
@@ -67,7 +98,7 @@ func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]dom
 	if err != nil {
 		return nil, err
 	}
-	return ridesFromRows(rows), nil
+	return r.decRides(rows)
 }
 
 func (r *RideRepo) FindByOriginDestinationAndDate(origin, destination string, date time.Time) ([]domain.Ride, error) {
@@ -80,7 +111,7 @@ func (r *RideRepo) FindByOriginDestinationAndDate(origin, destination string, da
 	if err != nil {
 		return nil, err
 	}
-	return ridesFromRows(rows), nil
+	return r.decRides(rows)
 }
 
 func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
@@ -117,7 +148,7 @@ func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ridesFromRows(rows), nil
+	return r.decRides(rows)
 }
 
 func (r *RideRepo) Delete(id string) error {
@@ -133,7 +164,7 @@ func (r *RideRepo) FindPendingFeedback() ([]domain.Ride, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ridesFromRows(rows), nil
+	return r.decRides(rows)
 }
 
 func (r *RideRepo) SetFeedbackGiven(id string) error {

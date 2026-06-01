@@ -7,3 +7,6 @@ test-unit:
 
 sqlc:
 	sqlc generate
+
+generate-phone-key:
+	@openssl rand -base64 32

@@ -13,7 +13,7 @@ import (
 
 func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool)
+	repo := postgres.NewRequestRepo(testPool, postgres.NoopCrypto())
 
 	testID := uuid.New().String()
 	req := domain.Request{
@@ -47,7 +47,7 @@ func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 
 func TestRequestRepo_FindMatching_WindowOverlap(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool)
+	repo := postgres.NewRequestRepo(testPool, postgres.NoopCrypto())
 
 	// Request: 09:15 ±30 min → window 08:45–09:45
 	_ = repo.Save(domain.Request{

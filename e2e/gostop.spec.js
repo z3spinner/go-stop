@@ -99,8 +99,10 @@ test('searcher finds ride with driver name but no phone', async ({ page }) => {
   await page.goto(`${BASE}/search?origin=Saillans&destination=Crest`);
   await page.waitForSelector('.card');
 
-  await expect(page.locator('.card').first()).toContainText(DRIVER.name);
-  await expect(page.locator('.card').first()).not.toContainText(DRIVER.phone);
+  // Find Alice's ride specifically (devstack may have other rides from previous runs)
+  const aliceCard = page.locator('.card', { hasText: DRIVER.name }).first();
+  await expect(aliceCard).toBeVisible();
+  await expect(aliceCard).not.toContainText(DRIVER.phone);
   await expect(page.locator('.btn-interest').first()).toBeVisible();
 });
 

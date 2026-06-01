@@ -11,7 +11,7 @@ import (
 
 func TestSubscriptionRepo_SaveFindDelete(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewSubscriptionRepo(testPool)
+	repo := postgres.NewSubscriptionRepo(testPool, postgres.NoopCrypto())
 
 	sub := domain.Subscription{
 		Phone:    "555-0001",
@@ -45,7 +45,7 @@ func TestSubscriptionRepo_SaveFindDelete(t *testing.T) {
 
 func TestSubscriptionRepo_Save_UpdatesOnConflict(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewSubscriptionRepo(testPool)
+	repo := postgres.NewSubscriptionRepo(testPool, postgres.NoopCrypto())
 
 	_ = repo.Save(domain.Subscription{
 		Phone: "555-0002", Endpoint: "https://push.example.com/old",

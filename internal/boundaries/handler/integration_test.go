@@ -63,9 +63,9 @@ func TestMain(m *testing.M) {
 func setupRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 
-	rideRepo := postgres.NewRideRepo(handlerPool, 60)
-	reqRepo := postgres.NewRequestRepo(handlerPool)
-	subRepo := postgres.NewSubscriptionRepo(handlerPool)
+	rideRepo := postgres.NewRideRepo(handlerPool, 60, postgres.NoopCrypto())
+	reqRepo := postgres.NewRequestRepo(handlerPool, postgres.NoopCrypto())
+	subRepo := postgres.NewSubscriptionRepo(handlerPool, postgres.NoopCrypto())
 	destRepo := postgres.NewDestinationRepo(handlerPool)
 	n := &noopNotifier{}
 
@@ -81,7 +81,7 @@ func setupRouter() *gin.Engine {
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	statRepo := postgres.NewStatRepo(handlerPool)
-	interestRepo := postgres.NewInterestRepo(handlerPool)
+	interestRepo := postgres.NewInterestRepo(handlerPool, postgres.NoopCrypto())
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, reqRepo)
 	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
 	getStats := usecase.NewGetStats(statRepo)
