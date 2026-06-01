@@ -99,6 +99,9 @@ const STRINGS = {
     btnAccept:        'Accept & share my number',
     contactRevealed:  'Contact accepted',
     theirNumber:      'Their number:',
+    theirName:        'Name:',
+    btnCallNow:       'Call now',
+    btnSearchRoute:   'Search this route',
     statsPageTitle:  'Stats',
     statsSearches:   'Searches',
     statsRidesPosted:'Rides posted',
@@ -220,6 +223,9 @@ const STRINGS = {
     btnAccept:        'Accepter et partager mon numéro',
     contactRevealed:  'Contact accepté',
     theirNumber:      'Leur numéro :',
+    theirName:        'Prénom :',
+    btnCallNow:       'Appeler maintenant',
+    btnSearchRoute:   'Rechercher ce trajet',
     statsPageTitle:  'Statistiques',
     statsSearches:   'Recherches',
     statsRidesPosted:'Trajets publiés',
@@ -335,6 +341,9 @@ const STRINGS = {
     btnAccept:        'Aceptar y compartir mi número',
     contactRevealed:  'Contacto aceptado',
     theirNumber:      'Su número:',
+    theirName:        'Nombre:',
+    btnCallNow:       'Llamar ahora',
+    btnSearchRoute:   'Buscar este viaje',
     statsPageTitle: 'Estadísticas',
     statsSearches:  'Búsquedas',
     statsRidesPosted:'Viajes publicados',
@@ -434,6 +443,9 @@ const STRINGS = {
     btnAccept:        'Accetta e condividi il mio numero',
     contactRevealed:  'Contatto accettato',
     theirNumber:      'Il loro numero:',
+    theirName:        'Nome:',
+    btnCallNow:       'Chiama ora',
+    btnSearchRoute:   'Cerca questo viaggio',
     statsPageTitle: 'Statistiche',
     statsSearches:  'Ricerche',
     statsRidesPosted:'Viaggi pubblicati',
@@ -533,6 +545,9 @@ const STRINGS = {
     btnAccept:        'Akzeptieren und Nummer teilen',
     contactRevealed:  'Kontakt akzeptiert',
     theirNumber:      'Ihre Nummer:',
+    theirName:        'Name:',
+    btnCallNow:       'Jetzt anrufen',
+    btnSearchRoute:   'Diese Fahrt suchen',
     statsPageTitle: 'Statistiken',
     statsSearches:  'Suchen',
     statsRidesPosted:'Veröffentlichte Fahrten',
@@ -632,6 +647,9 @@ const STRINGS = {
     btnAccept:        'Accepteren en nummer delen',
     contactRevealed:  'Contact geaccepteerd',
     theirNumber:      'Hun nummer:',
+    theirName:        'Naam:',
+    btnCallNow:       'Nu bellen',
+    btnSearchRoute:   'Deze rit zoeken',
     statsPageTitle: 'Statistieken',
     statsSearches:  'Zoekopdrachten',
     statsRidesPosted:'Gepubliceerde ritten',
@@ -1679,10 +1697,21 @@ async function renderInterestContact(interestID) {
   const p = getProfile();
   try {
     const res = await api('GET', `/interests/${interestID}/contact`, null, { 'X-Phone': p.phone });
+    const personLabel = res.role === 'driver' ? s.labelDriver : s.labelSearcher;
     document.getElementById('contact-result').innerHTML = `
-      <div class="card">
-        <p class="card-contact">${s.theirNumber} <a href="tel:${esc(res.phone)}">${esc(res.phone)}</a></p>
+      <div class="card contact-card">
+        <div class="card-route">${esc(res.origin)} → ${esc(res.destination)}</div>
+        <div class="card-meta">${formatTime(res.departure_at)}</div>
+        <table class="detail-table" style="margin-top:12px">
+          ${res.name ? `<tr><td>${personLabel}</td><td><strong>${esc(res.name)}</strong></td></tr>` : ''}
+          <tr><td>${s.theirNumber}</td><td><strong><a href="tel:${esc(res.phone)}">${esc(res.phone)}</a></strong></td></tr>
+        </table>
+        <a href="tel:${esc(res.phone)}" class="btn btn-primary" style="margin-top:16px;display:block;text-align:center;text-decoration:none">${s.btnCallNow}</a>
+        <button class="btn btn-secondary" id="btn-search-route" data-origin="${esc(res.origin)}" data-dest="${esc(res.destination)}">${s.btnSearchRoute}</button>
       </div>`;
+    document.getElementById('btn-search-route').onclick = (e) => {
+      renderSearchRides({ origin: e.currentTarget.dataset.origin, destination: e.currentTarget.dataset.dest, departureAt: '' });
+    };
   } catch (err) {
     document.getElementById('contact-result').innerHTML =
       `<p class="error">${esc(err.message)}</p>`;

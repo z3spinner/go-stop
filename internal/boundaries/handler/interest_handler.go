@@ -84,7 +84,7 @@ func (h *InterestHandler) GetContact(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
 		return
 	}
-	otherPhone, err := h.getInterestContact.Execute(c.Param("id"), phone)
+	info, err := h.getInterestContact.Execute(c.Param("id"), phone)
 	if err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
@@ -93,5 +93,12 @@ func (h *InterestHandler) GetContact(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"phone": otherPhone})
+	c.JSON(http.StatusOK, gin.H{
+		"phone":        info.Phone,
+		"name":         info.Name,
+		"role":         info.Role,
+		"origin":       info.Origin,
+		"destination":  info.Destination,
+		"departure_at": info.DepartureAt,
+	})
 }

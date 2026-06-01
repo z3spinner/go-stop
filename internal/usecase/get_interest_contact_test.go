@@ -24,13 +24,13 @@ func TestGetInterestContact_DriverGetsSearcherPhone(t *testing.T) {
 	}
 
 	uc := usecase.NewGetInterestContact(interests, rides)
-	phone, err := uc.Execute("int-1", "555-driver")
+	info, err := uc.Execute("int-1", "555-driver")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if phone != "555-searcher" {
-		t.Errorf("expected 555-searcher, got %s", phone)
+	if info.Phone != "555-searcher" {
+		t.Errorf("expected 555-searcher, got %s", info.Phone)
 	}
 }
 
@@ -50,13 +50,13 @@ func TestGetInterestContact_SearcherGetsDriverPhone(t *testing.T) {
 	}
 
 	uc := usecase.NewGetInterestContact(interests, rides)
-	phone, err := uc.Execute("int-1", "555-searcher")
+	info, err := uc.Execute("int-1", "555-searcher")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if phone != "555-driver" {
-		t.Errorf("expected 555-driver, got %s", phone)
+	if info.Phone != "555-driver" {
+		t.Errorf("expected 555-driver, got %s", info.Phone)
 	}
 }
 
