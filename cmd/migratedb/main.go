@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -19,6 +20,8 @@ func getMigrator() (*migrate.Migrate, error) {
 	if dbURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL not set")
 	}
+	// lib/pq (used by golang-migrate) rejects sslmode=prefer; replace with require.
+	dbURL = strings.ReplaceAll(dbURL, "sslmode=prefer", "sslmode=require")
 	d, err := iofs.New(migrations.FS, ".")
 	if err != nil {
 		return nil, fmt.Errorf("migrations source: %w", err)
