@@ -12,7 +12,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/spf13/cobra"
 
-	"github.com/z3spinner/go-stop/db/migrations"
+	"github.com/z3spinner/go-stop/internal/infrastructure/postgres/sqlc/migrations"
 )
 
 func getMigrator() (*migrate.Migrate, error) {
