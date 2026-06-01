@@ -97,6 +97,7 @@ const STRINGS = {
     btnInterest:      'Request contact',
     interestSent:     "Request sent — you'll be notified when the driver accepts.",
     interestPending:  'Waiting for driver',
+    btnResend:        'Request again',
     pendingInterests: (n) => n === 1 ? '1 person interested' : `${n} people interested`,
     btnAccept:        'Accept & share my number',
     contactRevealed:  'Contact accepted',
@@ -224,6 +225,7 @@ const STRINGS = {
     btnInterest:      'Demander le contact',
     interestSent:     "Demande envoyée — vous serez alerté(e) lorsque le conducteur accepte.",
     interestPending:  'En attente du conducteur',
+    btnResend:        'Redemander',
     pendingInterests: (n) => n === 1 ? '1 personne intéressée' : `${n} personnes intéressées`,
     btnAccept:        'Accepter et partager mon numéro',
     contactRevealed:  'Contact accepté',
@@ -345,6 +347,7 @@ const STRINGS = {
     btnInterest:      'Solicitar contacto',
     interestSent:     'Solicitud enviada — te avisaremos cuando el conductor acepte.',
     interestPending:  'Esperando al conductor',
+    btnResend:        'Volver a solicitar',
     pendingInterests: (n) => n === 1 ? '1 persona interesada' : `${n} personas interesadas`,
     btnAccept:        'Aceptar y compartir mi número',
     contactRevealed:  'Contacto aceptado',
@@ -450,6 +453,7 @@ const STRINGS = {
     btnInterest:      'Richiedi contatto',
     interestSent:     'Richiesta inviata — sarai avvisato/a quando il conducente accetta.',
     interestPending:  'In attesa del conducente',
+    btnResend:        'Richiedere di nuovo',
     pendingInterests: (n) => n === 1 ? '1 persona interessata' : `${n} persone interessate`,
     btnAccept:        'Accetta e condividi il mio numero',
     contactRevealed:  'Contatto accettato',
@@ -555,6 +559,7 @@ const STRINGS = {
     btnInterest:      'Kontakt anfragen',
     interestSent:     'Anfrage gesendet — du wirst benachrichtigt, wenn der Fahrer akzeptiert.',
     interestPending:  'Warte auf Fahrer/in',
+    btnResend:        'Erneut anfragen',
     pendingInterests: (n) => n === 1 ? '1 interessierte Person' : `${n} interessierte Personen`,
     btnAccept:        'Akzeptieren und Nummer teilen',
     contactRevealed:  'Kontakt akzeptiert',
@@ -660,6 +665,7 @@ const STRINGS = {
     btnInterest:      'Contactverzoek sturen',
     interestSent:     'Verzoek verstuurd — je wordt gewaarschuwd als de bestuurder accepteert.',
     interestPending:  'Wachten op bestuurder',
+    btnResend:        'Opnieuw aanvragen',
     pendingInterests: (n) => n === 1 ? '1 geïnteresseerde' : `${n} geïnteresseerden`,
     btnAccept:        'Accepteren en nummer delen',
     contactRevealed:  'Contact geaccepteerd',
@@ -1241,6 +1247,14 @@ function contactOrInterestBtn(r, contacts, s) {
   const phone = contacts[r.ID];
   if (phone) {
     return `<div class="contact-revealed"><a href="tel:${esc(phone)}">${esc(phone)}</a></div>`;
+  }
+  const pendingId = localStorage.getItem('interest_' + r.ID);
+  if (pendingId) {
+    return `<div class="interest-pending-row">
+      <span class="interest-pending-label">${s.interestPending}</span>
+      <button class="btn-interest btn-interest-resend" data-ride-id="${esc(r.ID)}">${s.btnResend}</button>
+    </div>
+    <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>`;
   }
   return `<button class="btn-interest" data-ride-id="${esc(r.ID)}">${s.btnInterest}</button>
           <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>`;
