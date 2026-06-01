@@ -92,7 +92,7 @@ const STRINGS = {
     btnAllStats:     'All stats →',
     homeFeedTitle:   'Available now',
     noActiveRides:  'No rides posted yet.',
-    btnInterest:      "I'm interested",
+    btnInterest:      'Request contact',
     interestSent:     "Request sent — you'll be notified when the driver accepts.",
     interestPending:  'Waiting for driver',
     pendingInterests: (n) => n === 1 ? '1 person interested' : `${n} people interested`,
@@ -213,7 +213,7 @@ const STRINGS = {
     btnAllStats:     'Toutes les stats →',
     homeFeedTitle:   'Disponibles maintenant',
     noActiveRides:  'Aucun trajet publié pour l\'instant.',
-    btnInterest:      'Je suis intéressé(e)',
+    btnInterest:      'Demander le contact',
     interestSent:     "Demande envoyée — vous serez alerté(e) lorsque le conducteur accepte.",
     interestPending:  'En attente du conducteur',
     pendingInterests: (n) => n === 1 ? '1 personne intéressée' : `${n} personnes intéressées`,
@@ -328,7 +328,7 @@ const STRINGS = {
     btnAllStats:    'Ver todas →',
     homeFeedTitle: 'Disponibles ahora',
     noActiveRides: 'Ningún viaje publicado todavía.',
-    btnInterest:      'Me interesa',
+    btnInterest:      'Solicitar contacto',
     interestSent:     'Solicitud enviada — te avisaremos cuando el conductor acepte.',
     interestPending:  'Esperando al conductor',
     pendingInterests: (n) => n === 1 ? '1 persona interesada' : `${n} personas interesadas`,
@@ -427,7 +427,7 @@ const STRINGS = {
     btnAllStats:    'Tutte le statistiche →',
     homeFeedTitle: 'Disponibili ora',
     noActiveRides: 'Nessun viaggio pubblicato.',
-    btnInterest:      'Sono interessato/a',
+    btnInterest:      'Richiedi contatto',
     interestSent:     'Richiesta inviata — sarai avvisato/a quando il conducente accetta.',
     interestPending:  'In attesa del conducente',
     pendingInterests: (n) => n === 1 ? '1 persona interessata' : `${n} persone interessate`,
@@ -526,7 +526,7 @@ const STRINGS = {
     btnAllStats:    'Alle Statistiken →',
     homeFeedTitle: 'Jetzt verfügbar',
     noActiveRides: 'Noch keine Fahrten veröffentlicht.',
-    btnInterest:      'Ich bin interessiert',
+    btnInterest:      'Kontakt anfragen',
     interestSent:     'Anfrage gesendet — du wirst benachrichtigt, wenn der Fahrer akzeptiert.',
     interestPending:  'Warte auf Fahrer/in',
     pendingInterests: (n) => n === 1 ? '1 interessierte Person' : `${n} interessierte Personen`,
@@ -625,7 +625,7 @@ const STRINGS = {
     btnAllStats:    'Alle statistieken →',
     homeFeedTitle: 'Nu beschikbaar',
     noActiveRides: 'Nog geen ritten gepubliceerd.',
-    btnInterest:      'Ik ben geïnteresseerd',
+    btnInterest:      'Contactverzoek sturen',
     interestSent:     'Verzoek verstuurd — je wordt gewaarschuwd als de bestuurder accepteert.',
     interestPending:  'Wachten op bestuurder',
     pendingInterests: (n) => n === 1 ? '1 geïnteresseerde' : `${n} geïnteresseerden`,
@@ -1125,7 +1125,7 @@ async function loadHomeFeed() {
         ${rides.map(r => `
           <div class="home-feed-card">
             <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
-            <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></span>
+            <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}</span>
             ${contactOrInterestBtn(r, contacts, s)}
           </div>`).join('')}
       </div>`;
@@ -1298,7 +1298,7 @@ async function renderSearchRides(autoQuery = null) {
 
       function rideCard(r) {
         return `<div class="card card-compact">
-          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
+          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}</div>
           ${contactOrInterestBtn(r, contacts, s)}
         </div>`;
       }

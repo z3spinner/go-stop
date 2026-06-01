@@ -11,9 +11,10 @@ import (
 	"github.com/z3spinner/go-stop/internal/usecase"
 )
 
-// publicRide is returned for public search/feed requests. Phone and DriverName are absent.
+// publicRide is returned for public search/feed requests. Phone is absent; DriverName is visible.
 type publicRide struct {
 	ID            string    `json:"ID"`
+	DriverName    string    `json:"DriverName"`
 	Origin        string    `json:"Origin"`
 	Destination   string    `json:"Destination"`
 	Date          time.Time `json:"Date"`
@@ -29,6 +30,7 @@ func toPublicRides(rides []domain.Ride) []publicRide {
 	for i, r := range rides {
 		out[i] = publicRide{
 			ID:            r.ID,
+			DriverName:    r.DriverName,
 			Origin:        r.Origin,
 			Destination:   r.Destination,
 			Date:          r.Date,
