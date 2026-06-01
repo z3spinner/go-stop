@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests`)
 		if truncErr == nil {
 			break
 		}
@@ -81,13 +81,18 @@ func setupRouter() *gin.Engine {
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	statRepo := postgres.NewStatRepo(handlerPool)
+	interestRepo := postgres.NewInterestRepo(handlerPool)
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, reqRepo)
 	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
 	getStats := usecase.NewGetStats(statRepo)
+	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, n)
+	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, n)
+	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact)
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, rideRepo)
+	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo)
 	reqH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, reqRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
@@ -99,6 +104,10 @@ func setupRouter() *gin.Engine {
 	r.DELETE("/api/rides/:id", rideH.Delete)
 	r.GET("/api/rides/:id/requests", rideH.ListMatchingRequests)
 	r.POST("/api/rides/:id/feedback", feedbackH.Post)
+	r.GET("/api/rides/:id/interests", rideH.ListInterests)
+	r.POST("/api/rides/:id/interest", interestH.Express)
+	r.POST("/api/interests/:id/accept", interestH.Accept)
+	r.GET("/api/interests/:id/contact", interestH.GetContact)
 	r.POST("/api/requests", reqH.Post)
 	r.GET("/api/requests", reqH.List)
 	r.GET("/api/requests/:id", reqH.Get)
@@ -112,7 +121,10 @@ func setupRouter() *gin.Engine {
 
 func truncateAll(t *testing.T) {
 	t.Helper()
-	handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+	if _, err := handlerPool.Exec(context.Background(),
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests`); err != nil {
+		t.Fatalf("truncate: %v", err)
+	}
 }
 
 func postJSON(r *gin.Engine, path string, body interface{}) *httptest.ResponseRecorder {
@@ -213,13 +225,13 @@ func TestHTTP_MyRides_XPhoneHeader_FiltersToOwnerOnly(t *testing.T) {
 
 	// Alice posts a ride
 	postJSON(r, "/api/rides", map[string]interface{}{
-		"driver_name": "Alice", "phone": "555-alice",
+		"driver_name": "Alice", "phone": "5551001",
 		"origin": "A", "destination": "B",
 		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
 	})
 	// Bob posts a ride
 	postJSON(r, "/api/rides", map[string]interface{}{
-		"driver_name": "Bob", "phone": "555-bob",
+		"driver_name": "Bob", "phone": "5552001",
 		"origin": "C", "destination": "D",
 		"departure_at": "2030-06-01T10:00:00Z", "flexibility": 0,
 	})
@@ -227,7 +239,7 @@ func TestHTTP_MyRides_XPhoneHeader_FiltersToOwnerOnly(t *testing.T) {
 	// Fetch with Alice's phone — must only return Alice's ride
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/rides", nil)
-	req.Header.Set("X-Phone", "555-alice")
+	req.Header.Set("X-Phone", "5551001")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -249,13 +261,13 @@ func TestHTTP_MyAlerts_XPhoneHeader_FiltersToOwnerOnly(t *testing.T) {
 
 	// Carol posts a request
 	postJSON(r, "/api/requests", map[string]interface{}{
-		"searcher_name": "Carol", "phone": "555-carol",
+		"searcher_name": "Carol", "phone": "5553001",
 		"origin": "A", "destination": "B",
 		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
 	})
 	// Dave posts a request
 	postJSON(r, "/api/requests", map[string]interface{}{
-		"searcher_name": "Dave", "phone": "555-dave",
+		"searcher_name": "Dave", "phone": "5554001",
 		"origin": "C", "destination": "D",
 		"departure_at": "2030-06-01T10:00:00Z", "flexibility": 0,
 	})
@@ -263,7 +275,7 @@ func TestHTTP_MyAlerts_XPhoneHeader_FiltersToOwnerOnly(t *testing.T) {
 	// Fetch with Carol's phone — must only return Carol's request
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/api/requests", nil)
-	req.Header.Set("X-Phone", "555-carol")
+	req.Header.Set("X-Phone", "5553001")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -284,12 +296,12 @@ func TestHTTP_MyRides_NoXPhoneHeader_ReturnsAllRides(t *testing.T) {
 	r := setupRouter()
 
 	postJSON(r, "/api/rides", map[string]interface{}{
-		"driver_name": "Alice", "phone": "555-alice",
+		"driver_name": "Alice", "phone": "5551001",
 		"origin": "A", "destination": "B",
 		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
 	})
 	postJSON(r, "/api/rides", map[string]interface{}{
-		"driver_name": "Bob", "phone": "555-bob",
+		"driver_name": "Bob", "phone": "5552001",
 		"origin": "C", "destination": "D",
 		"departure_at": "2030-06-01T10:00:00Z", "flexibility": 0,
 	})
@@ -364,5 +376,193 @@ func TestHTTP_Feedback_WrongPhone_Returns403(t *testing.T) {
 	})
 	if w2.Code != http.StatusForbidden {
 		t.Errorf("expected 403, got %d", w2.Code)
+	}
+}
+
+func TestHTTP_Interest_ExpressCreatesRecord(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5550002",
+	})
+	if w2.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var interest map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &interest)
+	if interest["id"] == nil || interest["id"] == "" {
+		t.Error("expected interest ID in response")
+	}
+	if interest["status"] != "pending" {
+		t.Errorf("expected pending status, got %v", interest["status"])
+	}
+	if interest["searcher_phone"] != nil || interest["phone"] != nil {
+		t.Error("phone must not appear in express-interest response")
+	}
+}
+
+func TestHTTP_Interest_DriverCannotBeSearcher(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5550001",
+	})
+	if w2.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", w2.Code)
+	}
+}
+
+func TestHTTP_Interest_AcceptRevealsPhonesCorrectly(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Driver posts ride
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	// Searcher expresses interest
+	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5550002",
+	})
+	var interest map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &interest)
+	interestID := interest["id"].(string)
+
+	// Contact endpoint returns error while pending
+	w3 := httptest.NewRecorder()
+	req3, _ := http.NewRequest(http.MethodGet, "/api/interests/"+interestID+"/contact", nil)
+	req3.Header.Set("X-Phone", "5550002")
+	r.ServeHTTP(w3, req3)
+	if w3.Code == http.StatusOK {
+		t.Error("expected non-200 while interest is pending")
+	}
+
+	// Driver accepts
+	w4 := postJSON(r, "/api/interests/"+interestID+"/accept", map[string]interface{}{
+		"phone": "5550001",
+	})
+	if w4.Code != http.StatusOK {
+		t.Fatalf("expected 200 on accept, got %d: %s", w4.Code, w4.Body.String())
+	}
+	var acceptResp map[string]interface{}
+	json.Unmarshal(w4.Body.Bytes(), &acceptResp)
+	if acceptResp["searcher_phone"] != "5550001" && acceptResp["searcher_phone"] != "5550002" {
+		t.Errorf("driver should receive searcher phone, got %v", acceptResp["searcher_phone"])
+	}
+	if acceptResp["searcher_phone"] != "5550002" {
+		t.Errorf("driver should receive searcher phone 5550002, got %v", acceptResp["searcher_phone"])
+	}
+
+	// Searcher can now get driver's phone
+	w5 := httptest.NewRecorder()
+	req5, _ := http.NewRequest(http.MethodGet, "/api/interests/"+interestID+"/contact", nil)
+	req5.Header.Set("X-Phone", "5550002")
+	r.ServeHTTP(w5, req5)
+	if w5.Code != http.StatusOK {
+		t.Fatalf("expected 200 for searcher contact, got %d: %s", w5.Code, w5.Body.String())
+	}
+	var contactResp map[string]interface{}
+	json.Unmarshal(w5.Body.Bytes(), &contactResp)
+	if contactResp["phone"] != "5550001" {
+		t.Errorf("searcher should receive driver phone 5550001, got %v", contactResp["phone"])
+	}
+
+	// Stranger gets 403
+	w6 := httptest.NewRecorder()
+	req6, _ := http.NewRequest(http.MethodGet, "/api/interests/"+interestID+"/contact", nil)
+	req6.Header.Set("X-Phone", "5550099")
+	r.ServeHTTP(w6, req6)
+	if w6.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for stranger, got %d", w6.Code)
+	}
+}
+
+func TestHTTP_PublicRideList_StripsPIIFields(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+
+	// Public request (no X-Phone)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/api/rides", nil)
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var rides []map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &rides)
+	if len(rides) != 1 {
+		t.Fatalf("expected 1 ride, got %d", len(rides))
+	}
+	if rides[0]["Phone"] != nil {
+		t.Errorf("Phone must not appear in public ride list, got %v", rides[0]["Phone"])
+	}
+	if rides[0]["DriverName"] != nil {
+		t.Errorf("DriverName must not appear in public ride list, got %v", rides[0]["DriverName"])
+	}
+	if rides[0]["Origin"] == nil {
+		t.Error("Origin must be present in public ride list")
+	}
+}
+
+func TestHTTP_Interest_WrongDriverPhoneReturns403(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	// Searcher expresses interest
+	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5550002",
+	})
+	var interest map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &interest)
+	interestID := interest["id"].(string)
+
+	// Wrong driver tries to accept
+	w3 := postJSON(r, "/api/interests/"+interestID+"/accept", map[string]interface{}{
+		"phone": "5550099",
+	})
+	if w3.Code != http.StatusForbidden {
+		t.Errorf("expected 403 for wrong driver, got %d", w3.Code)
 	}
 }

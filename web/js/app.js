@@ -73,6 +73,8 @@ const STRINGS = {
     labelSearcher:    'Passenger',
     labelDeparture:   'Departure',
     labelContact:     'Contact',
+    notifEnabled:    'Notifications enabled ✓ — you\'ll be alerted for new rides and accepted contacts.',
+    notifDeniedTip:  'Notifications are blocked. Enable them in your browser settings and reload.',
     footerPrivacy:    'Privacy',
     aboutTitle:       'About Go Stop',
     aboutBody:        (siteName) => `<p><strong>Go Stop</strong> is a local ride-sharing platform, positioned between hitchhiking and carpooling. It connects drivers offering one-time trips with people looking for a lift. Direct contact by phone — no accounts required.</p>
@@ -92,6 +94,16 @@ const STRINGS = {
     btnAllStats:     'All stats →',
     homeFeedTitle:   'Available now',
     noActiveRides:  'No rides posted yet.',
+    btnInterest:      'Request contact',
+    interestSent:     "Request sent — you'll be notified when the driver accepts.",
+    interestPending:  'Waiting for driver',
+    pendingInterests: (n) => n === 1 ? '1 person interested' : `${n} people interested`,
+    btnAccept:        'Accept & share my number',
+    contactRevealed:  'Contact accepted',
+    theirNumber:      'Their number:',
+    theirName:        'Name:',
+    btnCallNow:       'Call now',
+    btnSearchRoute:   'Search this route',
     statsPageTitle:  'Stats',
     statsSearches:   'Searches',
     statsRidesPosted:'Rides posted',
@@ -186,6 +198,9 @@ const STRINGS = {
     labelSearcher:    'Passager',
     labelDeparture:   'Départ',
     labelContact:     'Contact',
+    btnActivate:     'Activer',
+    notifEnabled:    'Notifications activées ✓ — vous serez alerté(e) pour les nouveaux trajets et les contacts acceptés.',
+    notifDeniedTip:  'Notifications bloquées. Activez-les dans les paramètres de votre navigateur puis rechargez.',
     footerPrivacy:    'Confidentialité',
     aboutTitle:       'À propos de Go Stop',
     aboutBody:        (siteName) => `<p><strong>Go Stop</strong> est une plateforme locale de covoiturage, à mi-chemin entre l'autostop et le covoiturage formel. Elle met en relation des conducteurs qui proposent un trajet ponctuel et des personnes qui cherchent un stop.</p>
@@ -206,6 +221,16 @@ const STRINGS = {
     btnAllStats:     'Toutes les stats →',
     homeFeedTitle:   'Disponibles maintenant',
     noActiveRides:  'Aucun trajet publié pour l\'instant.',
+    btnInterest:      'Demander le contact',
+    interestSent:     "Demande envoyée — vous serez alerté(e) lorsque le conducteur accepte.",
+    interestPending:  'En attente du conducteur',
+    pendingInterests: (n) => n === 1 ? '1 personne intéressée' : `${n} personnes intéressées`,
+    btnAccept:        'Accepter et partager mon numéro',
+    contactRevealed:  'Contact accepté',
+    theirNumber:      'Leur numéro :',
+    theirName:        'Prénom :',
+    btnCallNow:       'Appeler maintenant',
+    btnSearchRoute:   'Rechercher ce trajet',
     statsPageTitle:  'Statistiques',
     statsSearches:   'Recherches',
     statsRidesPosted:'Trajets publiés',
@@ -301,6 +326,9 @@ const STRINGS = {
     labelSearcher:  'Pasajero',
     labelDeparture: 'Salida',
     labelContact:   'Contacto',
+    btnActivate:   'Activar',
+    notifEnabled:  'Notificaciones activadas ✓',
+    notifDeniedTip:'Notificaciones bloqueadas. Actívalas en la configuración del navegador.',
     footerPrivacy:  'Privacidad',
     aboutTitle:     'Acerca de Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> es una plataforma local de viajes compartidos, entre el autostop y el carpooling. Conecta a conductores que ofrecen un viaje puntual con personas que buscan transporte. Contacto directo por teléfono — sin cuentas.</p><h3>Tu comunidad</h3><p>Esta instancia está desplegada para <strong>${esc(siteName)}</strong>.</p><h3>Desplegar para tu comunidad</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Desplegar en Scalingo</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -314,6 +342,16 @@ const STRINGS = {
     btnAllStats:    'Ver todas →',
     homeFeedTitle: 'Disponibles ahora',
     noActiveRides: 'Ningún viaje publicado todavía.',
+    btnInterest:      'Solicitar contacto',
+    interestSent:     'Solicitud enviada — te avisaremos cuando el conductor acepte.',
+    interestPending:  'Esperando al conductor',
+    pendingInterests: (n) => n === 1 ? '1 persona interesada' : `${n} personas interesadas`,
+    btnAccept:        'Aceptar y compartir mi número',
+    contactRevealed:  'Contacto aceptado',
+    theirNumber:      'Su número:',
+    theirName:        'Nombre:',
+    btnCallNow:       'Llamar ahora',
+    btnSearchRoute:   'Buscar este viaje',
     statsPageTitle: 'Estadísticas',
     statsSearches:  'Búsquedas',
     statsRidesPosted:'Viajes publicados',
@@ -393,6 +431,9 @@ const STRINGS = {
     labelSearcher:  'Passeggero',
     labelDeparture: 'Partenza',
     labelContact:   'Contatto',
+    btnActivate:   'Attiva',
+    notifEnabled:  'Notifiche attivate ✓',
+    notifDeniedTip:'Notifiche bloccate. Attivale nelle impostazioni del browser.',
     footerPrivacy:  'Privacy',
     aboutTitle:     'Informazioni su Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> è una piattaforma locale di condivisione viaggi, tra l'autostop e il carpooling formale. Mette in contatto conducenti che offrono un viaggio con chi cerca un passaggio. Contatto diretto per telefono — nessun account richiesto.</p><h3>La tua comunità</h3><p>Questa istanza è distribuita per <strong>${esc(siteName)}</strong>.</p><h3>Distribuisci per la tua comunità</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Distribuisci su Scalingo</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -406,6 +447,16 @@ const STRINGS = {
     btnAllStats:    'Tutte le statistiche →',
     homeFeedTitle: 'Disponibili ora',
     noActiveRides: 'Nessun viaggio pubblicato.',
+    btnInterest:      'Richiedi contatto',
+    interestSent:     'Richiesta inviata — sarai avvisato/a quando il conducente accetta.',
+    interestPending:  'In attesa del conducente',
+    pendingInterests: (n) => n === 1 ? '1 persona interessata' : `${n} persone interessate`,
+    btnAccept:        'Accetta e condividi il mio numero',
+    contactRevealed:  'Contatto accettato',
+    theirNumber:      'Il loro numero:',
+    theirName:        'Nome:',
+    btnCallNow:       'Chiama ora',
+    btnSearchRoute:   'Cerca questo viaggio',
     statsPageTitle: 'Statistiche',
     statsSearches:  'Ricerche',
     statsRidesPosted:'Viaggi pubblicati',
@@ -485,6 +536,9 @@ const STRINGS = {
     labelSearcher:  'Mitfahrer/in',
     labelDeparture: 'Abfahrt',
     labelContact:   'Kontakt',
+    btnActivate:   'Aktivieren',
+    notifEnabled:  'Benachrichtigungen aktiviert ✓',
+    notifDeniedTip:'Benachrichtigungen gesperrt. Aktiviere sie in den Browsereinstellungen.',
     footerPrivacy:  'Datenschutz',
     aboutTitle:     'Über Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> ist eine lokale Mitfahrplattform zwischen Trampen und formalem Carpooling. Sie verbindet Fahrer, die eine einmalige Fahrt anbieten, mit Menschen, die eine Mitfahrt suchen. Direkter Kontakt per Telefon — keine Accounts erforderlich.</p><h3>Deine Gemeinschaft</h3><p>Diese Instanz ist für <strong>${esc(siteName)}</strong> bereitgestellt.</p><h3>Für deine Gemeinschaft bereitstellen</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Auf Scalingo bereitstellen</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -498,6 +552,16 @@ const STRINGS = {
     btnAllStats:    'Alle Statistiken →',
     homeFeedTitle: 'Jetzt verfügbar',
     noActiveRides: 'Noch keine Fahrten veröffentlicht.',
+    btnInterest:      'Kontakt anfragen',
+    interestSent:     'Anfrage gesendet — du wirst benachrichtigt, wenn der Fahrer akzeptiert.',
+    interestPending:  'Warte auf Fahrer/in',
+    pendingInterests: (n) => n === 1 ? '1 interessierte Person' : `${n} interessierte Personen`,
+    btnAccept:        'Akzeptieren und Nummer teilen',
+    contactRevealed:  'Kontakt akzeptiert',
+    theirNumber:      'Ihre Nummer:',
+    theirName:        'Name:',
+    btnCallNow:       'Jetzt anrufen',
+    btnSearchRoute:   'Diese Fahrt suchen',
     statsPageTitle: 'Statistiken',
     statsSearches:  'Suchen',
     statsRidesPosted:'Veröffentlichte Fahrten',
@@ -577,6 +641,9 @@ const STRINGS = {
     labelSearcher:  'Passagier',
     labelDeparture: 'Vertrek',
     labelContact:   'Contact',
+    btnActivate:   'Activeren',
+    notifEnabled:  'Meldingen ingeschakeld ✓',
+    notifDeniedTip:'Meldingen geblokkeerd. Schakel ze in via de browserinstellingen.',
     footerPrivacy:  'Privacy',
     aboutTitle:     'Over Go Stop',
     aboutBody:      (siteName) => `<p><strong>Go Stop</strong> is een lokaal ritdeelplatform, tussen liften en formeel carpoolen. Het verbindt bestuurders die een eenmalige rit aanbieden met mensen die een rit zoeken. Direct contact per telefoon — geen accounts vereist.</p><h3>Jouw gemeenschap</h3><p>Deze instantie is uitgerold voor <strong>${esc(siteName)}</strong>.</p><h3>Uitrollen voor jouw gemeenschap</h3><p><a href="https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">▶ Uitrollen op Scalingo</a></p><p style="font-size:0.8rem;color:var(--gray-600)"><a href="https://github.com/z3spinner/go-stop" target="_blank" rel="noopener">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>`,
@@ -590,6 +657,16 @@ const STRINGS = {
     btnAllStats:    'Alle statistieken →',
     homeFeedTitle: 'Nu beschikbaar',
     noActiveRides: 'Nog geen ritten gepubliceerd.',
+    btnInterest:      'Contactverzoek sturen',
+    interestSent:     'Verzoek verstuurd — je wordt gewaarschuwd als de bestuurder accepteert.',
+    interestPending:  'Wachten op bestuurder',
+    pendingInterests: (n) => n === 1 ? '1 geïnteresseerde' : `${n} geïnteresseerden`,
+    btnAccept:        'Accepteren en nummer delen',
+    contactRevealed:  'Contact geaccepteerd',
+    theirNumber:      'Hun nummer:',
+    theirName:        'Naam:',
+    btnCallNow:       'Nu bellen',
+    btnSearchRoute:   'Deze rit zoeken',
     statsPageTitle: 'Statistieken',
     statsSearches:  'Zoekopdrachten',
     statsRidesPosted:'Gepubliceerde ritten',
@@ -757,6 +834,9 @@ function bindControls() {
   bindLangPicker();
   const aboutBtn = document.getElementById('btn-about');
   if (aboutBtn) aboutBtn.onclick = showAboutModal;
+  const bellBtn = document.getElementById('btn-bell');
+  if (bellBtn) bellBtn.onclick = handleBellClick;
+  updateBellState(); // async, updates colour after render
 }
 
 // ── Push notifications ────────────────────────────────────────────────────────
@@ -862,8 +942,138 @@ function defaultDeparture() {
 
 // ── Views ─────────────────────────────────────────────────────────────────────
 
+async function handleInterestClick(btn) {
+  const s = t();
+  const rideID = btn.dataset.rideId;
+  const p = getProfile();
+  let phone = p.phone;
+  if (!phone) {
+    phone = window.prompt(s.labelPhone + ':');
+    if (!phone) return;
+    saveProfile('', phone);
+  }
+  try {
+    btn.disabled = true;
+    const res = await api('POST', `/rides/${rideID}/interest`, { phone, name: p.name || '' });
+    localStorage.setItem('interest_' + rideID, res.id);
+    btn.textContent = s.interestPending;
+    const stateEl = document.getElementById('int-state-' + rideID);
+    if (stateEl) {
+      stateEl.textContent = s.interestSent;
+      stateEl.classList.remove('hidden');
+    }
+    // Offer push notifications so the searcher is alerted when the driver accepts.
+    // Use a modal (not full-page replacement) so the user stays on the current view.
+    const bellState = document.getElementById('btn-bell')?.dataset.notifState;
+    if (bellState !== 'enabled') {
+      showNotifModal(bellState || 'default');
+    }
+  } catch (err) {
+    btn.disabled = false;
+    const stateEl = document.getElementById('int-state-' + rideID);
+    if (stateEl) {
+      stateEl.textContent = err.message;
+      stateEl.classList.remove('hidden');
+    }
+  }
+}
+
+function bellIcon() {
+  return `<button class="btn-bell" id="btn-bell" aria-label="Notifications"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>`;
+}
+
+async function updateBellState() {
+  const btn = document.getElementById('btn-bell');
+  if (!btn) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    btn.style.display = 'none';
+    return;
+  }
+  const perm = Notification.permission;
+  let subscribed = false;
+  if (perm === 'granted') {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      subscribed = sub !== null;
+    } catch {}
+  }
+  btn.classList.remove('bell-enabled', 'bell-disabled');
+  btn.classList.add(subscribed ? 'bell-enabled' : 'bell-disabled');
+  btn.dataset.notifState = subscribed ? 'enabled' : (perm === 'denied' ? 'denied' : 'default');
+
+  const label = document.getElementById('bell-activate-label');
+  if (label) {
+    if (!subscribed) {
+      label.textContent = t().btnActivate || 'Activate';
+      label.classList.remove('hidden');
+      label.onclick = handleBellClick;
+    } else {
+      label.classList.add('hidden');
+      label.onclick = null;
+    }
+  }
+}
+
+function handleBellClick() {
+  const s = t();
+  const state = document.getElementById('btn-bell')?.dataset.notifState;
+  showNotifModal(state);
+}
+
+function showNotifModal(state) {
+  const s = t();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const isEnabled = state === 'enabled';
+  const isDenied = state === 'denied';
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h2>${isEnabled ? '🔔 ' : ''}${s.notifTitle}</h2>
+        <button class="btn-modal-close" id="btn-notif-modal-close">${s.privacyClose}</button>
+      </div>
+      <div class="modal-body">
+        ${isEnabled
+          ? `<p>${s.notifEnabled}</p>`
+          : isDenied
+          ? `<p>${s.notifDeniedTip}</p>`
+          : `<p>${s.notifBody}</p>
+             <button class="btn btn-primary" id="btn-notif-modal-enable" style="margin-top:8px">${s.notifEnable}</button>
+             <button class="btn btn-secondary" id="btn-notif-modal-skip" style="margin-top:8px">${s.notifSkip}</button>`
+        }
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  document.getElementById('btn-notif-modal-close').onclick = () => overlay.remove();
+
+  if (!isEnabled && !isDenied) {
+    document.getElementById('btn-notif-modal-skip').onclick = () => overlay.remove();
+    document.getElementById('btn-notif-modal-enable').onclick = async () => {
+      overlay.remove();
+      const p = getProfile();
+      if (!p.phone) {
+        const phone = window.prompt(s.labelPhone + ':');
+        if (!phone) return;
+        saveProfile('', phone);
+        p.phone = phone;
+      }
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        await trySubscribePush(p.phone);
+        updateBellState();
+      } else if (result === 'denied') {
+        showNotifModal('denied');
+      }
+    };
+  }
+}
+
 function controls() {
-  return `<div class="controls">${langToggle()}${aboutIcon()}</div>`;
+  return `<div class="controls">${langToggle()}<div class="controls-icons">${aboutIcon()}${bellIcon()}<span class="bell-activate-label hidden" id="bell-activate-label"></span></div></div>`;
 }
 
 function topBar() {
@@ -963,6 +1173,26 @@ async function renderHome() {
   bindControls();
   loadHomeStats();
   loadHomeFeed();
+  loadPendingInterestBadge();
+}
+
+async function loadPendingInterestBadge() {
+  const p = getProfile();
+  if (!p.phone) return;
+  try {
+    const myRides = await api('GET', '/rides', null, { 'X-Phone': p.phone });
+    if (!myRides || !myRides.length) return;
+    let pending = 0;
+    await Promise.all(myRides.map(r =>
+      api('GET', `/rides/${r.ID}/interests`, null, { 'X-Phone': p.phone })
+        .then(interests => { pending += (interests || []).filter(i => i.status === 'pending').length; })
+        .catch(() => {})
+    ));
+    if (pending > 0) {
+      const btn = document.getElementById('btn-my-rides');
+      if (btn) btn.innerHTML += ` <span class="interest-badge">${pending}</span>`;
+    }
+  } catch {}
 }
 
 async function loadHomeStats() {
@@ -991,6 +1221,31 @@ async function loadHomeStats() {
   }
 }
 
+// For rides where the user has an accepted interest, look up the driver's phone.
+// Returns a map of rideID → driverPhone. Silently skips pending/missing interests.
+async function loadAcceptedContacts(rides) {
+  const p = getProfile();
+  if (!p.phone) return {};
+  const contacts = {};
+  await Promise.all(rides.map(r => {
+    const id = localStorage.getItem('interest_' + r.ID);
+    if (!id) return;
+    return api('GET', `/interests/${id}/contact`, null, { 'X-Phone': p.phone })
+      .then(res => { if (res && res.phone) contacts[r.ID] = res.phone; })
+      .catch(() => {});
+  }));
+  return contacts;
+}
+
+function contactOrInterestBtn(r, contacts, s) {
+  const phone = contacts[r.ID];
+  if (phone) {
+    return `<div class="contact-revealed"><a href="tel:${esc(phone)}">${esc(phone)}</a></div>`;
+  }
+  return `<button class="btn-interest" data-ride-id="${esc(r.ID)}">${s.btnInterest}</button>
+          <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>`;
+}
+
 async function loadHomeFeed() {
   const s = t();
   try {
@@ -1001,17 +1256,19 @@ async function loadHomeFeed() {
       el.innerHTML = `<div class="home-feed"><p class="home-feed-empty">${s.noActiveRides}</p></div>`;
       return;
     }
+    const contacts = await loadAcceptedContacts(rides);
     el.innerHTML = `
       <div class="home-feed">
         <div class="home-feed-title">${s.homeFeedTitle}</div>
         ${rides.map(r => `
-          <div class="home-feed-card" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}">
+          <div class="home-feed-card">
             <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
-            <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></span>
+            <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}</span>
+            ${contactOrInterestBtn(r, contacts, s)}
           </div>`).join('')}
       </div>`;
-    el.querySelectorAll('.home-feed-card').forEach(card => {
-      card.onclick = () => renderSearchRides({ origin: card.dataset.origin, destination: card.dataset.dest, departureAt: '' });
+    el.querySelectorAll('.btn-interest').forEach(btn => {
+      btn.onclick = () => handleInterestClick(btn);
     });
   } catch {
     // silently omit
@@ -1175,11 +1432,12 @@ async function renderSearchRides(autoQuery = null) {
     const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${timeParam}`;
     try {
       const [rides, returnRides] = await Promise.all([api('GET', fwdUrl), api('GET', retUrl)]);
+      const contacts = await loadAcceptedContacts([...rides, ...returnRides]);
 
       function rideCard(r) {
         return `<div class="card card-compact">
-          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
-          <div class="card-contact"><strong>${esc(r.DriverName)}</strong><br><a href="tel:${esc(r.Phone)}">${esc(r.Phone)}</a></div>
+          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}</div>
+          ${contactOrInterestBtn(r, contacts, s)}
         </div>`;
       }
 
@@ -1206,6 +1464,9 @@ async function renderSearchRides(autoQuery = null) {
           </div>
         </div>`;
 
+      results.querySelectorAll('.btn-interest').forEach(btn => {
+        btn.onclick = () => handleInterestClick(btn);
+      });
       results.querySelectorAll('.col-notify').forEach(btn => {
         btn.onclick = () => renderNotifyRoute(btn.dataset.from, btn.dataset.to, btn.dataset.dept);
       });
@@ -1317,6 +1578,7 @@ function renderMyRides() {
             <div class="seekers-section" id="seekers-${esc(r.ID)}">
               <div class="seekers-loading">…</div>
             </div>
+            <div class="interests-section" id="interests-${esc(r.ID)}"></div>
             ${feedbackSection}
             <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
             <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
@@ -1344,6 +1606,34 @@ function renderMyRides() {
           const el = document.getElementById('seekers-' + r.ID);
           if (el) el.innerHTML = '';
         });
+      });
+
+      // Load interests (pending/accepted contact requests)
+      rides.forEach(r => {
+        api('GET', `/rides/${r.ID}/interests`, null, { 'X-Phone': phone }).then(interests => {
+          const el = document.getElementById('interests-' + r.ID);
+          if (!el || !interests || !interests.length) return;
+          el.innerHTML = `<div class="interests-title">${s.pendingInterests(interests.length)}</div>` +
+            interests.map(i => `
+              <div class="interest-row" id="irow-${esc(i.id)}">
+                ${i.status === 'pending'
+                  ? `<div class="interest-pending-info">${i.searcher_name ? `<strong>${esc(i.searcher_name)}</strong> — ` : ''}${s.btnInterest.toLowerCase()}</div>
+                     <button class="btn-accept-interest" data-id="${esc(i.id)}" data-phone="${esc(phone)}">${s.btnAccept}</button>`
+                  : `<span class="interest-accepted">${s.contactRevealed}${i.searcher_name ? ` (${esc(i.searcher_name)})` : ''}: <a href="tel:${esc(i.searcher_phone)}">${esc(i.searcher_phone)}</a></span>`
+                }
+              </div>`).join('');
+          el.querySelectorAll('.btn-accept-interest').forEach(btn => {
+            btn.onclick = async () => {
+              try {
+                btn.disabled = true;
+                const res = await api('POST', `/interests/${btn.dataset.id}/accept`, { phone: btn.dataset.phone });
+                const nameTag = res.searcher_name ? ` (${esc(res.searcher_name)})` : '';
+                  document.getElementById('irow-' + btn.dataset.id).innerHTML =
+                  `<span class="interest-accepted">${s.contactRevealed}${nameTag}: <a href="tel:${esc(res.searcher_phone)}">${esc(res.searcher_phone)}</a></span>`;
+              } catch { btn.disabled = false; }
+            };
+          });
+        }).catch(() => {});
       });
 
       // Bind feedback buttons
@@ -1512,6 +1802,40 @@ function renderMyAlerts() {
   if (p.phone) document.getElementById('my-alerts-form').requestSubmit();
 }
 
+async function renderInterestContact(interestID) {
+  pushRoute('/interests/' + interestID);
+  const s = t();
+  app.innerHTML = `
+    ${pageBar()}
+    <h2>${s.contactRevealed}</h2>
+    <div id="contact-result"><p class="section-hint">…</p></div>`;
+  document.getElementById('back').onclick = renderHome;
+  bindControls();
+
+  const p = getProfile();
+  try {
+    const res = await api('GET', `/interests/${interestID}/contact`, null, { 'X-Phone': p.phone });
+    const personLabel = res.role === 'driver' ? s.labelDriver : s.labelSearcher;
+    document.getElementById('contact-result').innerHTML = `
+      <div class="card contact-card">
+        <div class="card-route">${esc(res.origin)} → ${esc(res.destination)}</div>
+        <div class="card-meta">${formatTime(res.departure_at)}</div>
+        <table class="detail-table" style="margin-top:12px">
+          ${res.name ? `<tr><td>${personLabel}</td><td><strong>${esc(res.name)}</strong></td></tr>` : ''}
+          <tr><td>${s.theirNumber}</td><td><strong><a href="tel:${esc(res.phone)}">${esc(res.phone)}</a></strong></td></tr>
+        </table>
+        <a href="tel:${esc(res.phone)}" class="btn btn-primary" style="margin-top:16px;display:block;text-align:center;text-decoration:none">${s.btnCallNow}</a>
+        <button class="btn btn-secondary" id="btn-search-route" data-origin="${esc(res.origin)}" data-dest="${esc(res.destination)}">${s.btnSearchRoute}</button>
+      </div>`;
+    document.getElementById('btn-search-route').onclick = (e) => {
+      renderSearchRides({ origin: e.currentTarget.dataset.origin, destination: e.currentTarget.dataset.dest, departureAt: '' });
+    };
+  } catch (err) {
+    document.getElementById('contact-result').innerHTML =
+      `<p class="error">${esc(err.message)}</p>`;
+  }
+}
+
 // ── Deep link from push notification ─────────────────────────────────────────
 
 async function renderItemDetail(type, item) {
@@ -1573,6 +1897,16 @@ async function handleDeepLink() {
     case '/my-alerts':    renderMyAlerts();          return true;
     case '/post-request': await renderPostRequest(); return true;
     case '/stats':        await renderStats();       return true;
+  }
+
+  // /interests/:id deep link
+  if (path.startsWith('/interests/')) {
+    const parts = path.split('/');
+    const id = parts[2];
+    if (id) {
+      await renderInterestContact(id);
+      return true;
+    }
   }
 
   return false;

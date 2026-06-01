@@ -31,6 +31,7 @@ func main() {
 	destRepo := postgres.NewDestinationRepo(pool)
 	subRepo := postgres.NewSubscriptionRepo(pool)
 	statRepo := postgres.NewStatRepo(pool)
+	interestRepo := postgres.NewInterestRepo(pool)
 
 	notifier := webpush.New(
 		os.Getenv("VAPID_PUBLIC_KEY"),
@@ -55,8 +56,12 @@ func main() {
 	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
 	getStats := usecase.NewGetStats(statRepo)
 	sendFeedbackReminders := usecase.NewSendFeedbackReminders(rideRepo, subRepo, notifier)
+	expressInterest    := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
+	acceptInterest     := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
+	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, rideRepo)
+	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
@@ -104,6 +109,10 @@ func main() {
 		api.DELETE("/rides/:id", rideH.Delete)
 		api.GET("/rides/:id/requests", rideH.ListMatchingRequests)
 		api.POST("/rides/:id/feedback", feedbackH.Post)
+		api.GET("/rides/:id/interests",   rideH.ListInterests)
+		api.POST("/rides/:id/interest",   interestH.Express)
+		api.POST("/interests/:id/accept", interestH.Accept)
+		api.GET("/interests/:id/contact", interestH.GetContact)
 
 		api.POST("/requests", requestH.Post)
 		api.GET("/requests", requestH.List)

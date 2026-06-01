@@ -1,11 +1,11 @@
-# Devstack (persistent volume):
+# Devstack (DB is tmpfs — data lost on stop):
 #   docker compose up --build
 #
-# Integration tests (tmpfs — data lost on stop):
-#   docker compose -f docker-compose.yml -f docker-compose.test.yml up db -d
+# Integration tests:
+#   docker compose up db migrations -d
 #   TEST_DATABASE_URL=postgres://gostop:gostop@localhost:5432/gostop?sslmode=disable \
 #     go test -tags integration ./...
-#   docker compose -f docker-compose.yml -f docker-compose.test.yml down
+#   docker compose down
 
 services:
   db:
@@ -18,13 +18,25 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/migrations:/migrations:ro
-      - ./db/initdb:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gostop"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  migrations:
+    build:
+      context: .
+      target: development
+    command: sh -c "go run ./cmd/migratedb up"
+    environment:
+      DATABASE_URL: postgres://gostop:gostop@db:5432/gostop?sslmode=disable
+    volumes:
+      - .:/app
+      - go-cache:/root/go/pkg/mod
+    depends_on:
+      db:
+        condition: service_healthy
 
   app:
     build:
@@ -46,7 +58,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
   go-cache:
