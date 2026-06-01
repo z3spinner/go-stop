@@ -10,7 +10,7 @@ import (
 )
 
 const listDestinations = `-- name: ListDestinations :many
-SELECT MIN(location) AS location FROM (
+SELECT MIN(location)::text AS location FROM (
   SELECT origin      AS location FROM rides
   UNION ALL SELECT destination   FROM rides
   UNION ALL SELECT origin        FROM requests
@@ -24,15 +24,15 @@ ORDER BY COUNT(*) DESC, MIN(location) ASC
 
 // Returns known locations sorted by popularity. Combines active rides/requests
 // with historical ride_stats so locations persist after rides expire.
-func (q *Queries) ListDestinations(ctx context.Context) ([]interface{}, error) {
+func (q *Queries) ListDestinations(ctx context.Context) ([]string, error) {
 	rows, err := q.db.Query(ctx, listDestinations)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []interface{}{}
+	items := []string{}
 	for rows.Next() {
-		var location interface{}
+		var location string
 		if err := rows.Scan(&location); err != nil {
 			return nil, err
 		}

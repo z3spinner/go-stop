@@ -44,7 +44,7 @@ type Querier interface {
 	InsertSearchEvent(ctx context.Context, arg InsertSearchEventParams) error
 	// Returns known locations sorted by popularity. Combines active rides/requests
 	// with historical ride_stats so locations persist after rides expire.
-	ListDestinations(ctx context.Context) ([]interface{}, error)
+	ListDestinations(ctx context.Context) ([]string, error)
 	ListInterestsByRide(ctx context.Context, rideID pgtype.UUID) ([]Interest, error)
 	ListRequestsByPhone(ctx context.Context, phone string) ([]Request, error)
 	// grace_minutes: hides rides whose flex window ended more than N minutes ago

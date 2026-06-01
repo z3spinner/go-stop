@@ -1,7 +1,7 @@
 -- name: ListDestinations :many
 -- Returns known locations sorted by popularity. Combines active rides/requests
 -- with historical ride_stats so locations persist after rides expire.
-SELECT MIN(location) AS location FROM (
+SELECT MIN(location)::text AS location FROM (
   SELECT origin      AS location FROM rides
   UNION ALL SELECT destination   FROM rides
   UNION ALL SELECT origin        FROM requests
