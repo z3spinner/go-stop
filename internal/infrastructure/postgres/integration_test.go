@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 
 func truncate(t *testing.T) {
 	t.Helper()
-	if _, err := testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`); err != nil {
+	if _, err := testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }

@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events`)
 		if truncErr == nil {
 			break
 		}
@@ -122,7 +122,7 @@ func setupRouter() *gin.Engine {
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests`); err != nil {
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }
