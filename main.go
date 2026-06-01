@@ -97,7 +97,8 @@ func main() {
 	}()
 
 	r := gin.Default()
-	r.SetTrustedProxies(nil)
+	// On Scalingo the real client IP is in X-Real-IP (set by their reverse proxy).
+	r.TrustedPlatform = "X-Real-IP"
 	r.Static("/css", "./web/css")
 	r.Static("/js", "./web/js")
 	r.StaticFile("/manifest.json", "./web/manifest.json")
