@@ -4,12 +4,13 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o go-stop .
+RUN CGO_ENABLED=0 go build -o go-stop . && CGO_ENABLED=0 go build -o migratedb ./cmd/migratedb
 
 FROM alpine:latest AS production
-RUN apk --no-cache add ca-certificates postgresql-client
+RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /app/go-stop .
+COPY --from=builder /app/migratedb .
 COPY web/ ./web/
 EXPOSE 8080
 CMD ["./go-stop"]

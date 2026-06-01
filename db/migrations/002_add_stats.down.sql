@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS ride_stats;
+ALTER TABLE rides DROP COLUMN IF EXISTS feedback_given;
