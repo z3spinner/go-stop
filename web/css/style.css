@@ -534,3 +534,6 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 }
 .btn-accept-interest:hover { opacity: 0.9; }
 .btn-accept-interest:disabled { opacity: 0.5; cursor: default; }
+
+.contact-revealed { margin-top: 6px; font-size: 0.9rem; }
+.contact-revealed a { color: var(--blue); font-weight: 500; }

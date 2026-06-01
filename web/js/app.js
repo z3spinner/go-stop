@@ -1063,6 +1063,31 @@ async function loadHomeStats() {
   }
 }
 
+// For rides where the user has an accepted interest, look up the driver's phone.
+// Returns a map of rideID → driverPhone. Silently skips pending/missing interests.
+async function loadAcceptedContacts(rides) {
+  const p = getProfile();
+  if (!p.phone) return {};
+  const contacts = {};
+  await Promise.all(rides.map(r => {
+    const id = localStorage.getItem('interest_' + r.ID);
+    if (!id) return;
+    return api('GET', `/interests/${id}/contact`, null, { 'X-Phone': p.phone })
+      .then(res => { if (res && res.phone) contacts[r.ID] = res.phone; })
+      .catch(() => {});
+  }));
+  return contacts;
+}
+
+function contactOrInterestBtn(r, contacts, s) {
+  const phone = contacts[r.ID];
+  if (phone) {
+    return `<div class="contact-revealed"><a href="tel:${esc(phone)}">${esc(phone)}</a></div>`;
+  }
+  return `<button class="btn-interest" data-ride-id="${esc(r.ID)}">${s.btnInterest}</button>
+          <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>`;
+}
+
 async function loadHomeFeed() {
   const s = t();
   try {
@@ -1073,6 +1098,7 @@ async function loadHomeFeed() {
       el.innerHTML = `<div class="home-feed"><p class="home-feed-empty">${s.noActiveRides}</p></div>`;
       return;
     }
+    const contacts = await loadAcceptedContacts(rides);
     el.innerHTML = `
       <div class="home-feed">
         <div class="home-feed-title">${s.homeFeedTitle}</div>
@@ -1080,8 +1106,7 @@ async function loadHomeFeed() {
           <div class="home-feed-card">
             <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
             <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></span>
-            <button class="btn-interest" data-ride-id="${esc(r.ID)}">${s.btnInterest}</button>
-            <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>
+            ${contactOrInterestBtn(r, contacts, s)}
           </div>`).join('')}
       </div>`;
     el.querySelectorAll('.btn-interest').forEach(btn => {
@@ -1249,12 +1274,12 @@ async function renderSearchRides(autoQuery = null) {
     const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${timeParam}`;
     try {
       const [rides, returnRides] = await Promise.all([api('GET', fwdUrl), api('GET', retUrl)]);
+      const contacts = await loadAcceptedContacts([...rides, ...returnRides]);
 
       function rideCard(r) {
         return `<div class="card card-compact">
           <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
-          <button class="btn-interest" data-ride-id="${esc(r.ID)}">${s.btnInterest}</button>
-          <div class="interest-state hidden" id="int-state-${esc(r.ID)}"></div>
+          ${contactOrInterestBtn(r, contacts, s)}
         </div>`;
       }
 
