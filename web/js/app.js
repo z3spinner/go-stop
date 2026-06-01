@@ -946,10 +946,16 @@ async function loadHomeStats() {
 async function loadHomeFeed() {
   const s = t();
   try {
-    const rides = await api('GET', '/rides');
+    const allRides = await api('GET', '/rides');
     const el = document.getElementById('home-feed');
     if (!el) return;
-    if (!rides || !rides.length) {
+    // Hide rides whose flex window ended more than 1 hour ago
+    const now = Date.now();
+    const rides = (allRides || []).filter(r => {
+      const flexMs = (r.Flexibility || 0) * 60 * 1000;
+      return new Date(r.DepartureAt).getTime() + flexMs + 60 * 60 * 1000 > now;
+    });
+    if (!rides.length) {
       el.innerHTML = `<div class="home-feed"><p class="home-feed-empty">${s.noActiveRides}</p></div>`;
       return;
     }
