@@ -5,7 +5,7 @@
   "addons": ["postgresql:postgresql-sandbox"],
   "env": {
     "VAPID_PUBLIC_KEY": {
-      "description": "VAPID public key for Web Push notifications (generate with webpush-go or similar)",
+      "description": "VAPID public key for Web Push notifications (generate with: go run ./cmd/genvapid)",
       "required": true
     },
     "VAPID_PRIVATE_KEY": {
@@ -16,17 +16,29 @@
       "description": "Contact email for Web Push — prefix with mailto: (e.g. mailto:you@example.com)",
       "required": true
     },
+    "SITE_NAME": {
+      "description": "Display name for this community's instance (e.g. 'Go Stop Saillans!')",
+      "value": "Go-Stop"
+    },
+    "SERVICE_TZ": {
+      "description": "IANA timezone for the community (e.g. Europe/Paris, Europe/London). Used to interpret time-only searches correctly.",
+      "value": "Europe/Paris"
+    },
+    "RIDE_GRACE_MINUTES": {
+      "description": "Minutes after a ride's flex window closes before it disappears from search results (default: 60)",
+      "value": "60"
+    },
+    "RETURN_DELAY_HOURS": {
+      "description": "Default hours after outbound departure to pre-fill the return trip time (default: 2)",
+      "value": "2"
+    },
+    "PHONE_ENCRYPTION_KEY": {
+      "description": "Base64-encoded 32-byte AES-256 key for encrypting phone numbers at rest. Generate with: openssl rand -base64 32. Optional — phones stored in plaintext if unset.",
+      "required": false
+    },
     "GIN_MODE": {
       "description": "Set to 'release' for production",
       "value": "release"
-    },
-    "RIDE_GRACE_MINUTES": {
-      "description": "Minutes after a ride's flex window closes before it disappears from listings (default: 60)",
-      "value": "60"
-    },
-    "SITE_NAME": {
-      "description": "Display name for this community's instance (default: Go-Stop)",
-      "value": "Go-Stop"
     }
   }
 }
