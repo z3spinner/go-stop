@@ -1020,7 +1020,7 @@ async function handleBellClick() {
 }
 
 function controls() {
-  return `<div class="controls">${langToggle()}${aboutIcon()}${bellIcon()}</div>`;
+  return `<div class="controls">${langToggle()}<div class="controls-icons">${aboutIcon()}${bellIcon()}</div></div>`;
 }
 
 function topBar() {
