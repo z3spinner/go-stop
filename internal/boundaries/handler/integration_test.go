@@ -706,3 +706,56 @@ func TestHTTP_Alert_AnytimeMode_MatchesAnyRideOnRoute(t *testing.T) {
 		t.Errorf("anytime mode: expected 0 matches for different route, got %d", len(noMatch))
 	}
 }
+
+func TestHTTP_Alert_DailyMode_MatchesTimeOnAnyDate(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Post a daily alert for 09:00 ±30 min, any day
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name":  "Alice", "phone": "5563001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_time": "09:00", "flexibility": 30,
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Ride at 09:15 on a completely different date — should match (within ±30 min window)
+	w2 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "5563002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2031-03-20T09:15:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &ride)
+
+	req2, _ := http.NewRequest(http.MethodGet, "/api/rides/"+ride["ID"].(string)+"/requests", nil)
+	req2.Header.Set("X-Phone", "5563002")
+	w3 := httptest.NewRecorder()
+	r.ServeHTTP(w3, req2)
+	var matching []map[string]interface{}
+	json.Unmarshal(w3.Body.Bytes(), &matching)
+	if len(matching) != 1 {
+		t.Errorf("daily mode: expected 1 match for ride within time window, got %d", len(matching))
+	}
+
+	// Ride at 14:00 on any date — should NOT match (outside window)
+	w4 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "5563002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2031-03-21T14:00:00Z", "flexibility": 0,
+	})
+	var ride2 map[string]interface{}
+	json.Unmarshal(w4.Body.Bytes(), &ride2)
+
+	req3, _ := http.NewRequest(http.MethodGet, "/api/rides/"+ride2["ID"].(string)+"/requests", nil)
+	req3.Header.Set("X-Phone", "5563002")
+	w5 := httptest.NewRecorder()
+	r.ServeHTTP(w5, req3)
+	var noMatch []map[string]interface{}
+	json.Unmarshal(w5.Body.Bytes(), &noMatch)
+	if len(noMatch) != 0 {
+		t.Errorf("daily mode: expected 0 matches for ride outside time window, got %d", len(noMatch))
+	}
+}

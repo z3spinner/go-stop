@@ -99,7 +99,10 @@ func (r *RequestRepo) FindMatching(ride domain.Ride) ([]domain.Request, error) {
 		 WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
 		   AND expires_at > NOW()
 		   AND (
-		     date IS NULL
+		     (date IS NULL AND departure_at IS NULL)
+		     OR (date IS NULL AND departure_at IS NOT NULL
+		         AND (departure_at::time - (flexibility * interval '1 minute')) <= ($4::timestamptz::time + ($5 * interval '1 minute'))
+		         AND (departure_at::time + (flexibility * interval '1 minute')) >= ($4::timestamptz::time - ($5 * interval '1 minute')))
 		     OR (date = $3 AND departure_at IS NULL)
 		     OR (date = $3
 		         AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5 * interval '1 minute'))

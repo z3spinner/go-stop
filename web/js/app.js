@@ -65,6 +65,7 @@ const STRINGS = {
     alertModeTime:    'Specific time',
     alertModeDay:     'Any time this day',
     alertModeAnytime: 'Any time, any date',
+    alertModeDaily:   'Daily at a time',
     alertAnytimeLabel:'Always',
     btnMyAlerts:      'My alerts',
     myAlertsTitle:    'My alerts',
@@ -195,6 +196,7 @@ const STRINGS = {
     alertModeTime:    'Heure précise',
     alertModeDay:     'Toute la journée',
     alertModeAnytime: 'Toujours',
+    alertModeDaily:   'Chaque jour',
     alertAnytimeLabel:'Toujours',
     btnMyAlerts:      'Mes alertes',
     myAlertsTitle:    'Mes alertes',
@@ -328,6 +330,7 @@ const STRINGS = {
     alertModeTime:  'Hora específica',
     alertModeDay:   'Cualquier hora ese día',
     alertModeAnytime:'Siempre',
+    alertModeDaily:  'Cada día',
     alertAnytimeLabel:'Siempre',
     btnMyAlerts:    'Mis alertas',
     myAlertsTitle:  'Mis alertas',
@@ -438,6 +441,7 @@ const STRINGS = {
     alertModeTime:  'Orario specifico',
     alertModeDay:   'Qualsiasi ora quel giorno',
     alertModeAnytime:'Sempre',
+    alertModeDaily:  'Ogni giorno',
     alertAnytimeLabel:'Sempre',
     btnMyAlerts:    'I miei avvisi',
     myAlertsTitle:  'I miei avvisi',
@@ -548,6 +552,7 @@ const STRINGS = {
     alertModeTime:  'Bestimmte Uhrzeit',
     alertModeDay:   'Ganzer Tag',
     alertModeAnytime:'Immer',
+    alertModeDaily:  'Täglich',
     alertAnytimeLabel:'Immer',
     btnMyAlerts:    'Meine Alerts',
     myAlertsTitle:  'Meine Alerts',
@@ -658,6 +663,7 @@ const STRINGS = {
     alertModeTime:  'Specifieke tijd',
     alertModeDay:   'Hele dag',
     alertModeAnytime:'Altijd',
+    alertModeDaily:  'Dagelijks',
     alertAnytimeLabel:'Altijd',
     btnMyAlerts:    'Mijn alerts',
     myAlertsTitle:  'Mijn alerts',
@@ -1759,6 +1765,7 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
         <div class="btn-group" id="alert-mode-btns">
           <button type="button" class="btn-mode active" data-mode="time">${s.alertModeTime}</button>
           <button type="button" class="btn-mode" data-mode="day">${s.alertModeDay}</button>
+          <button type="button" class="btn-mode" data-mode="daily">${s.alertModeDaily}</button>
           <button type="button" class="btn-mode" data-mode="anytime">${s.alertModeAnytime}</button>
         </div>
       </div>
@@ -1791,10 +1798,12 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
     const timeGroup = document.getElementById('alert-time-group');
     const flexGroup = document.getElementById('alert-flex-group');
     const timeFields = document.getElementById('alert-time-fields');
+    const dateGroup = document.querySelector('.search-date-group');
     if (alertMode === 'anytime') {
       timeFields.classList.add('hidden');
     } else {
       timeFields.classList.remove('hidden');
+      dateGroup.style.display = alertMode === 'daily' ? 'none' : '';
       timeGroup.style.display = alertMode === 'day' ? 'none' : '';
       flexGroup.style.display = alertMode === 'day' ? 'none' : '';
     }
@@ -1822,8 +1831,14 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
     } else if (alertMode === 'day') {
       const date = fd.get('alert_date');
       if (date) body.departure_date = date;
+    } else if (alertMode === 'daily') {
+      const time = fd.get('alert_time');
+      if (time) {
+        body.departure_time = time;
+        body.flexibility = parseInt(fd.get('flexibility'));
+      }
     }
-    // anytime: no date fields
+    // anytime: no date/time fields
     try {
       await api('POST', '/requests', body);
       renderNotificationPrompt(phone, () => {
@@ -1864,9 +1879,17 @@ function renderMyAlerts() {
       }
       list.innerHTML = reqs.map(r => {
         let meta;
-        if (!r.Date || r.Date === '0001-01-01T00:00:00Z') {
+        const noDate = !r.Date || r.Date === '0001-01-01T00:00:00Z';
+        const noDept = !r.DepartureAt || r.DepartureAt === '0001-01-01T00:00:00Z';
+        const isDailyTime = !noDate ? false : !noDept && r.DepartureAt !== '0001-01-01T00:00:00Z';
+        if (noDate && noDept) {
           meta = `<span class="tag tag-anytime">${s.alertAnytimeLabel}</span>`;
-        } else if (!r.DepartureAt || r.DepartureAt === '0001-01-01T00:00:00Z') {
+        } else if (noDate && !noDept) {
+          // daily mode — show time only
+          const d = new Date(r.DepartureAt);
+          const pad = n => String(n).padStart(2, '0');
+          meta = `<span class="tag tag-daily">${s.alertModeDaily} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}</span> <span class="tag">${s.flexLabel[r.Flexibility] || r.Flexibility + ' min'}</span>`;
+        } else if (!noDate && noDept) {
           meta = `<span class="tag">${formatDate(r.Date)}</span>`;
         } else {
           meta = `${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>`;

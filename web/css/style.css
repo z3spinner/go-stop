@@ -91,6 +91,7 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   color: var(--gray-600);
 }
 .tag-anytime { background: #dbeafe; color: #1d4ed8; }
+.tag-daily   { background: #dcfce7; color: #166534; }
 .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn-mode {
   padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--blue);

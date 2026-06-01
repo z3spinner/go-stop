@@ -29,10 +29,11 @@ func (uc *PostRequest) Execute(req domain.Request) (domain.Request, error) {
 	req.ID = uuid.New().String()
 	req.PostedAt = time.Now()
 	switch {
-	case req.Date.IsZero(): // anytime — no date constraint
-		req.DepartureAt = time.Time{}
+	case req.Date.IsZero() && req.DepartureAt.IsZero(): // anytime
 		req.ExpiresAt = time.Now().AddDate(1, 0, 0)
-	case req.DepartureAt.IsZero(): // day — date set, no time constraint
+	case req.Date.IsZero() && !req.DepartureAt.IsZero(): // daily — time only, any date
+		req.ExpiresAt = time.Now().AddDate(1, 0, 0)
+	case !req.Date.IsZero() && req.DepartureAt.IsZero(): // day — date set, any time
 		req.ExpiresAt = req.Date.AddDate(0, 0, 1)
 	default: // specific time window
 		req.Date = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day(), 0, 0, 0, 0, req.DepartureAt.Location())

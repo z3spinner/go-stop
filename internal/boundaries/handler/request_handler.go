@@ -48,13 +48,14 @@ func (h *RequestHandler) List(c *gin.Context) {
 }
 
 type postRequestBody struct {
-	SearcherName  string `json:"searcher_name" binding:"required"`
-	Phone         string `json:"phone" binding:"required"`
-	Origin        string `json:"origin" binding:"required"`
-	Destination   string `json:"destination" binding:"required"`
-	DepartureAt   string `json:"departure_at"`   // RFC3339 — specific time mode
-	DepartureDate string `json:"departure_date"` // YYYY-MM-DD — day mode
-	Flexibility   int    `json:"flexibility"`
+	SearcherName    string `json:"searcher_name" binding:"required"`
+	Phone           string `json:"phone" binding:"required"`
+	Origin          string `json:"origin" binding:"required"`
+	Destination     string `json:"destination" binding:"required"`
+	DepartureAt     string `json:"departure_at"`   // RFC3339 — specific time mode
+	DepartureDate   string `json:"departure_date"` // YYYY-MM-DD — day mode
+	DepartureTime   string `json:"departure_time"` // HH:MM — daily mode (any day at this time)
+	Flexibility     int    `json:"flexibility"`
 }
 
 func (h *RequestHandler) Post(c *gin.Context) {
@@ -85,6 +86,14 @@ func (h *RequestHandler) Post(c *gin.Context) {
 			return
 		}
 		req.Date = d // day mode: Date set, DepartureAt stays zero
+	case body.DepartureTime != "":
+		tt, err := time.Parse("15:04", body.DepartureTime)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid departure_time, use HH:MM"})
+			return
+		}
+		// Daily mode: Date stays zero, DepartureAt carries only the time (sentinel date 1970-01-01).
+		req.DepartureAt = time.Date(1970, 1, 1, tt.Hour(), tt.Minute(), 0, 0, time.UTC)
 	// neither → anytime: both Date and DepartureAt remain zero
 	}
 	saved, err := h.postRequest.Execute(req)
