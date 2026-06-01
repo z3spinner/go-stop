@@ -60,12 +60,23 @@ func main() {
 	acceptInterest     := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo)
+	serviceTZ := time.UTC
+	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
+		if loc, err := time.LoadLocation(tzName); err == nil {
+			serviceTZ = loc
+			log.Printf("service timezone: %s", tzName)
+		} else {
+			log.Printf("warning: invalid SERVICE_TZ %q, using UTC: %v", tzName, err)
+		}
+	}
+
+	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 	vapidH := handler.NewVapidHandler(os.Getenv("VAPID_PUBLIC_KEY"))
+
 	siteName := os.Getenv("SITE_NAME")
 	if siteName == "" {
 		siteName = "Go-Stop"

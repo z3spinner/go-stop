@@ -51,6 +51,7 @@ services:
       VAPID_EMAIL: ${VAPID_EMAIL:-mailto:dev@localhost}
       SITE_NAME: ${SITE_NAME:-Go-Stop}
       RIDE_GRACE_MINUTES: ${RIDE_GRACE_MINUTES:-60}
+      SERVICE_TZ: ${SERVICE_TZ:-Europe/Paris}
       PORT: "8080"
     volumes:
       - .:/app

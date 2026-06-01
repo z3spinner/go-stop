@@ -54,6 +54,7 @@ type RideHandler struct {
 	statRepo             repository.StatRepository
 	interestRepo         repository.InterestRepository
 	rideRepo             repository.RideRepository
+	serviceTZ            *time.Location
 }
 
 func NewRideHandler(
@@ -66,6 +67,7 @@ func NewRideHandler(
 	statRepo repository.StatRepository,
 	interestRepo repository.InterestRepository,
 	rideRepo repository.RideRepository,
+	serviceTZ *time.Location,
 ) *RideHandler {
 	return &RideHandler{
 		postRide:            postRide,
@@ -77,6 +79,7 @@ func NewRideHandler(
 		statRepo:            statRepo,
 		interestRepo:        interestRepo,
 		rideRepo:            rideRepo,
+		serviceTZ:           serviceTZ,
 	}
 }
 
@@ -141,9 +144,15 @@ func (h *RideHandler) List(c *gin.Context) {
 				searchDate = parsed
 			}
 		} else if raw := c.Query("search_time"); raw != "" {
-			// HH:MM — use a sentinel date (epoch) so the time component is non-zero
+			// HH:MM local time — convert to UTC using the service timezone
 			if parsed, err2 := time.Parse("15:04", raw); err2 == nil {
-				searchTime = time.Date(1970, 1, 1, parsed.Hour(), parsed.Minute(), 0, 0, time.UTC)
+				loc := h.serviceTZ
+				if loc == nil {
+					loc = time.UTC
+				}
+				now := time.Now().In(loc)
+				searchTime = time.Date(now.Year(), now.Month(), now.Day(),
+					parsed.Hour(), parsed.Minute(), 0, 0, loc)
 			}
 		}
 		rides, err = h.searchRides.Execute(origin, destination, searchDate, deptAt, searchTime)

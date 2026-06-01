@@ -1502,18 +1502,11 @@ async function renderSearchRides(autoQuery = null) {
     const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${extraQS}`;
     history.replaceState({ path: '/search' }, '', '/search' + searchQS);
     const results = document.getElementById('results');
-    // API uses UTC time — convert local search_time to UTC so it matches stored departure_at.
-    // Use today's date (not 1970-01-01) so the correct DST offset applies.
-    let apiTimeParam = searchTimeParam;
-    if (searchTimeParam) {
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-      const d = new Date(`${today}T${searchTimeParam}`);
-      const pad = n => String(n).padStart(2, '0');
-      apiTimeParam = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-    }
+    // search_time is sent as the user's local time (HH:MM).
+    // The server converts to UTC using its SERVICE_TZ configuration.
     const apiParam = deptISO        ? `&departure_at=${encodeURIComponent(deptISO)}`
                    : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}`
-                   : apiTimeParam    ? `&search_time=${encodeURIComponent(apiTimeParam)}` : '';
+                   : searchTimeParam ? `&search_time=${encodeURIComponent(searchTimeParam)}` : '';
     const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${apiParam}`;
     const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${apiParam}`;
     try {
