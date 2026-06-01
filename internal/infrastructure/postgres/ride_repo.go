@@ -33,7 +33,10 @@ func (r *RideRepo) FindByID(id string) (domain.Ride, error) {
 func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
-		 FROM rides WHERE expires_at > NOW() ORDER BY departure_at ASC`)
+		 FROM rides
+		 WHERE expires_at > NOW()
+		   AND departure_at + (flexibility * interval '1 minute') + interval '1 hour' > NOW()
+		 ORDER BY departure_at ASC`)
 	if err != nil {
 		return nil, err
 	}
