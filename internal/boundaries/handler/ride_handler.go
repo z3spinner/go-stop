@@ -232,10 +232,14 @@ func (h *RideHandler) ListInterests(c *gin.Context) {
 	}
 	out := make([]interestResponse, len(interests))
 	for i, interest := range interests {
-		out[i] = interestResponse{ID: interest.ID, Status: interest.Status}
+		// Name is always shown to the driver; phone only after accepted
+		out[i] = interestResponse{
+			ID:           interest.ID,
+			Status:       interest.Status,
+			SearcherName: interest.SearcherName,
+		}
 		if interest.Status == "accepted" {
 			out[i].SearcherPhone = interest.SearcherPhone
-			out[i].SearcherName = interest.SearcherName
 		}
 	}
 	c.JSON(http.StatusOK, out)
