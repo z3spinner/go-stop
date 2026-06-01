@@ -1401,7 +1401,7 @@ async function renderSearchRides(autoQuery = null) {
       <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(ls.destination || '')}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
       <div class="search-datetime-row">
         <div class="form-group search-date-group"><label class="label-optional">${s.labelSearchDate}</label><input name="search_date" type="date" value="${esc(dateInputVal)}"></div>
-        <div class="form-group search-time-group"><label class="label-optional">${s.labelSearchTime}</label><input name="search_time" type="time" step="300" value="${esc(timeInputVal)}"></div>
+        <div class="form-group search-time-group"><label class="label-optional">${s.labelSearchTime}</label><input name="search_time" type="time" value="${esc(timeInputVal)}"></div>
       </div>
       <button class="btn btn-primary" type="submit">${s.btnSearch}</button>
     </form>
