@@ -1,6 +1,7 @@
 package usecase_test
 
 import (
+	"time"
 	"testing"
 
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -18,6 +19,7 @@ func (r *expiringRideRepo) FindByPhone(string) ([]domain.Ride, error) { return n
 func (r *expiringRideRepo) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil
 }
+func (r *expiringRideRepo) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
 func (r *expiringRideRepo) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (r *expiringRideRepo) Delete(string) error                                 { return nil }
 func (r *expiringRideRepo) DeleteExpired() error {

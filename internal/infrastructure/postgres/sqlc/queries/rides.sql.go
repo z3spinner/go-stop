@@ -453,6 +453,60 @@ func (q *Queries) SearchRides(ctx context.Context, arg SearchRidesParams) ([]Rid
 	return items, nil
 }
 
+const searchRidesByDate = `-- name: SearchRidesByDate :many
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+FROM rides
+WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+  AND date = $3
+  AND expires_at > NOW()
+  AND departure_at + (flexibility * interval '1 minute') + ($4::int * interval '1 minute') > NOW()
+ORDER BY departure_at ASC
+`
+
+type SearchRidesByDateParams struct {
+	Lower        string      `db:"lower"`
+	Lower_2      string      `db:"lower_2"`
+	Date         pgtype.Date `db:"date"`
+	GraceMinutes int32       `db:"grace_minutes"`
+}
+
+func (q *Queries) SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error) {
+	rows, err := q.db.Query(ctx, searchRidesByDate,
+		arg.Lower,
+		arg.Lower_2,
+		arg.Date,
+		arg.GraceMinutes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Ride{}
+	for rows.Next() {
+		var i Ride
+		if err := rows.Scan(
+			&i.ID,
+			&i.DriverName,
+			&i.Phone,
+			&i.Origin,
+			&i.Destination,
+			&i.Date,
+			&i.DepartureAt,
+			&i.Flexibility,
+			&i.PostedAt,
+			&i.ExpiresAt,
+			&i.FeedbackGiven,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setRideFeedbackGiven = `-- name: SetRideFeedbackGiven :exec
 UPDATE rides SET feedback_given = true WHERE id = $1
 `

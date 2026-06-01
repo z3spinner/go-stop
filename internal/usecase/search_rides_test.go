@@ -1,6 +1,7 @@
 package usecase_test
 
 import (
+	"time"
 	"testing"
 
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -18,6 +19,7 @@ func (m *mockRideRepoSearch) FindByPhone(string) ([]domain.Ride, error) { return
 func (m *mockRideRepoSearch) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return m.resultsByRoute[o+"|"+d], nil
 }
+func (m *mockRideRepoSearch) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoSearch) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoSearch) Delete(string) error                                 { return nil }
 func (m *mockRideRepoSearch) DeleteExpired() error                                { return nil }
@@ -31,7 +33,7 @@ func TestSearchRides_FiltersByOriginAndDestination(t *testing.T) {
 		},
 	}
 	uc := usecase.NewSearchRides(rides)
-	result, err := uc.Execute("Village A", "Station")
+	result, err := uc.Execute("Village A", "Station", time.Time{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -42,7 +44,7 @@ func TestSearchRides_FiltersByOriginAndDestination(t *testing.T) {
 
 func TestSearchRides_ReturnsEmptySliceWhenNoneFound(t *testing.T) {
 	uc := usecase.NewSearchRides(&mockRideRepoSearch{resultsByRoute: map[string][]domain.Ride{}})
-	result, err := uc.Execute("A", "B")
+	result, err := uc.Execute("A", "B", time.Time{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -61,6 +62,19 @@ func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]dom
 	rows, err := r.q.SearchRides(context.Background(), queries.SearchRidesParams{
 		Lower:        origin,
 		Lower_2:      destination,
+		GraceMinutes: r.graceMins,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ridesFromRows(rows), nil
+}
+
+func (r *RideRepo) FindByOriginDestinationAndDate(origin, destination string, date time.Time) ([]domain.Ride, error) {
+	rows, err := r.q.SearchRidesByDate(context.Background(), queries.SearchRidesByDateParams{
+		Lower:        origin,
+		Lower_2:      destination,
+		Date:         dateFrom(date),
 		GraceMinutes: r.graceMins,
 	})
 	if err != nil {

@@ -1,6 +1,10 @@
 package repository
 
-import "github.com/z3spinner/go-stop/internal/domain"
+import (
+	"time"
+
+	"github.com/z3spinner/go-stop/internal/domain"
+)
 
 type RideRepository interface {
 	Save(ride domain.Ride) error
@@ -8,6 +12,7 @@ type RideRepository interface {
 	FindAll() ([]domain.Ride, error)
 	FindByPhone(phone string) ([]domain.Ride, error)
 	FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error)
+	FindByOriginDestinationAndDate(origin, destination string, date time.Time) ([]domain.Ride, error)
 	FindMatching(request domain.Request) ([]domain.Ride, error)
 	FindPendingFeedback() ([]domain.Ride, error)
 	Delete(id string) error

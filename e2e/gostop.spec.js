@@ -429,3 +429,43 @@ test('date+time in search pre-fills both fields in notification alert', async ({
   // Time is converted to local timezone — verify format not exact value
   expect(timeVal).toMatch(/^\d{2}:\d{2}$/);
 });
+
+// ── 21. Date-filtered search hides rides from other dates ─────────────────────
+test('search with date filter only shows rides on that date', async ({ page }) => {
+  await page.goto(BASE);
+
+  // Post a ride on a specific far-future date (unique enough to not clash)
+  const targetDate = '2031-03-10';
+  const otherDate  = '2031-03-11';
+  const origin = `FilterTest${Date.now()}`;
+  const dest   = `FilterDest${Date.now()}`;
+
+  const postRide = async (departure) => page.evaluate(async ({ driver, origin, dest, dep }) => {
+    const r = await fetch('/api/rides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driver_name: driver.name, phone: driver.phone,
+        origin, destination: dest,
+        departure_at: dep, flexibility: 0,
+      }),
+    });
+    return r.json();
+  }, { driver: DRIVER, origin, dest, dep: departure });
+
+  const r1 = await postRide(`${targetDate}T09:00:00Z`); // on target date
+  const r2 = await postRide(`${otherDate}T09:00:00Z`);  // on other date
+  expect(r1.ID).toBeTruthy();
+  expect(r2.ID).toBeTruthy();
+
+  // Search with departure_at = targetDate (midnight UTC → same date)
+  const deptParam = encodeURIComponent(`${targetDate}T00:00:00.000Z`);
+  const rides = await page.evaluate(async ({ origin, dest, dept }) => {
+    const r = await fetch(`/api/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&departure_at=${dept}`);
+    return r.json();
+  }, { origin, dest, dept: deptParam });
+
+  const ids = rides.map(r => r.ID);
+  expect(ids).toContain(r1.ID);       // target date → should appear
+  expect(ids).not.toContain(r2.ID);   // other date  → must be hidden
+});

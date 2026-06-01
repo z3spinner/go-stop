@@ -36,6 +36,7 @@ func (m *mockRideRepo) FindByPhone(string) ([]domain.Ride, error) { return nil, 
 func (m *mockRideRepo) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return nil, nil
 }
+func (m *mockRideRepo) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) Delete(string) error                                 { return nil }
 func (m *mockRideRepo) DeleteExpired() error                                { return nil }

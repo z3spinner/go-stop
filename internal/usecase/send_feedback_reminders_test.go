@@ -22,6 +22,7 @@ func (m *mockRideRepoPendingFeedback) FindByPhone(string) ([]domain.Ride, error)
 func (m *mockRideRepoPendingFeedback) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil
 }
+func (m *mockRideRepoPendingFeedback) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoPendingFeedback) FindMatching(domain.Request) ([]domain.Ride, error) {
 	return nil, nil
 }

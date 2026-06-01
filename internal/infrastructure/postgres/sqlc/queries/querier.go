@@ -52,6 +52,7 @@ type Querier interface {
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)
 	ListRidesPendingFeedback(ctx context.Context) ([]Ride, error)
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)
+	SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error)
 	SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

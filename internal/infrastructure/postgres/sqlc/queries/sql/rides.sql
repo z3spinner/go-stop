@@ -19,6 +19,15 @@ SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibil
 FROM rides WHERE phone = $1 AND expires_at > NOW()
 ORDER BY departure_at ASC;
 
+-- name: SearchRidesByDate :many
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+FROM rides
+WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+  AND date = $3
+  AND expires_at > NOW()
+  AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
+ORDER BY departure_at ASC;
+
 -- name: SearchRides :many
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
 FROM rides
