@@ -532,9 +532,21 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-interest:hover { background: var(--blue); color: white; }
 .btn-interest:disabled { opacity: 0.5; cursor: default; background: none; color: var(--blue); }
 .interest-state { font-size: 0.8rem; color: var(--green); margin-top: 4px; }
-.interest-pending-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.interest-pending-row { display: flex; flex-direction: column; gap: 6px; }
 .interest-pending-label { font-size: 0.85rem; color: var(--muted); }
-.btn-interest-resend { font-size: 0.75rem; padding: 2px 8px; }
+.btn-interest-resend {
+  /* same size as .btn-interest but filled blue to stand out as a repeat action */
+  font-size: 0.85rem;
+  padding: 5px 10px;
+  width: 100%;
+  background: var(--blue);
+  color: white;
+  border: 1px solid var(--blue);
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-top: 0;
+}
+.btn-interest-resend:hover { background: var(--blue-dark); border-color: var(--blue-dark); }
 .interests-section { margin-top: 8px; }
 .interests-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.05em; color: var(--gray-600); margin-bottom: 4px; }
