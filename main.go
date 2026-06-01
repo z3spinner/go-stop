@@ -70,7 +70,13 @@ func main() {
 	if siteName == "" {
 		siteName = "Go-Stop"
 	}
-	configH := handler.NewConfigHandler(siteName)
+	returnDelayHours := 2
+	if v := os.Getenv("RETURN_DELAY_HOURS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			returnDelayHours = n
+		}
+	}
+	configH := handler.NewConfigHandler(siteName, returnDelayHours)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
 

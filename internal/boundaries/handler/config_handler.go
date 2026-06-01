@@ -7,13 +7,17 @@ import (
 )
 
 type ConfigHandler struct {
-	siteName string
+	siteName          string
+	returnDelayHours  int
 }
 
-func NewConfigHandler(siteName string) *ConfigHandler {
-	return &ConfigHandler{siteName: siteName}
+func NewConfigHandler(siteName string, returnDelayHours int) *ConfigHandler {
+	return &ConfigHandler{siteName: siteName, returnDelayHours: returnDelayHours}
 }
 
 func (h *ConfigHandler) Get(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"siteName": h.siteName})
+	c.JSON(http.StatusOK, gin.H{
+		"siteName":         h.siteName,
+		"returnDelayHours": h.returnDelayHours,
+	})
 }

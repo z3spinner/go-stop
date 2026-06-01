@@ -3,6 +3,7 @@
 
 const app = document.getElementById('app');
 let SITE_NAME = 'Go-Stop';
+let RETURN_DELAY_HOURS = 2;
 
 // ── i18n ─────────────────────────────────────────────────────────────────────
 
@@ -1352,7 +1353,17 @@ async function renderPostRide() {
     sec.classList.remove('hidden');
     const retInput = document.querySelector('[name=return_departure_at]');
     retInput.required = true;
-    if (!retInput.value) retInput.value = defaultDeparture();
+    if (!retInput.value) {
+      const outbound = document.querySelector('[name=departure_at]').value;
+      if (outbound) {
+        const d = new Date(outbound);
+        d.setHours(d.getHours() + RETURN_DELAY_HOURS);
+        const pad = n => String(n).padStart(2, '0');
+        retInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      } else {
+        retInput.value = defaultDeparture();
+      }
+    }
   };
 
   document.getElementById('ride-form').onsubmit = async (e) => {
@@ -1930,6 +1941,7 @@ async function handleDeepLink() {
   try {
     const cfg = await api('GET', '/config');
     SITE_NAME = cfg.siteName || 'Go-Stop';
+    RETURN_DELAY_HOURS = cfg.returnDelayHours || 2;
     document.title = SITE_NAME;
   } catch {}
   renderFooter();
