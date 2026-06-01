@@ -8,9 +8,9 @@ type Request struct {
 	Phone        string
 	Origin       string
 	Destination  string
-	Date         time.Time
-	DepartureAt  time.Time
-	Flexibility  Flexibility
+	Date         time.Time   // zero → anytime (no date constraint)
+	DepartureAt  time.Time   // zero → day or anytime (no time constraint)
+	Flexibility  Flexibility // only meaningful when DepartureAt is set
 	PostedAt     time.Time
 	ExpiresAt    time.Time
 }

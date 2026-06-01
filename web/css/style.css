@@ -90,6 +90,14 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   font-size: 0.8rem;
   color: var(--gray-600);
 }
+.tag-anytime { background: #dbeafe; color: #1d4ed8; }
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-mode {
+  padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--blue);
+  background: white; color: var(--blue); font-size: 0.85rem; cursor: pointer;
+}
+.btn-mode.active { background: var(--blue); color: white; }
+.btn-mode:hover:not(.active) { background: #eff6ff; }
 
 .error { color: var(--red); font-size: 0.9rem; margin-top: 8px; }
 

@@ -529,8 +529,9 @@ func TestHTTP_PublicRideList_StripsPIIFields(t *testing.T) {
 	if rides[0]["Phone"] != nil {
 		t.Errorf("Phone must not appear in public ride list, got %v", rides[0]["Phone"])
 	}
-	if rides[0]["DriverName"] != nil {
-		t.Errorf("DriverName must not appear in public ride list, got %v", rides[0]["DriverName"])
+	// DriverName is intentionally public (mutual interest feature)
+	if rides[0]["DriverName"] == nil {
+		t.Error("DriverName must be present in public ride list")
 	}
 	if rides[0]["Origin"] == nil {
 		t.Error("Origin must be present in public ride list")
@@ -564,5 +565,144 @@ func TestHTTP_Interest_WrongDriverPhoneReturns403(t *testing.T) {
 	})
 	if w3.Code != http.StatusForbidden {
 		t.Errorf("expected 403 for wrong driver, got %d", w3.Code)
+	}
+}
+
+func TestHTTP_Alert_TimeMode_MatchesOverlappingRide(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Post a time-mode alert for 09:00 ±30 min on 2030-06-01
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Alice", "phone": "5560001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Ride at 09:15 — within the ±30 min window
+	w2 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "5560002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:15:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &ride)
+
+	req2, _ := http.NewRequest(http.MethodGet, "/api/rides/"+ride["ID"].(string)+"/requests", nil)
+	req2.Header.Set("X-Phone", "5560002")
+	w3 := httptest.NewRecorder()
+	r.ServeHTTP(w3, req2)
+	var matching []map[string]interface{}
+	json.Unmarshal(w3.Body.Bytes(), &matching)
+	if len(matching) != 1 {
+		t.Errorf("time mode: expected 1 match, got %d", len(matching))
+	}
+}
+
+func TestHTTP_Alert_DayMode_MatchesAnyTimeOnDate(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Post a day-mode alert for 2030-06-01 (any time)
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Alice", "phone": "5561001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_date": "2030-06-01",
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Ride early morning — should match (any time on that day)
+	w2 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "5561002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T06:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &ride)
+
+	req2, _ := http.NewRequest(http.MethodGet, "/api/rides/"+ride["ID"].(string)+"/requests", nil)
+	req2.Header.Set("X-Phone", "5561002")
+	w3 := httptest.NewRecorder()
+	r.ServeHTTP(w3, req2)
+	var matching []map[string]interface{}
+	json.Unmarshal(w3.Body.Bytes(), &matching)
+	if len(matching) != 1 {
+		t.Errorf("day mode: expected 1 match for any time on date, got %d", len(matching))
+	}
+
+	// Ride on a different day — must NOT match
+	w4 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "5561002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-02T06:00:00Z", "flexibility": 0,
+	})
+	var ride2 map[string]interface{}
+	json.Unmarshal(w4.Body.Bytes(), &ride2)
+
+	req3, _ := http.NewRequest(http.MethodGet, "/api/rides/"+ride2["ID"].(string)+"/requests", nil)
+	req3.Header.Set("X-Phone", "5561002")
+	w5 := httptest.NewRecorder()
+	r.ServeHTTP(w5, req3)
+	var noMatch []map[string]interface{}
+	json.Unmarshal(w5.Body.Bytes(), &noMatch)
+	if len(noMatch) != 0 {
+		t.Errorf("day mode: expected 0 matches for different date, got %d", len(noMatch))
+	}
+}
+
+func TestHTTP_Alert_AnytimeMode_MatchesAnyRideOnRoute(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Post an anytime alert — no date, no time
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Alice", "phone": "5562001",
+		"origin": "Saillans", "destination": "Crest",
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Any ride on this route should match
+	w2 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "5562002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-07-15T14:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &ride)
+
+	req2, _ := http.NewRequest(http.MethodGet, "/api/rides/"+ride["ID"].(string)+"/requests", nil)
+	req2.Header.Set("X-Phone", "5562002")
+	w3 := httptest.NewRecorder()
+	r.ServeHTTP(w3, req2)
+	var matching []map[string]interface{}
+	json.Unmarshal(w3.Body.Bytes(), &matching)
+	if len(matching) != 1 {
+		t.Errorf("anytime mode: expected 1 match, got %d", len(matching))
+	}
+
+	// Different route — must NOT match
+	w4 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Bob", "phone": "5562002",
+		"origin": "Saillans", "destination": "Die",
+		"departure_at": "2030-07-15T14:00:00Z", "flexibility": 0,
+	})
+	var ride2 map[string]interface{}
+	json.Unmarshal(w4.Body.Bytes(), &ride2)
+
+	req3, _ := http.NewRequest(http.MethodGet, "/api/rides/"+ride2["ID"].(string)+"/requests", nil)
+	req3.Header.Set("X-Phone", "5562002")
+	w5 := httptest.NewRecorder()
+	r.ServeHTTP(w5, req3)
+	var noMatch []map[string]interface{}
+	json.Unmarshal(w5.Body.Bytes(), &noMatch)
+	if len(noMatch) != 0 {
+		t.Errorf("anytime mode: expected 0 matches for different route, got %d", len(noMatch))
 	}
 }

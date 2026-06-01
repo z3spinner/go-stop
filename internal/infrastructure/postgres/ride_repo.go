@@ -85,13 +85,30 @@ fmt.Sprintf(`SELECT id, driver_name, phone, origin, destination, date, departure
 }
 
 func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
-	rows, err := r.pool.Query(context.Background(),
-		`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
-		 FROM rides
-		 WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2) AND date = $3 AND expires_at > NOW()
-		   AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5 * interval '1 minute'))
-		   AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5 * interval '1 minute'))`,
-		req.Origin, req.Destination, req.Date, req.DepartureAt, int(req.Flexibility))
+	var rows pgx.Rows
+	var err error
+	switch {
+	case req.Date.IsZero(): // anytime — match any active ride on this route
+		rows, err = r.pool.Query(context.Background(),
+			`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+			 FROM rides
+			 WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2) AND expires_at > NOW()`,
+			req.Origin, req.Destination)
+	case req.DepartureAt.IsZero(): // day — match any ride on the given date
+		rows, err = r.pool.Query(context.Background(),
+			`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+			 FROM rides
+			 WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2) AND date = $3 AND expires_at > NOW()`,
+			req.Origin, req.Destination, req.Date)
+	default: // specific time window
+		rows, err = r.pool.Query(context.Background(),
+			`SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+			 FROM rides
+			 WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2) AND date = $3 AND expires_at > NOW()
+			   AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5 * interval '1 minute'))
+			   AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5 * interval '1 minute'))`,
+			req.Origin, req.Destination, req.Date, req.DepartureAt, int(req.Flexibility))
+	}
 	if err != nil {
 		return nil, err
 	}

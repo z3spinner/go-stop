@@ -62,6 +62,10 @@ const STRINGS = {
     notifRouteTitle:  'Get notified',
     notifRouteBody:   'We\'ll alert you when a ride matching this route is posted. Enter your details below.',
     notifRouteSet:    '✓ You\'ll be notified when a matching ride appears.',
+    alertModeTime:    'Specific time',
+    alertModeDay:     'Any time this day',
+    alertModeAnytime: 'Any time, any date',
+    alertAnytimeLabel:'Always',
     btnMyAlerts:      'My alerts',
     myAlertsTitle:    'My alerts',
     btnShowAlerts:    'Show my alerts',
@@ -188,6 +192,10 @@ const STRINGS = {
     notifRouteTitle:  'Recevoir des alertes',
     notifRouteBody:   'Vous serez alerté(e) dès qu\'un trajet correspondant à ce parcours est publié. Indiquez vos coordonnées.',
     notifRouteSet:    '✓ Vous serez alerté(e) dès qu\'un trajet correspondant apparaît.',
+    alertModeTime:    'Heure précise',
+    alertModeDay:     'Toute la journée',
+    alertModeAnytime: 'Toujours',
+    alertAnytimeLabel:'Toujours',
     btnMyAlerts:      'Mes alertes',
     myAlertsTitle:    'Mes alertes',
     btnShowAlerts:    'Voir mes alertes',
@@ -317,6 +325,10 @@ const STRINGS = {
     notifRouteTitle:'Recibir alertas',
     notifRouteBody: 'Te avisaremos cuando se publique un viaje compatible. Introduce tus datos.',
     notifRouteSet:  '✓ Te avisaremos cuando aparezca un viaje compatible.',
+    alertModeTime:  'Hora específica',
+    alertModeDay:   'Cualquier hora ese día',
+    alertModeAnytime:'Siempre',
+    alertAnytimeLabel:'Siempre',
     btnMyAlerts:    'Mis alertas',
     myAlertsTitle:  'Mis alertas',
     btnShowAlerts:  'Ver mis alertas',
@@ -423,6 +435,10 @@ const STRINGS = {
     notifRouteTitle:'Ricevi notifiche',
     notifRouteBody: 'Ti avviseremo quando viene pubblicato un viaggio compatibile. Inserisci i tuoi dati.',
     notifRouteSet:  '✓ Sarai avvisato quando appare un viaggio compatibile.',
+    alertModeTime:  'Orario specifico',
+    alertModeDay:   'Qualsiasi ora quel giorno',
+    alertModeAnytime:'Sempre',
+    alertAnytimeLabel:'Sempre',
     btnMyAlerts:    'I miei avvisi',
     myAlertsTitle:  'I miei avvisi',
     btnShowAlerts:  'Vedi i miei avvisi',
@@ -529,6 +545,10 @@ const STRINGS = {
     notifRouteTitle:'Benachrichtigung einrichten',
     notifRouteBody: 'Du wirst benachrichtigt, wenn eine passende Fahrt veröffentlicht wird. Gib deine Daten ein.',
     notifRouteSet:  '✓ Du wirst benachrichtigt, wenn eine passende Fahrt erscheint.',
+    alertModeTime:  'Bestimmte Uhrzeit',
+    alertModeDay:   'Ganzer Tag',
+    alertModeAnytime:'Immer',
+    alertAnytimeLabel:'Immer',
     btnMyAlerts:    'Meine Alerts',
     myAlertsTitle:  'Meine Alerts',
     btnShowAlerts:  'Meine Alerts anzeigen',
@@ -635,6 +655,10 @@ const STRINGS = {
     notifRouteTitle:'Melding instellen',
     notifRouteBody: 'Je wordt gewaarschuwd wanneer een passende rit wordt gepubliceerd. Vul je gegevens in.',
     notifRouteSet:  '✓ Je wordt gewaarschuwd wanneer een passende rit verschijnt.',
+    alertModeTime:  'Specifieke tijd',
+    alertModeDay:   'Hele dag',
+    alertModeAnytime:'Altijd',
+    alertAnytimeLabel:'Altijd',
     btnMyAlerts:    'Mijn alerts',
     myAlertsTitle:  'Mijn alerts',
     btnShowAlerts:  'Toon mijn alerts',
@@ -1712,8 +1736,16 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
   const s = t();
   const p = getProfile();
   const dests = await getDestinations();
-  // Use the time from the search if provided, otherwise default to 1h from now.
   const deptValue = departureAt || defaultDeparture();
+  let initDate = '', initTime = '';
+  if (deptValue) {
+    const d = new Date(deptValue);
+    if (!isNaN(d)) {
+      const pad = n => String(n).padStart(2, '0');
+      initDate = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      initTime = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+  }
   app.innerHTML = `
     ${pageBar()}
     <h2>${s.notifRouteTitle}</h2>
@@ -1723,34 +1755,77 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
       <div class="form-group"><label>${s.labelPhone}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
       <div class="form-group"><label>${s.labelFrom}</label><input name="origin" value="${esc(origin)}" list="dests-from" required autocomplete="off">${destinationList('dests-from', dests)}</div>
       <div class="form-group"><label>${s.labelTo}</label><input name="destination" value="${esc(destination)}" list="dests-to" required autocomplete="off">${destinationList('dests-to', dests)}</div>
-      <div class="form-group"><label>${s.labelDatetime}</label><input name="departure_at" type="datetime-local" step="300" value="${esc(deptValue)}" required></div>
       <div class="form-group">
-        <label>${s.labelFlex}</label>
-        <select name="flexibility">
-          <option value="0">${s.flexExact}</option>
-          <option value="30" selected>${s.flex30}</option>
-          <option value="60">${s.flex60}</option>
-        </select>
+        <div class="btn-group" id="alert-mode-btns">
+          <button type="button" class="btn-mode active" data-mode="time">${s.alertModeTime}</button>
+          <button type="button" class="btn-mode" data-mode="day">${s.alertModeDay}</button>
+          <button type="button" class="btn-mode" data-mode="anytime">${s.alertModeAnytime}</button>
+        </div>
+      </div>
+      <div id="alert-time-fields">
+        <div class="search-datetime-row">
+          <div class="form-group search-date-group"><label class="label-optional">${s.labelSearchDate}</label><input name="alert_date" type="date" value="${esc(initDate)}"></div>
+          <div class="form-group search-time-group" id="alert-time-group"><label class="label-optional">${s.labelSearchTime}</label><input name="alert_time" type="time" value="${esc(initTime)}"></div>
+        </div>
+        <div class="form-group" id="alert-flex-group">
+          <label>${s.labelFlex}</label>
+          <select name="flexibility">
+            <option value="0">${s.flexExact}</option>
+            <option value="30" selected>${s.flex30}</option>
+            <option value="60">${s.flex60}</option>
+          </select>
+        </div>
       </div>
       <button class="btn btn-primary" type="submit">${s.notifEnable}</button>
       <div class="error" id="err"></div>
     </form>`;
   document.getElementById('back').onclick = () => renderSearchRides();
   bindControls();
+
+  let alertMode = 'time';
+  document.getElementById('alert-mode-btns').onclick = (e) => {
+    const btn = e.target.closest('.btn-mode');
+    if (!btn) return;
+    alertMode = btn.dataset.mode;
+    document.querySelectorAll('.btn-mode').forEach(b => b.classList.toggle('active', b === btn));
+    const timeGroup = document.getElementById('alert-time-group');
+    const flexGroup = document.getElementById('alert-flex-group');
+    const timeFields = document.getElementById('alert-time-fields');
+    if (alertMode === 'anytime') {
+      timeFields.classList.add('hidden');
+    } else {
+      timeFields.classList.remove('hidden');
+      timeGroup.style.display = alertMode === 'day' ? 'none' : '';
+      flexGroup.style.display = alertMode === 'day' ? 'none' : '';
+    }
+  };
+
   document.getElementById('notify-form').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
     const phone = fd.get('phone');
     saveProfile(fd.get('searcher_name'), phone);
+    const body = {
+      searcher_name: fd.get('searcher_name'),
+      phone,
+      origin: fd.get('origin'),
+      destination: fd.get('destination'),
+    };
+    if (alertMode === 'time') {
+      const date = fd.get('alert_date'), time = fd.get('alert_time');
+      if (date && time) {
+        body.departure_at = new Date(`${date}T${time}`).toISOString();
+        body.flexibility = parseInt(fd.get('flexibility'));
+      } else if (date) {
+        body.departure_date = date;
+      }
+    } else if (alertMode === 'day') {
+      const date = fd.get('alert_date');
+      if (date) body.departure_date = date;
+    }
+    // anytime: no date fields
     try {
-      await api('POST', '/requests', {
-        searcher_name: fd.get('searcher_name'),
-        phone,
-        origin: fd.get('origin'),
-        destination: fd.get('destination'),
-        departure_at: new Date(fd.get('departure_at')).toISOString(),
-        flexibility: parseInt(fd.get('flexibility')),
-      });
+      await api('POST', '/requests', body);
       renderNotificationPrompt(phone, () => {
         app.innerHTML = `<div class="notif-prompt"><div class="notif-icon">✓</div><p>${s.notifRouteSet}</p><button class="btn btn-secondary" id="btn-home">${s.btnBack}</button></div>`;
         document.getElementById('btn-home').onclick = renderHome;
@@ -1787,16 +1862,26 @@ function renderMyAlerts() {
         list.innerHTML = `<div class="empty">${s.noMyAlerts}</div>`;
         return;
       }
-      list.innerHTML = reqs.map(r => `
+      list.innerHTML = reqs.map(r => {
+        let meta;
+        if (!r.Date || r.Date === '0001-01-01T00:00:00Z') {
+          meta = `<span class="tag tag-anytime">${s.alertAnytimeLabel}</span>`;
+        } else if (!r.DepartureAt || r.DepartureAt === '0001-01-01T00:00:00Z') {
+          meta = `<span class="tag">${formatDate(r.Date)}</span>`;
+        } else {
+          meta = `${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>`;
+        }
+        return `
         <div class="card" id="card-${esc(r.ID)}">
           <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
-          <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
+          <div class="card-meta">${meta}</div>
           <div class="alert-actions">
             <button class="btn-see-matches" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}" data-dept="${esc(r.DepartureAt)}">${s.btnSeeMatches}</button>
             <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
           </div>
           <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
       list.querySelectorAll('.btn-see-matches').forEach(btn => {
         btn.onclick = () => renderSearchRides({
           origin: btn.dataset.origin,

@@ -28,8 +28,16 @@ func NewPostRequest(
 func (uc *PostRequest) Execute(req domain.Request) (domain.Request, error) {
 	req.ID = uuid.New().String()
 	req.PostedAt = time.Now()
-	req.Date = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day(), 0, 0, 0, 0, req.DepartureAt.Location())
-	req.ExpiresAt = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day()+1, 0, 0, 0, 0, req.DepartureAt.Location())
+	switch {
+	case req.Date.IsZero(): // anytime — no date constraint
+		req.DepartureAt = time.Time{}
+		req.ExpiresAt = time.Now().AddDate(1, 0, 0)
+	case req.DepartureAt.IsZero(): // day — date set, no time constraint
+		req.ExpiresAt = req.Date.AddDate(0, 0, 1)
+	default: // specific time window
+		req.Date = time.Date(req.DepartureAt.Year(), req.DepartureAt.Month(), req.DepartureAt.Day(), 0, 0, 0, 0, req.DepartureAt.Location())
+		req.ExpiresAt = req.Date.AddDate(0, 0, 1)
+	}
 
 	if err := uc.requests.Save(req); err != nil {
 		return domain.Request{}, err

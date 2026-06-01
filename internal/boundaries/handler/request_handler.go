@@ -48,12 +48,13 @@ func (h *RequestHandler) List(c *gin.Context) {
 }
 
 type postRequestBody struct {
-	SearcherName string `json:"searcher_name" binding:"required"`
-	Phone        string `json:"phone" binding:"required"`
-	Origin       string `json:"origin" binding:"required"`
-	Destination  string `json:"destination" binding:"required"`
-	DepartureAt  string `json:"departure_at" binding:"required"`
-	Flexibility  int    `json:"flexibility"`
+	SearcherName  string `json:"searcher_name" binding:"required"`
+	Phone         string `json:"phone" binding:"required"`
+	Origin        string `json:"origin" binding:"required"`
+	Destination   string `json:"destination" binding:"required"`
+	DepartureAt   string `json:"departure_at"`   // RFC3339 — specific time mode
+	DepartureDate string `json:"departure_date"` // YYYY-MM-DD — day mode
+	Flexibility   int    `json:"flexibility"`
 }
 
 func (h *RequestHandler) Post(c *gin.Context) {
@@ -62,18 +63,29 @@ func (h *RequestHandler) Post(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	dept, err := time.Parse(time.RFC3339, body.DepartureAt)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid departure_at, use RFC3339"})
-		return
-	}
 	req := domain.Request{
 		SearcherName: body.SearcherName,
 		Phone:        normalizePhone(body.Phone),
 		Origin:       normalizeLocation(body.Origin),
 		Destination:  normalizeLocation(body.Destination),
-		DepartureAt:  dept,
 		Flexibility:  domain.Flexibility(body.Flexibility),
+	}
+	switch {
+	case body.DepartureAt != "":
+		dept, err := time.Parse(time.RFC3339, body.DepartureAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid departure_at, use RFC3339"})
+			return
+		}
+		req.DepartureAt = dept
+	case body.DepartureDate != "":
+		d, err := time.Parse("2006-01-02", body.DepartureDate)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid departure_date, use YYYY-MM-DD"})
+			return
+		}
+		req.Date = d // day mode: Date set, DepartureAt stays zero
+	// neither → anytime: both Date and DepartureAt remain zero
 	}
 	saved, err := h.postRequest.Execute(req)
 	if err != nil {

@@ -1,0 +1,3 @@
+ALTER TABLE requests
+  ALTER COLUMN date SET NOT NULL,
+  ALTER COLUMN departure_at SET NOT NULL;
