@@ -1502,10 +1502,12 @@ async function renderSearchRides(autoQuery = null) {
     const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${extraQS}`;
     history.replaceState({ path: '/search' }, '', '/search' + searchQS);
     const results = document.getElementById('results');
-    // API uses UTC time — convert local search_time to UTC so it matches stored departure_at
+    // API uses UTC time — convert local search_time to UTC so it matches stored departure_at.
+    // Use today's date (not 1970-01-01) so the correct DST offset applies.
     let apiTimeParam = searchTimeParam;
     if (searchTimeParam) {
-      const d = new Date(`1970-01-01T${searchTimeParam}`); // parses as local time
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const d = new Date(`${today}T${searchTimeParam}`);
       const pad = n => String(n).padStart(2, '0');
       apiTimeParam = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
     }

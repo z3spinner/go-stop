@@ -532,3 +532,55 @@ test('reload preserves time-only search input', async ({ page }) => {
   await expect(page.locator('input[name=search_time]')).toHaveValue('09:30');
   await expect(page.locator('input[name=search_date]')).toHaveValue('');
 });
+
+// ── 26. Time-only search filters correctly (timezone-aware) ───────────────────
+test('time-only search shows rides within ±60min window', async ({ page }) => {
+  await page.goto(BASE);
+
+  const origin = `TZTest${Date.now()}`;
+  const dest   = `TZTestDest${Date.now()}`;
+
+  // Post rides at local times relative to browser timezone (Europe/Paris = CEST in summer)
+  // near: 09:10 local (within ±60min of 09:30)
+  // far:  15:00 local (outside ±60min of 09:30)
+  const [nearID, farID] = await page.evaluate(async ({ driver, origin, dest }) => {
+    const post = async (localHour, localMin) => {
+      const d = new Date(2031, 8, 1, localHour, localMin, 0, 0); // Sep 1 2031, local time
+      const r = await fetch('/api/rides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driver_name: driver.name, phone: driver.phone,
+          origin, destination: dest, flexibility: 0,
+          departure_at: d.toISOString(),
+        }),
+      });
+      return (await r.json()).ID;
+    };
+    return Promise.all([post(9, 10), post(15, 0)]);
+  }, { driver: DRIVER, origin, dest });
+
+  expect(nearID).toBeTruthy();
+  expect(farID).toBeTruthy();
+
+  // Navigate to search page, fill fields, and submit
+  await page.goto(`${BASE}/search?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}`);
+  await page.waitForSelector('#search-form');
+  await page.fill('input[name=search_time]', '09:30');
+
+  // Submit and wait for both API calls (forward + return) that include search_time
+  const [fwdResponse] = await Promise.all([
+    page.waitForResponse(r =>
+      r.url().includes(`origin=${encodeURIComponent(origin)}`) &&
+      r.url().includes('search_time') &&
+      r.request().method() === 'GET'
+    ),
+    page.click('button[type=submit]'),
+  ]);
+
+  const fwdRides = await fwdResponse.json();
+  const ids = fwdRides.map(r => r.ID);
+
+  expect(ids).toContain(nearID);
+  expect(ids).not.toContain(farID);
+});
