@@ -960,7 +960,7 @@ async function renderPostRide() {
       </div>
       <div id="return-section" class="return-section hidden">
         <div class="return-section-title">${s.returnSection}</div>
-        <div class="form-group"><label>${s.labelReturnTime}</label><input name="return_departure_at" type="datetime-local"></div>
+        <div class="form-group"><label>${s.labelReturnTime}</label><input name="return_departure_at" type="datetime-local" step="300"></div>
         <div class="form-group">
           <label>${s.labelReturnFlex}</label>
           <select name="return_flexibility">
