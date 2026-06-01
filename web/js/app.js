@@ -1492,16 +1492,26 @@ async function renderSearchRides(autoQuery = null) {
     } else if (searchDate) {
       searchDateParam = searchDate;
     } else if (searchTime) {
-      searchTimeParam = searchTime; // HH:MM
+      searchTimeParam = searchTime; // keep local HH:MM for URL display and pre-fill
     }
     saveLastSearch(origin, dest);
-    const extraQS = deptISO       ? `&departure_at=${encodeURIComponent(deptISO)}`
+    // URL uses local time for human-readable display and reload pre-fill
+    const extraQS = deptISO        ? `&departure_at=${encodeURIComponent(deptISO)}`
                   : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}`
                   : searchTimeParam ? `&search_time=${encodeURIComponent(searchTimeParam)}` : '';
     const searchQS = `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${extraQS}`;
     history.replaceState({ path: '/search' }, '', '/search' + searchQS);
     const results = document.getElementById('results');
-    const apiParam = extraQS;
+    // API uses UTC time — convert local search_time to UTC so it matches stored departure_at
+    let apiTimeParam = searchTimeParam;
+    if (searchTimeParam) {
+      const d = new Date(`1970-01-01T${searchTimeParam}`); // parses as local time
+      const pad = n => String(n).padStart(2, '0');
+      apiTimeParam = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    }
+    const apiParam = deptISO        ? `&departure_at=${encodeURIComponent(deptISO)}`
+                   : searchDateParam ? `&search_date=${encodeURIComponent(searchDateParam)}`
+                   : apiTimeParam    ? `&search_time=${encodeURIComponent(apiTimeParam)}` : '';
     const fwdUrl = `/rides?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}${apiParam}`;
     const retUrl = `/rides?origin=${encodeURIComponent(dest)}&destination=${encodeURIComponent(origin)}${apiParam}`;
     try {
