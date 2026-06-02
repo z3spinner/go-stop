@@ -925,13 +925,14 @@ git commit -m "feat(frontend): adapter-static SPA build into web/build"
 
 - [ ] **Step 1: Vite dev proxy `/api` → Go on 8080**
 
-`frontend/vite.config.ts`:
+`frontend/vite.config.ts` (full replacement — the scaffold uses a Vitest `projects`/workspace structure; replace the whole `test` section with this flat one, and **keep the `@tailwindcss/vite` plugin** from the scaffold or Tailwind v4 styling breaks):
 ```typescript
+import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [tailwindcss(), sveltekit()],
 	server: {
 		proxy: {
 			'/api': 'http://localhost:8080'
@@ -944,7 +945,7 @@ export default defineConfig({
 	}
 });
 ```
-(The `test.setupFiles` entry is created in Task 6.)
+(The `test.setupFiles` entry is created in Task 7. Also delete the scaffold's `src/lib/vitest-examples/` directory — it is unused boilerplate.)
 
 - [ ] **Step 2: Root `package.json` delegates the production build to `frontend/`**
 
@@ -1252,14 +1253,16 @@ Create `frontend/src/messages/en.json` and `frontend/src/messages/fr.json` from 
 
 - [ ] **Step 3: Add the Paraglide Vite plugin (client strategies only)**
 
-Update `frontend/vite.config.ts` to add the plugin above `sveltekit()`:
+Update `frontend/vite.config.ts` to add the Paraglide plugin (keep `tailwindcss()` first and `sveltekit()` last):
 ```typescript
+import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [
+		tailwindcss(),
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide',
