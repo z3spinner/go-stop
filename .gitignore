@@ -3,6 +3,8 @@
 *.png
 !web/icon-192.png
 !web/icon-512.png
+!web/icon-maskable-192.png
+!web/icon-maskable-512.png
 !web/apple-touch-icon.png
 .idea/
 node_modules/

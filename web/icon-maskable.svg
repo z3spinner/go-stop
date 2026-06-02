@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Maskable variant: full-bleed square background (no clip to rounded rect).
+    Content scaled to 75% centred at (256,256) so it fits inside the
+    Android adaptive icon safe zone (80% circle = radius 204px).
+  -->
+  <defs>
+    <linearGradient id="gl" x1="0%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#4CD964"/>
+      <stop offset="100%" stop-color="#28A836"/>
+    </linearGradient>
+    <linearGradient id="gr" x1="20%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4538"/>
+      <stop offset="100%" stop-color="#C81E1E"/>
+    </linearGradient>
+    <filter id="ds" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.28)"/>
+    </filter>
+  </defs>
+
+  <!-- Full-bleed background (no clip) -->
+  <rect x="0"   y="0" width="256" height="512" fill="url(#gl)"/>
+  <rect x="256" y="0" width="256" height="512" fill="url(#gr)"/>
+
+  <!-- Content scaled 75% around centre (256,256) -->
+  <g transform="translate(256,256) scale(0.75) translate(-256,-256)">
+    <!-- G ring + tail + O ring -->
+    <g filter="url(#ds)" fill="none" stroke="white" stroke-width="22"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 196,175 A 106,106 0 1 0 234,256 L 278,256"/>
+      <circle cx="384" cy="256" r="106"/>
+    </g>
+    <!-- Play triangle -->
+    <g filter="url(#ds)">
+      <polygon points="90,196 90,316 198,256" fill="white"/>
+    </g>
+    <!-- Stop square -->
+    <g filter="url(#ds)">
+      <rect x="330" y="202" width="108" height="108" rx="20" ry="20" fill="white"/>
+    </g>
+  </g>
+</svg>
