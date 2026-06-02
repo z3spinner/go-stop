@@ -50,7 +50,7 @@ func main() {
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	deleteRide := usecase.NewDeleteRide(rideRepo)
 	deleteRequest := usecase.NewDeleteRequest(requestRepo)
-	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, subRepo, notifier)
+	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, interestRepo, subRepo, notifier)
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)

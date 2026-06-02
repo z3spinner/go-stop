@@ -627,7 +627,30 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
   expect(seekerText).toContain(SEARCHER.name);
   expect(seekerText).not.toContain(SEARCHER.phone);
 
-  // Click Prévenir — should disable the button and show ✓
-  await page.locator('.btn-ping-searcher').first().click();
+  // Click Prévenir — should disable the button (API call succeeds)
+  const [pingResp] = await Promise.all([
+    page.waitForResponse(r => r.url().includes('/ping') && r.request().method() === 'POST'),
+    page.locator('.btn-ping-searcher').first().click(),
+  ]);
+  expect(pingResp.status()).toBe(204);
   await expect(page.locator('.btn-ping-searcher').first()).toBeDisabled({ timeout: 3000 });
+
+  // After pinging, Bob can see Alice's phone via the interest contact endpoint
+  const contactResp = await page.evaluate(async ({ searcherPhone }) => {
+    // Find accepted interests for Bob via Mes demandes
+    const interests = await fetch('/api/interests', {
+      headers: { 'X-Phone': searcherPhone }
+    }).then(r => r.json());
+    const accepted = (interests || []).find(i => i.status === 'accepted');
+    if (!accepted) return { found: false };
+    const contact = await fetch('/api/interests/' + accepted.id + '/contact', {
+      headers: { 'X-Phone': searcherPhone }
+    }).then(r => r.json());
+    return { found: true, role: contact.role, hasPhone: !!contact.phone };
+  }, { searcherPhone: SEARCHER.phone });
+
+  // Bob (searcher) should now see Alice's (driver) phone
+  expect(contactResp.found).toBe(true);
+  expect(contactResp.role).toBe('driver');
+  expect(contactResp.hasPhone).toBe(true);
 });

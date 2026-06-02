@@ -93,7 +93,7 @@ func setupRouter() *gin.Engine {
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, interestRepo)
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, subRepo, n), reqRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 
