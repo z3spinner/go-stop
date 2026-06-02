@@ -30,6 +30,8 @@ func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRep
 			if strings.Contains(err.Error(), "410") {
 				_ = subs.DeleteByEndpoint(sub.Endpoint)
 			}
+		} else {
+			log.Printf("push sent ok phone=***%s", lastN(phone, 3))
 		}
 	}
 }
