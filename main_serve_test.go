@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -11,27 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// buildSPARouter mirrors the NoRoute SPA fallback wiring in main.go for testing.
+// buildSPARouter wires the real spaHandler for testing.
 func buildSPARouter(buildDir string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.GET("/api/ping", func(c *gin.Context) { c.JSON(200, gin.H{"ok": true}) })
-	r.NoRoute(func(c *gin.Context) {
-		p := c.Request.URL.Path
-		if strings.HasPrefix(p, "/api/") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
-		clean := filepath.Clean(p)
-		file := filepath.Join(buildDir, clean)
-		if strings.HasPrefix(file, filepath.Clean(buildDir)+string(os.PathSeparator)) {
-			if fi, err := os.Stat(file); err == nil && !fi.IsDir() {
-				c.File(file)
-				return
-			}
-		}
-		c.File(filepath.Join(buildDir, "index.html"))
-	})
+	r.NoRoute(spaHandler(buildDir))
 	return r
 }
 
@@ -54,5 +38,28 @@ func TestSPAFallbackServesIndex(t *testing.T) {
 	r.ServeHTTP(w, httptest.NewRequest("GET", "/api/nope", nil))
 	if w.Code != 404 || strings.Contains(w.Body.String(), "INDEX") {
 		t.Fatalf("api 404: got %d %q", w.Code, w.Body.String())
+	}
+
+	// Existing file is served directly, not replaced by index.html
+	if err := os.WriteFile(filepath.Join(dir, "sw.js"), []byte("SWJS"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("GET", "/sw.js", nil))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "SWJS") || strings.Contains(w.Body.String(), "INDEX") {
+		t.Fatalf("existing file: got %d %q", w.Code, w.Body.String())
+	}
+
+	// Path traversal attempt is contained — Gin rejects it (400) or falls back to
+	// index.html; either way the response must NOT serve arbitrary system file content.
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("GET", "/../../etc/passwd", nil))
+	body := w.Body.String()
+	if strings.Contains(body, "root:") {
+		t.Fatalf("traversal: response looks like /etc/passwd — got %d %q", w.Code, body)
+	}
+	// Must be either a rejection (400) or the SPA shell (200 with INDEX).
+	if w.Code != 400 && !(w.Code == 200 && strings.Contains(body, "INDEX")) {
+		t.Fatalf("traversal: unexpected response %d %q", w.Code, body)
 	}
 }

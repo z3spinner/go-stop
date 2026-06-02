@@ -127,23 +127,7 @@ func main() {
 	// existing file falls back to index.html (client-side routing).
 	const buildDir = "./web/build"
 	log.Printf("build version: %s", version.Get())
-	r.NoRoute(func(c *gin.Context) {
-		p := c.Request.URL.Path
-		if strings.HasPrefix(p, "/api/") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
-		clean := filepath.Clean(p)
-		file := filepath.Join(buildDir, clean)
-		// Guard against path traversal, then serve the file if it exists.
-		if strings.HasPrefix(file, filepath.Clean(buildDir)+string(os.PathSeparator)) {
-			if fi, err := os.Stat(file); err == nil && !fi.IsDir() {
-				c.File(file)
-				return
-			}
-		}
-		c.File(filepath.Join(buildDir, "index.html"))
-	})
+	r.NoRoute(spaHandler(buildDir))
 
 	api := r.Group("/api")
 	{
@@ -184,5 +168,27 @@ func main() {
 	log.Printf("listening on :%s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("server: %v", err)
+	}
+}
+
+// spaHandler serves the SvelteKit static build from buildDir with an SPA
+// fallback: /api/* paths get a JSON 404, existing files are served directly,
+// and everything else falls back to index.html for client-side routing.
+func spaHandler(buildDir string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		p := c.Request.URL.Path
+		if strings.HasPrefix(p, "/api/") || p == "/api" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		clean := filepath.Clean(p)
+		file := filepath.Join(buildDir, clean)
+		if strings.HasPrefix(file, filepath.Clean(buildDir)+string(os.PathSeparator)) {
+			if fi, err := os.Stat(file); err == nil && !fi.IsDir() {
+				c.File(file)
+				return
+			}
+		}
+		c.File(filepath.Join(buildDir, "index.html"))
 	}
 }
