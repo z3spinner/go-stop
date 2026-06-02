@@ -1,6 +1,9 @@
 .env
 .playwright-mcp/
 *.png
+!web/icon-192.png
+!web/icon-512.png
+!web/apple-touch-icon.png
 .idea/
 node_modules/
 test-results/
