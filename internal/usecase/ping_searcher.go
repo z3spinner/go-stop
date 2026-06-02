@@ -44,28 +44,25 @@ func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) error {
 		return ErrUnauthorized
 	}
 
-	// Create or accept an interest on behalf of the searcher.
-	// The driver is consenting to share their number by pinging.
+	// Create a "driver_shared" interest: driver consents to share their number.
+	// Status "driver_shared" means only the SEARCHER can retrieve the driver's phone
+	// via GetInterestContact — the driver cannot get the searcher's phone this way
+	// (that requires the full mutual-consent flow).
 	interest, err := uc.interests.FindByRideAndSearcher(rideID, req.Phone)
 	if err != nil {
-		// No existing interest — create a pre-accepted one
+		// No existing interest — create a driver_shared one
 		interest = domain.Interest{
 			ID:            uuid.New().String(),
 			RideID:        rideID,
 			SearcherPhone: req.Phone,
 			SearcherName:  req.SearcherName,
-			Status:        "accepted",
+			Status:        "driver_shared",
 		}
 		if err := uc.interests.Save(interest); err != nil {
 			return fmt.Errorf("create interest: %w", err)
 		}
-	} else if interest.Status == "pending" {
-		// Existing pending interest — accept it
-		if err := uc.interests.Accept(interest.ID); err != nil {
-			return fmt.Errorf("accept interest: %w", err)
-		}
 	}
-	// If already accepted, nothing to do — just re-notify.
+	// If interest already exists (pending/accepted/driver_shared), just re-notify.
 
 	msg := domain.Message{
 		Title:       fmt.Sprintf("%s peut vous emmener", ride.DriverName),

@@ -1397,6 +1397,19 @@ async function loadHomeStats() {
 async function loadAcceptedContacts(rides) {
   const p = getProfile();
   if (!p.phone) return {};
+
+  // Sync server-side accepted interests into localStorage so driver-initiated
+  // contacts (ping flow) appear without the searcher having clicked "Demander".
+  await api('GET', '/interests', null, { 'X-Phone': p.phone })
+    .then(list => {
+      for (const i of (list || [])) {
+        if ((i.status === 'accepted' || i.status === 'driver_shared') && !localStorage.getItem('interest_' + i.ride_id)) {
+          localStorage.setItem('interest_' + i.ride_id, i.id);
+        }
+      }
+    })
+    .catch(() => {});
+
   const contacts = {};
   await Promise.all(rides.map(r => {
     const id = localStorage.getItem('interest_' + r.ID);

@@ -33,26 +33,19 @@ func (uc *GetInterestContact) Execute(interestID, requesterPhone string) (Contac
 	if err != nil {
 		return ContactInfo{}, err
 	}
-	if interest.Status != "accepted" {
-		return ContactInfo{}, errors.New("interest not yet accepted")
-	}
 	ride, err := uc.rides.FindByID(interest.RideID)
 	if err != nil {
 		return ContactInfo{}, err
 	}
-	switch requesterPhone {
-	case ride.Phone:
-		// Driver is asking — return searcher's info
-		return ContactInfo{
-			Phone:       interest.SearcherPhone,
-			Name:        interest.SearcherName,
-			Role:        "searcher",
-			Origin:      ride.Origin,
-			Destination: ride.Destination,
-			DepartureAt: ride.DepartureAt,
-		}, nil
-	case interest.SearcherPhone:
-		// Searcher is asking — return driver's info
+
+	switch interest.Status {
+	case "driver_shared":
+		// Driver unilaterally shared their number (ping flow).
+		// Only the searcher may retrieve the driver's phone — the driver
+		// cannot use this to look up the searcher's number.
+		if requesterPhone != interest.SearcherPhone {
+			return ContactInfo{}, ErrUnauthorized
+		}
 		return ContactInfo{
 			Phone:       ride.Phone,
 			Name:        ride.DriverName,
@@ -61,7 +54,33 @@ func (uc *GetInterestContact) Execute(interestID, requesterPhone string) (Contac
 			Destination: ride.Destination,
 			DepartureAt: ride.DepartureAt,
 		}, nil
+
+	case "accepted":
+		// Mutual consent — both parties may retrieve each other's info.
+		switch requesterPhone {
+		case ride.Phone:
+			return ContactInfo{
+				Phone:       interest.SearcherPhone,
+				Name:        interest.SearcherName,
+				Role:        "searcher",
+				Origin:      ride.Origin,
+				Destination: ride.Destination,
+				DepartureAt: ride.DepartureAt,
+			}, nil
+		case interest.SearcherPhone:
+			return ContactInfo{
+				Phone:       ride.Phone,
+				Name:        ride.DriverName,
+				Role:        "driver",
+				Origin:      ride.Origin,
+				Destination: ride.Destination,
+				DepartureAt: ride.DepartureAt,
+			}, nil
+		default:
+			return ContactInfo{}, ErrUnauthorized
+		}
+
 	default:
-		return ContactInfo{}, ErrUnauthorized
+		return ContactInfo{}, errors.New("interest not yet accepted")
 	}
 }

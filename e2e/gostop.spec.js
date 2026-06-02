@@ -653,4 +653,33 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
   expect(contactResp.found).toBe(true);
   expect(contactResp.role).toBe('driver');
   expect(contactResp.hasPhone).toBe(true);
+
+  // Verify Bob can access Alice's phone directly via the interest contact endpoint
+  // (the driver_shared interest makes the driver's phone available to the searcher)
+  const driversPhone = await page.evaluate(async ({ searcherPhone }) => {
+    const interests = await fetch('/api/interests', {
+      headers: { 'X-Phone': searcherPhone }
+    }).then(r => r.json());
+    const ds = (interests || []).find(i => i.status === 'driver_shared');
+    if (!ds) return null;
+    const contact = await fetch('/api/interests/' + ds.id + '/contact', {
+      headers: { 'X-Phone': searcherPhone }
+    }).then(r => r.json());
+    return contact.phone || null;
+  }, { searcherPhone: SEARCHER.phone });
+  expect(driversPhone).toBeTruthy();
+
+  // Also verify the driver CANNOT get the searcher's phone via driver_shared interest
+  const driverGetsSearcherPhone = await page.evaluate(async ({ driverPhone, searcherPhone }) => {
+    const interests = await fetch('/api/interests', {
+      headers: { 'X-Phone': searcherPhone }
+    }).then(r => r.json());
+    const ds = (interests || []).find(i => i.status === 'driver_shared');
+    if (!ds) return 403;
+    const r = await fetch('/api/interests/' + ds.id + '/contact', {
+      headers: { 'X-Phone': driverPhone }
+    });
+    return r.status;
+  }, { driverPhone: DRIVER.phone, searcherPhone: SEARCHER.phone });
+  expect(driverGetsSearcherPhone).toBe(403);
 });
