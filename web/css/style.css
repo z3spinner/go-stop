@@ -624,3 +624,6 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .a2hs-steps { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
 .a2hs-step { background: var(--gray-100); border-radius: var(--radius); padding: 10px 14px; font-size: 0.95rem; }
 .a2hs-icon { font-style: normal; }
+.btn-ping-searcher { background: none; border: 1px solid var(--blue); border-radius: var(--radius); color: var(--blue); font-size: 0.8rem; padding: 3px 10px; cursor: pointer; margin-left: auto; }
+.btn-ping-searcher:hover { background: var(--blue); color: white; }
+.btn-ping-searcher:disabled { opacity: 0.5; cursor: default; }

@@ -15,6 +15,7 @@ type RequestHandler struct {
 	postRequest    *usecase.PostRequest
 	getMyRequests  *usecase.GetMyRequests
 	deleteRequest  *usecase.DeleteRequest
+	pingSearcher   *usecase.PingSearcher
 	requestRepo    repository.RequestRepository
 }
 
@@ -22,14 +23,44 @@ func NewRequestHandler(
 	postRequest *usecase.PostRequest,
 	getMyRequests *usecase.GetMyRequests,
 	deleteRequest *usecase.DeleteRequest,
+	pingSearcher *usecase.PingSearcher,
 	requestRepo repository.RequestRepository,
 ) *RequestHandler {
 	return &RequestHandler{
 		postRequest:   postRequest,
 		getMyRequests: getMyRequests,
 		deleteRequest: deleteRequest,
+		pingSearcher:  pingSearcher,
 		requestRepo:   requestRepo,
 	}
+}
+
+type pingSearcherBody struct {
+	RideID string `json:"ride_id" binding:"required"`
+}
+
+// Ping notifies the searcher that a driver's ride matches their alert.
+// POST /requests/:id/ping  (X-Phone = driver's phone)
+func (h *RequestHandler) Ping(c *gin.Context) {
+	driverPhone := normalizePhone(c.GetHeader("X-Phone"))
+	if driverPhone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	var body pingSearcherBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.pingSearcher.Execute(c.Param("id"), body.RideID, driverPhone); err != nil {
+		if errors.Is(err, usecase.ErrUnauthorized) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 func (h *RequestHandler) List(c *gin.Context) {

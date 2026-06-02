@@ -50,6 +50,7 @@ func main() {
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	deleteRide := usecase.NewDeleteRide(rideRepo)
 	deleteRequest := usecase.NewDeleteRequest(requestRepo)
+	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, subRepo, notifier)
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)
@@ -73,7 +74,7 @@ func main() {
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, interestRepo)
-	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, requestRepo)
+	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, pingSearcher, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 	vapidH := handler.NewVapidHandler(os.Getenv("VAPID_PUBLIC_KEY"))
@@ -142,6 +143,7 @@ func main() {
 		api.GET("/requests", requestH.List)
 		api.GET("/requests/:id", requestH.Get)
 		api.DELETE("/requests/:id", requestH.Delete)
+		api.POST("/requests/:id/ping", requestH.Ping)
 
 		api.GET("/destinations", destH.List)
 

@@ -51,6 +51,7 @@ const STRINGS = {
     deleteOk:         'Deleted.',
     deleteErr:        'Could not delete — is that the right phone number?',
     seekersTitle:     'People looking for this ride',
+    btnPingSearcher:  'Notify →',
     noSeekers:        'No one waiting yet.',
     labelSearchDate:   'Date (optional)',
     labelSearchTime:   'Time (optional)',
@@ -195,6 +196,7 @@ const STRINGS = {
     deleteOk:         'Supprimé.',
     deleteErr:        'Impossible de supprimer — numéro incorrect ?',
     seekersTitle:     'Personnes cherchant ce trajet',
+    btnPingSearcher:  'Prévenir →',
     noSeekers:        'Personne en attente.',
     labelSearchDate:   'Date (optionnel)',
     labelSearchTime:   'Heure (optionnel)',
@@ -342,6 +344,7 @@ const STRINGS = {
     deleteOk:       'Eliminado.',
     deleteErr:      '¿Número de teléfono incorrecto?',
     seekersTitle: 'Personas que buscan este viaje',
+    btnPingSearcher: 'Notificar →',
     noSeekers:    'Nadie en espera todavía.',
     labelSearchDate: 'Fecha (opcional)',
     labelSearchTime: 'Hora (opcional)',
@@ -466,6 +469,7 @@ const STRINGS = {
     deleteOk:       'Eliminato.',
     deleteErr:      'Numero di telefono errato?',
     seekersTitle: 'Persone che cercano questo viaggio',
+    btnPingSearcher: 'Notifica →',
     noSeekers:    'Nessuno in attesa.',
     labelSearchDate:'Data (opzionale)',
     labelSearchTime:'Ora (opzionale)',
@@ -590,6 +594,7 @@ const STRINGS = {
     deleteOk:       'Gelöscht.',
     deleteErr:      'Falsche Telefonnummer?',
     seekersTitle: 'Personen, die diese Fahrt suchen',
+    btnPingSearcher: 'Benachrichtigen →',
     noSeekers:    'Noch niemand wartet.',
     labelSearchDate:'Datum (optional)',
     labelSearchTime:'Uhrzeit (optional)',
@@ -714,6 +719,7 @@ const STRINGS = {
     deleteOk:       'Verwijderd.',
     deleteErr:      'Verkeerd telefoonnummer?',
     seekersTitle: 'Mensen die deze rit zoeken',
+    btnPingSearcher: 'Notificeer →',
     noSeekers:    'Nog niemand in afwachting.',
     labelSearchDate:'Datum (optioneel)',
     labelSearchTime:'Tijdstip (optioneel)',
@@ -1802,7 +1808,19 @@ function renderMyRides() {
               <div class="seeker-row">
                 <strong>${esc(req.SearcherName)}</strong>
                 <span class="seeker-meta">${formatTime(req.DepartureAt)} <span class="tag">${s.flexLabel[req.Flexibility] || esc(req.Flexibility) + ' min'}</span></span>
+                <button class="btn-ping-searcher" data-req-id="${esc(req.ID)}" data-ride-id="${esc(r.ID)}">${s.btnPingSearcher}</button>
               </div>`).join('');
+          el.querySelectorAll('.btn-ping-searcher').forEach(btn => {
+            btn.onclick = async () => {
+              btn.disabled = true;
+              try {
+                await api('POST', `/requests/${btn.dataset.reqId}/ping`,
+                  { ride_id: btn.dataset.rideId },
+                  { 'X-Phone': phone });
+                btn.textContent = '✓';
+              } catch { btn.disabled = false; }
+            };
+          });
         }).catch(() => {
           const el = document.getElementById('seekers-' + r.ID);
           if (el) el.innerHTML = '';
