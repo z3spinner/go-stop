@@ -117,6 +117,11 @@ func main() {
 	r.StaticFile("/manifest.json", "./web/manifest.json")
 	r.StaticFile("/sw.js", "./web/js/sw.js")
 	r.StaticFile("/logo.svg", "./web/logo.svg")
+	r.StaticFile("/icon-192.png", "./web/icon-192.png")
+	r.StaticFile("/icon-512.png", "./web/icon-512.png")
+	r.StaticFile("/icon-maskable-192.png", "./web/icon-maskable-192.png")
+	r.StaticFile("/icon-maskable-512.png", "./web/icon-maskable-512.png")
+	r.StaticFile("/apple-touch-icon.png", "./web/apple-touch-icon.png")
 	buildVersion := version.Get()
 	indexH, err := handler.NewIndexHandler("./web/index.html", buildVersion)
 	if err != nil {
