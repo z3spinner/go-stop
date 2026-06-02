@@ -38,6 +38,11 @@ const STRINGS = {
     notifSkip:       'No thanks',
     notifDenied:      'Notifications blocked in browser settings.',
     btnMyRides:       'My rides',
+    btnMe:            'Me',
+    meTitle:          'My profile',
+    meHint:           'Your name and number are saved on this device only.',
+    meSaved:          'Saved ✓',
+    btnSave:          'Save',
     btnMyRequests:    'My requests',
     myRequestsTitle:  'My requests',
     noMyRequests:     'No contact requests yet.',
@@ -183,6 +188,11 @@ const STRINGS = {
     notifSkip:       'Non merci',
     notifDenied:      'Notifications bloquées dans les paramètres du navigateur.',
     btnMyRides:       'Mes trajets',
+    btnMe:            'Moi',
+    meTitle:          'Mon profil',
+    meHint:           'Votre prénom et numéro sont enregistrés sur cet appareil uniquement.',
+    meSaved:          'Enregistré ✓',
+    btnSave:          'Enregistrer',
     btnMyRequests:    'Mes demandes',
     myRequestsTitle:  'Mes demandes',
     noMyRequests:     'Aucune demande de contact pour l\'instant.',
@@ -331,6 +341,11 @@ const STRINGS = {
     notifSkip:      'No, gracias',
     notifDenied:    'Notificaciones bloqueadas en la configuración del navegador.',
     btnMyRides:     'Mis viajes',
+    btnMe:            'Yo',
+    meTitle:          'Mi perfil',
+    meHint:           'Tu nombre y número se guardan solo en este dispositivo.',
+    meSaved:          'Guardado ✓',
+    btnSave:          'Guardar',
     btnMyRequests:    'Mis solicitudes',
     myRequestsTitle:  'Mis solicitudes',
     noMyRequests:     'Sin solicitudes de contacto aún.',
@@ -456,6 +471,11 @@ const STRINGS = {
     notifSkip:      'No grazie',
     notifDenied:    'Notifiche bloccate nelle impostazioni del browser.',
     btnMyRides:     'I miei viaggi',
+    btnMe:            'Io',
+    meTitle:          'Il mio profilo',
+    meHint:           'Il tuo nome e numero sono salvati solo su questo dispositivo.',
+    meSaved:          'Salvato ✓',
+    btnSave:          'Salva',
     btnMyRequests:    'Le mie richieste',
     myRequestsTitle:  'Le mie richieste',
     noMyRequests:     'Nessuna richiesta di contatto ancora.',
@@ -581,6 +601,11 @@ const STRINGS = {
     notifSkip:      'Nein danke',
     notifDenied:    'Benachrichtigungen in den Browser-Einstellungen blockiert.',
     btnMyRides:     'Meine Fahrten',
+    btnMe:            'Ich',
+    meTitle:          'Mein Profil',
+    meHint:           'Dein Name und deine Nummer werden nur auf diesem Gerät gespeichert.',
+    meSaved:          'Gespeichert ✓',
+    btnSave:          'Speichern',
     btnMyRequests:    'Meine Anfragen',
     myRequestsTitle:  'Meine Anfragen',
     noMyRequests:     'Noch keine Kontaktanfragen.',
@@ -706,6 +731,11 @@ const STRINGS = {
     notifSkip:      'Nee bedankt',
     notifDenied:    'Meldingen geblokkeerd in browserinstellingen.',
     btnMyRides:     'Mijn ritten',
+    btnMe:            'Ik',
+    meTitle:          'Mijn profiel',
+    meHint:           'Je naam en nummer worden alleen op dit apparaat opgeslagen.',
+    meSaved:          'Opgeslagen ✓',
+    btnSave:          'Opslaan',
     btnMyRequests:    'Mijn verzoeken',
     myRequestsTitle:  'Mijn verzoeken',
     noMyRequests:     'Nog geen contactverzoeken.',
@@ -1104,6 +1134,12 @@ async function handleInterestClick(btn) {
   }
 }
 
+function meIcon() {
+  const p = getProfile();
+  const filled = p.name || p.phone;
+  return `<button class="btn-me-icon${filled ? ' me-icon-set' : ''}" id="btn-me-icon" aria-label="${t().meTitle || 'Profile'}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button>`;
+}
+
 function bellIcon() {
   return `<button class="btn-bell" id="btn-bell" aria-label="Notifications"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>`;
 }
@@ -1241,7 +1277,7 @@ function showNotifModal(state) {
 }
 
 function controls() {
-  return `<div class="controls">${langToggle()}<div class="controls-icons">${aboutIcon()}${bellIcon()}<span class="bell-activate-label hidden" id="bell-activate-label"></span></div></div>`;
+  return `<div class="controls">${langToggle()}<div class="controls-icons">${meIcon()}${aboutIcon()}${bellIcon()}<span class="bell-activate-label hidden" id="bell-activate-label"></span></div></div>`;
 }
 
 function topBar() {
@@ -1327,6 +1363,8 @@ async function renderHome() {
       <button class="btn btn-primary" id="btn-driver">${s.btnDriver}</button>
       <button class="btn btn-secondary" id="btn-searcher">${s.btnSearcher}</button>
       <div class="ghost-row">
+        <button class="btn-ghost-inline" id="btn-me">${s.btnMe}</button>
+        <span class="ghost-sep">·</span>
         <button class="btn-ghost-inline" id="btn-my-rides">${s.btnMyRides}</button>
         <span class="ghost-sep">·</span>
         <button class="btn-ghost-inline" id="btn-my-alerts">${s.btnMyAlerts}</button>
@@ -1338,6 +1376,7 @@ async function renderHome() {
     <div id="home-stats"></div>`;
   document.getElementById('btn-driver').onclick = renderPostRide;
   document.getElementById('btn-searcher').onclick = renderSearchRides;
+  document.getElementById('btn-me').onclick = renderMe;
   document.getElementById('btn-my-rides').onclick = renderMyRides;
   document.getElementById('btn-my-alerts').onclick = renderMyAlerts;
   document.getElementById('btn-my-requests').onclick = renderMyRequests;
@@ -2034,6 +2073,40 @@ async function renderNotifyRoute(origin, destination, departureAt = '') {
 
 // ── My alerts (waiting requests) ─────────────────────────────────────────────
 
+
+// ── Me (profile) page ─────────────────────────────────────────────────────────
+
+function renderMe() {
+  pushRoute('/me');
+  const s = t();
+  const p = getProfile();
+  app.innerHTML = `
+    ${pageBar()}
+    <h2>${s.meTitle}</h2>
+    <form id="me-form">
+      <div class="form-group"><label>${s.labelName}</label><input name="name" value="${esc(p.name)}" autocomplete="given-name"></div>
+      <div class="form-group"><label>${s.labelPhone}</label><input name="phone" type="tel" value="${esc(p.phone)}" autocomplete="tel"></div>
+      <button class="btn btn-primary" type="submit">${s.btnSave || 'Save'}</button>
+      <div class="section-hint" id="me-saved" style="display:none;color:var(--green)">${s.meSaved}</div>
+    </form>
+    <p class="section-hint">${s.meHint}</p>`;
+  document.getElementById('back').onclick = renderHome;
+  bindControls();
+  document.getElementById('me-form').onsubmit = (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    saveProfile(fd.get('name'), normalizePhoneInput(fd.get('phone')));
+    const saved = document.getElementById('me-saved');
+    saved.style.display = '';
+    setTimeout(() => { saved.style.display = 'none'; }, 2000);
+  };
+}
+
+function normalizePhoneInput(phone) {
+  // Light client-side normalisation — server normalises further on submission
+  return (phone || '').trim().replace(/[\s\-\.\(\)]+/g, '');
+}
+
 function renderMyAlerts() {
   pushRoute('/my-alerts');
   const s = t();
@@ -2267,6 +2340,7 @@ async function handleDeepLink() {
       return true;
     }
     case '/my-rides':     renderMyRides();           return true;
+    case '/me':           renderMe();                return true;
     case '/my-alerts':    renderMyAlerts();          return true;
     case '/my-requests':  renderMyRequests();        return true;
     case '/post-request': await renderPostRequest(); return true;

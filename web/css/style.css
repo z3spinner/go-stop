@@ -627,3 +627,6 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-ping-searcher { background: none; border: 1px solid var(--blue); border-radius: var(--radius); color: var(--blue); font-size: 0.8rem; padding: 3px 10px; cursor: pointer; margin-left: auto; }
 .btn-ping-searcher:hover { background: var(--blue); color: white; }
 .btn-ping-searcher:disabled { opacity: 0.5; cursor: default; }
+.btn-me-icon { background:none; border:none; border-radius:50%; width:28px; height:28px; padding:0; cursor:pointer; color:var(--gray-600); display:flex; align-items:center; justify-content:center; }
+.btn-me-icon:hover { background:var(--gray-100); color:var(--gray-900); }
+.me-icon-set { color:var(--blue); }

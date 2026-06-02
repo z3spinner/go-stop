@@ -683,3 +683,70 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
   }, { driverPhone: DRIVER.phone, searcherPhone: SEARCHER.phone });
   expect(driverGetsSearcherPhone).toBe(403);
 });
+
+// ── 31. Me page — saves profile and pre-fills other forms ─────────────────────
+test('Me page saves name and phone to localStorage', async ({ page }) => {
+  await page.goto(BASE);
+  await setFr(page);
+  await page.reload();
+
+  // Click "Moi" link
+  await page.click('#btn-me');
+  await expect(page).toHaveURL(/\/me/);
+  await expect(page.locator('h2')).toContainText(/Mon profil|My profile|profil/i);
+
+  // Fill in name and phone
+  await page.fill('input[name=name]', 'Marie');
+  await page.fill('input[name=phone]', '0644000001');
+  await page.click('button[type=submit]');
+
+  // Confirmation appears
+  await expect(page.locator('#me-saved')).toBeVisible({ timeout: 3000 });
+
+  // Values are persisted in localStorage
+  const stored = await page.evaluate(() => ({
+    name:  localStorage.getItem('user_name'),
+    phone: localStorage.getItem('user_phone'),
+  }));
+  expect(stored.name).toBe('Marie');
+  expect(stored.phone).toBe('0644000001');
+});
+
+test('Me page pre-fills from existing localStorage profile', async ({ page }) => {
+  await page.goto(BASE);
+  await page.evaluate(() => {
+    localStorage.setItem('lang', 'fr');
+    localStorage.setItem('user_name', 'Jean');
+    localStorage.setItem('user_phone', '0655000002');
+  });
+
+  await page.evaluate(() => renderMe());
+  await page.waitForSelector('#me-form');
+
+  await expect(page.locator('input[name=name]')).toHaveValue('Jean');
+  await expect(page.locator('input[name=phone]')).toHaveValue('0655000002');
+});
+
+test('Me page values pre-fill the post-ride form', async ({ page }) => {
+  await page.context().grantPermissions(['notifications'], { origin: BASE });
+  await page.goto(BASE);
+  await setFr(page);
+  await page.reload();
+
+  // Set profile via Me page
+  await page.evaluate(() => renderMe());
+  await page.waitForSelector('#me-form');
+  await page.fill('input[name=name]', 'Sophie');
+  await page.fill('input[name=phone]', '0666000003');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#me-saved:not([style*="none"])');
+
+  // Navigate to post-ride form — should pre-fill
+  await page.click('#back');
+  await page.waitForSelector('button.btn-primary');
+  await page.click('button.btn-primary');
+  await page.waitForSelector('input[name=driver_name]');
+
+  await expect(page.locator('input[name=driver_name]')).toHaveValue('Sophie');
+  await expect(page.locator('input[name=phone]')).toHaveValue('0666000003');
+});
