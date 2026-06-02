@@ -1301,6 +1301,13 @@ async function updateBellState() {
       const sub = await reg.pushManager.getSubscription();
       subscribed = sub !== null;
     } catch {}
+    // Permission granted but no active subscription — push service may have
+    // expired it (410 Gone) and we deleted the endpoint. Re-subscribe silently
+    // so the user doesn't have to re-enable notifications manually.
+    if (!subscribed) {
+      const p = getProfile();
+      if (p.phone) subscribed = await trySubscribePush(p.phone);
+    }
   }
   btn.classList.remove('bell-enabled', 'bell-disabled');
   btn.classList.add(subscribed ? 'bell-enabled' : 'bell-disabled');
