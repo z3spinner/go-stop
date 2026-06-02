@@ -3,6 +3,7 @@ package webpush
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	webpushlib "github.com/SherClockHolmes/webpush-go"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -41,6 +42,7 @@ func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) erro
 		VAPIDPrivateKey: n.vapidPrivate,
 		Subscriber:      n.vapidEmail,
 		TTL:             86400,
+		Urgency:         webpushlib.UrgencyHigh,
 	})
 	if err != nil {
 		return fmt.Errorf("send push notification: %w", err)
@@ -48,7 +50,9 @@ func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) erro
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("push service returned status %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("push service status %d endpoint=%s body=%s",
+			resp.StatusCode, sub.Endpoint, string(body))
 	}
 	return nil
 }

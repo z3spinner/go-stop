@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/z3spinner/go-stop/internal/boundaries/notification"
@@ -18,6 +19,7 @@ func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRep
 	}
 	for _, sub := range subList {
 		if err := notifier.Send(sub, msg); err != nil {
+			log.Printf("push send error phone=%s: %v", phone, err)
 			if strings.Contains(err.Error(), "410") {
 				_ = subs.DeleteByEndpoint(sub.Endpoint)
 			}

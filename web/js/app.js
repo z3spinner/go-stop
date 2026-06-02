@@ -1027,8 +1027,10 @@ async function trySubscribePush(phone) {
     });
     const { endpoint, keys: { p256dh, auth } } = sub.toJSON();
     await api('POST', '/subscriptions', { phone, endpoint, p256dh, auth });
+    console.log('[push] subscribed', endpoint.slice(0, 60) + '…');
     return true;
-  } catch {
+  } catch (err) {
+    console.error('[push] subscription failed:', err);
     return false;
   }
 }
