@@ -7,3 +7,13 @@ test-unit:
 
 sqlc:
 	sqlc generate
+
+build-web:
+	npm ci --prefix frontend && npm run build --prefix frontend
+
+dev:
+	@echo "Go :8080 + Vite :5173 (proxying /api). Ctrl-C stops both."
+	@( go run . & echo $$! > /tmp/gostop-go.pid ; npm run dev --prefix frontend ; kill `cat /tmp/gostop-go.pid` )
+
+test-e2e: build-web
+	npm run test:e2e

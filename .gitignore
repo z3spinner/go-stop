@@ -10,3 +10,7 @@
 node_modules/
 test-results/
 playwright-report/
+web/build/
+frontend/.svelte-kit/
+frontend/build/
+frontend/src/lib/paraglide/
