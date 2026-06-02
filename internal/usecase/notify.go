@@ -10,6 +10,13 @@ import (
 	"github.com/z3spinner/go-stop/internal/domain"
 )
 
+func lastN(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[len(s)-n:]
+}
+
 // sendToAll delivers msg to every subscription for phone.
 // Stale subscriptions (push service returns 410) are removed automatically.
 func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRepository, notifier notification.Notifier) {
@@ -19,7 +26,7 @@ func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRep
 	}
 	for _, sub := range subList {
 		if err := notifier.Send(sub, msg); err != nil {
-			log.Printf("push send error phone=%s: %v", phone, err)
+			log.Printf("push send error phone=***%s: %v", lastN(phone, 3), err)
 			if strings.Contains(err.Error(), "410") {
 				_ = subs.DeleteByEndpoint(sub.Endpoint)
 			}

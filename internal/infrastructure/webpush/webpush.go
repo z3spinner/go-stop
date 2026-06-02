@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 
 	webpushlib "github.com/SherClockHolmes/webpush-go"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -51,8 +52,12 @@ func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) erro
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("push service status %d endpoint=%s body=%s",
-			resp.StatusCode, sub.Endpoint, string(body))
+		host := sub.Endpoint
+		if u, err := url.Parse(sub.Endpoint); err == nil {
+			host = u.Host // log only the push service host, not the device token path
+		}
+		return fmt.Errorf("push service status %d host=%s body=%s",
+			resp.StatusCode, host, string(body))
 	}
 	return nil
 }
