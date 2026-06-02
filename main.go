@@ -2,8 +2,11 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -120,23 +123,27 @@ func main() {
 	r := gin.Default()
 	// On Scalingo the real client IP is in X-Real-IP (set by their reverse proxy).
 	r.TrustedPlatform = "X-Real-IP"
-	r.Static("/css", "./web/css")
-	r.Static("/js", "./web/js")
-	r.StaticFile("/manifest.json", "./web/manifest.json")
-	r.StaticFile("/sw.js", "./web/js/sw.js")
-	r.StaticFile("/logo.svg", "./web/logo.svg")
-	r.StaticFile("/icon-192.png", "./web/icon-192.png")
-	r.StaticFile("/icon-512.png", "./web/icon-512.png")
-	r.StaticFile("/icon-maskable-192.png", "./web/icon-maskable-192.png")
-	r.StaticFile("/icon-maskable-512.png", "./web/icon-maskable-512.png")
-	r.StaticFile("/apple-touch-icon.png", "./web/apple-touch-icon.png")
-	buildVersion := version.Get()
-	indexH, err := handler.NewIndexHandler("./web/index.html", buildVersion)
-	if err != nil {
-		log.Fatalf("index template: %v", err)
-	}
-	log.Printf("build version: %s", buildVersion)
-	r.NoRoute(indexH.Serve)
+	// Serve the SvelteKit static build. Any path that is not /api and not an
+	// existing file falls back to index.html (client-side routing).
+	const buildDir = "./web/build"
+	log.Printf("build version: %s", version.Get())
+	r.NoRoute(func(c *gin.Context) {
+		p := c.Request.URL.Path
+		if strings.HasPrefix(p, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		clean := filepath.Clean(p)
+		file := filepath.Join(buildDir, clean)
+		// Guard against path traversal, then serve the file if it exists.
+		if strings.HasPrefix(file, filepath.Clean(buildDir)+string(os.PathSeparator)) {
+			if fi, err := os.Stat(file); err == nil && !fi.IsDir() {
+				c.File(file)
+				return
+			}
+		}
+		c.File(filepath.Join(buildDir, "index.html"))
+	})
 
 	api := r.Group("/api")
 	{
