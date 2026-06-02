@@ -43,7 +43,7 @@ func NotifyDriver(phone string, req domain.Request, subs repository.Subscription
 	msg := domain.Message{
 		Title:       "Someone needs a ride!",
 		Body:        fmt.Sprintf("%s needs a ride from %s to %s", req.SearcherName, req.Origin, req.Destination),
-		URL:         "/requests/" + req.ID,
+		URL:         "/my-rides",
 		ContactName: req.SearcherName,
 		Phone:       req.Phone,
 		Origin:      req.Origin,
