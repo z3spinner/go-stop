@@ -11,10 +11,14 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run"
+		"test": "npm run test:unit -- --run",
+		"paraglide": "paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
+		"pretest": "npm run paraglide",
+		"pretest:unit": "npm run paraglide"
 	},
 	"devDependencies": {
 		"@fontsource-variable/inter": "^5.2.8",
+		"@inlang/paraglide-js": "^2.18.2",
 		"@internationalized/date": "^3.12.2",
 		"@lucide/svelte": "^1.17.0",
 		"@sveltejs/adapter-static": "^3.0.10",
@@ -23,6 +27,7 @@
 		"@tailwindcss/vite": "^4.2.2",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
+		"jsdom": "^29.1.1",
 		"shadcn-svelte": "^1.3.0",
 		"svelte": "^5.55.2",
 		"svelte-check": "^4.4.6",
