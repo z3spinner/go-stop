@@ -86,6 +86,9 @@ const STRINGS = {
     alertModeAnytime: 'Any time, any date',
     alertModeDaily:   'Daily at a time',
     alertAnytimeLabel:'Always',
+    btnMySearches:    'My searches',
+    mySearchesTitle:  'My searches',
+    btnShowSearches:  'Show',
     btnMyAlerts:      'My alerts',
     myAlertsTitle:    'My alerts',
     btnShowAlerts:    'Show my alerts',
@@ -230,6 +233,9 @@ const STRINGS = {
     alertModeAnytime: 'Toujours',
     alertModeDaily:   'Chaque jour',
     alertAnytimeLabel:'Toujours',
+    btnMySearches:   'Mes recherches',
+    mySearchesTitle: 'Mes recherches',
+    btnShowSearches: 'Voir',
     btnMyAlerts:      'Mes alertes',
     myAlertsTitle:    'Mes alertes',
     btnShowAlerts:    'Voir mes alertes',
@@ -385,6 +391,9 @@ const STRINGS = {
     alertModeAnytime:'Siempre',
     alertModeDaily:  'Cada día',
     alertAnytimeLabel:'Siempre',
+    btnMySearches:  'Mis búsquedas',
+    mySearchesTitle: 'Mis búsquedas',
+    btnShowSearches: 'Ver',
     btnMyAlerts:    'Mis alertas',
     myAlertsTitle:  'Mis alertas',
     btnShowAlerts:  'Ver mis alertas',
@@ -517,6 +526,9 @@ const STRINGS = {
     alertModeAnytime:'Sempre',
     alertModeDaily:  'Ogni giorno',
     alertAnytimeLabel:'Sempre',
+    btnMySearches:  'Le mie ricerche',
+    mySearchesTitle: 'Le mie ricerche',
+    btnShowSearches: 'Vedi',
     btnMyAlerts:    'I miei avvisi',
     myAlertsTitle:  'I miei avvisi',
     btnShowAlerts:  'Vedi i miei avvisi',
@@ -649,6 +661,9 @@ const STRINGS = {
     alertModeAnytime:'Immer',
     alertModeDaily:  'Täglich',
     alertAnytimeLabel:'Immer',
+    btnMySearches:  'Meine Suchen',
+    mySearchesTitle: 'Meine Suchen',
+    btnShowSearches: 'Anzeigen',
     btnMyAlerts:    'Meine Alerts',
     myAlertsTitle:  'Meine Alerts',
     btnShowAlerts:  'Meine Alerts anzeigen',
@@ -781,6 +796,9 @@ const STRINGS = {
     alertModeAnytime:'Altijd',
     alertModeDaily:  'Dagelijks',
     alertAnytimeLabel:'Altijd',
+    btnMySearches:  'Mijn zoekopdrachten',
+    mySearchesTitle: 'Mijn zoekopdrachten',
+    btnShowSearches: 'Tonen',
     btnMyAlerts:    'Mijn alerts',
     myAlertsTitle:  'Mijn alerts',
     btnShowAlerts:  'Toon mijn alerts',
@@ -1477,9 +1495,7 @@ async function renderHome() {
         <span class="ghost-sep">·</span>
         <button class="btn-ghost-inline" id="btn-my-rides">${s.btnMyRides}</button>
         <span class="ghost-sep">·</span>
-        <button class="btn-ghost-inline" id="btn-my-alerts">${s.btnMyAlerts}</button>
-        <span class="ghost-sep">·</span>
-        <button class="btn-ghost-inline" id="btn-my-requests">${s.btnMyRequests}</button>
+        <button class="btn-ghost-inline" id="btn-my-searches">${s.btnMySearches}</button>
       </div>
     </div>
     <div id="home-feed"></div>
@@ -1488,8 +1504,7 @@ async function renderHome() {
   document.getElementById('btn-searcher').onclick = renderSearchRides;
   document.getElementById('btn-me').onclick = renderMe;
   document.getElementById('btn-my-rides').onclick = renderMyRides;
-  document.getElementById('btn-my-alerts').onclick = renderMyAlerts;
-  document.getElementById('btn-my-requests').onclick = renderMyRequests;
+  document.getElementById('btn-my-searches').onclick = renderMySearches;
   document.getElementById('a2hs-banner-open')?.addEventListener('click', showA2HSModal);
   document.getElementById('a2hs-banner-dismiss')?.addEventListener('click', () => {
     localStorage.setItem('a2hs_dismissed', '1');
@@ -2222,71 +2237,100 @@ function normalizePhoneInput(phone) {
   return (phone || '').trim().replace(/[\s\-\.\(\)]+/g, '');
 }
 
-function renderMyAlerts() {
-  pushRoute('/my-alerts');
+// ── My searches — combined alerts + contact requests ──────────────────────────
+
+async function renderMySearches() {
+  pushRoute('/my-searches');
   const s = t();
   const p = getProfile();
   app.innerHTML = `
     ${pageBar()}
-    <h2>${s.myAlertsTitle}</h2>
-    <form id="my-alerts-form">
+    <h2>${s.mySearchesTitle}</h2>
+    <form id="my-searches-form">
       <div class="form-group"><label>${s.labelPhoneCheck}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
-      <button class="btn btn-primary" type="submit">${s.btnShowAlerts}</button>
+      <button class="btn btn-primary" type="submit">${s.btnShowSearches || s.btnShowAlerts}</button>
     </form>
-    <div id="my-alerts-list"></div>`;
+    <div id="my-searches-content"></div>`;
   document.getElementById('back').onclick = renderHome;
   bindControls();
-  document.getElementById('my-alerts-form').onsubmit = async (e) => {
+
+  document.getElementById('my-searches-form').onsubmit = async (e) => {
     e.preventDefault();
     const phone = new FormData(e.target).get('phone');
-    const list = document.getElementById('my-alerts-list');
+    const content = document.getElementById('my-searches-content');
     try {
-      const reqs = await api('GET', '/requests', null, { 'X-Phone': phone });
-      if (!reqs.length) {
-        list.innerHTML = `<div class="empty">${s.noMyAlerts}</div>`;
-        return;
-      }
-      list.innerHTML = reqs.map(r => {
-        let meta;
-        const noDate = !r.Date || r.Date === '0001-01-01T00:00:00Z';
-        const noDept = !r.DepartureAt || r.DepartureAt === '0001-01-01T00:00:00Z';
-        const isDailyTime = !noDate ? false : !noDept && r.DepartureAt !== '0001-01-01T00:00:00Z';
-        if (noDate && noDept) {
-          meta = `<span class="tag tag-anytime">${s.alertAnytimeLabel}</span>`;
-        } else if (noDate && !noDept) {
-          // daily mode — show time only
-          const d = new Date(r.DepartureAt);
-          const pad = n => String(n).padStart(2, '0');
-          meta = `<span class="tag tag-daily">${s.alertModeDaily} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}</span> <span class="tag">${s.flexLabel[r.Flexibility] || r.Flexibility + ' min'}</span>`;
-        } else if (!noDate && noDept) {
-          meta = `<span class="tag">${formatDate(r.Date)}</span>`;
-        } else {
-          meta = `${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>`;
-        }
-        return `
-        <div class="card" id="card-${esc(r.ID)}">
-          <div class="card-route" translate="no">${esc(r.Origin)} → ${esc(r.Destination)}</div>
-          <div class="card-meta">${meta}</div>
-          <div class="alert-actions">
-            <button class="btn-see-matches" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}" data-dept="${esc(noDate && !noDept ? '' : r.DepartureAt)}">${s.btnSeeMatches}</button>
-            <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
-          </div>
-          <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
-        </div>`;
-      }).join('');
-      list.querySelectorAll('.btn-see-matches').forEach(btn => {
+      const [reqs, interests] = await Promise.all([
+        api('GET', '/requests', null,  { 'X-Phone': phone }),
+        api('GET', '/interests', null, { 'X-Phone': phone }),
+      ]);
+
+      // ── Alerts ───────────────────────────────────────
+      const alertsHTML = (!reqs || !reqs.length)
+        ? `<div class="empty">${s.noMyAlerts}</div>`
+        : reqs.map(r => {
+            let meta;
+            const noDate = !r.Date || r.Date === '0001-01-01T00:00:00Z';
+            const noDept = !r.DepartureAt || r.DepartureAt === '0001-01-01T00:00:00Z';
+            if (noDate && noDept) {
+              meta = `<span class="tag tag-anytime">${s.alertAnytimeLabel}</span>`;
+            } else if (noDate && !noDept) {
+              const d = new Date(r.DepartureAt);
+              const pad = n => String(n).padStart(2, '0');
+              meta = `<span class="tag tag-daily">${s.alertModeDaily} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}</span> <span class="tag">${s.flexLabel[r.Flexibility] || r.Flexibility + ' min'}</span>`;
+            } else if (!noDate && noDept) {
+              meta = `<span class="tag">${formatDate(r.Date)}</span>`;
+            } else {
+              meta = `${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>`;
+            }
+            return `
+            <div class="card" id="card-${esc(r.ID)}">
+              <div class="card-route" translate="no">${esc(r.Origin)} → ${esc(r.Destination)}</div>
+              <div class="card-meta">${meta}</div>
+              <div class="alert-actions">
+                <button class="btn-see-matches" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}" data-dept="${esc(noDate && !noDept ? '' : r.DepartureAt)}">${s.btnSeeMatches}</button>
+                <button class="btn btn-danger btn-delete" data-id="${esc(r.ID)}" data-phone="${esc(phone)}">${s.btnDelete}</button>
+              </div>
+              <div class="delete-msg" id="msg-${esc(r.ID)}"></div>
+            </div>`;
+          }).join('');
+
+      // ── Contact requests ─────────────────────────────
+      const requestsHTML = (!interests || !interests.length)
+        ? `<div class="empty">${s.noMyRequests}</div>`
+        : interests.map(r => {
+            const isPending = r.status === 'pending';
+            const statusTag = isPending
+              ? `<span class="tag">${s.reqStatusPending}</span>`
+              : `<span class="tag tag-accepted">${s.reqStatusAccepted}</span>`;
+            const action = isPending
+              ? `<div class="interest-pending-label">${s.interestPending}</div>`
+              : `<a class="btn-contact-link" href="/interests/${esc(r.id)}">${s.contactRevealed} →</a>`;
+            return `
+            <div class="card" id="req-card-${esc(r.id)}">
+              <div class="card-route" translate="no">${esc(r.origin)} → ${esc(r.destination)}</div>
+              <div class="card-meta">${formatTime(r.departure_at)} · <strong>${esc(r.driver_name)}</strong> ${statusTag}</div>
+              <div class="req-action">${action}</div>
+            </div>`;
+          }).join('');
+
+      content.innerHTML = `
+        <h3 class="section-label">${s.myAlertsTitle}</h3>
+        <div id="my-alerts-list">${alertsHTML}</div>
+        <h3 class="section-label">${s.myRequestsTitle}</h3>
+        <div id="my-requests-list">${requestsHTML}</div>`;
+
+      content.querySelectorAll('.btn-see-matches').forEach(btn => {
         btn.onclick = () => renderSearchRides({
           origin: btn.dataset.origin,
           destination: btn.dataset.dest,
           departureAt: btn.dataset.dept,
         });
       });
-      list.querySelectorAll('.btn-delete').forEach(btn => {
+      content.querySelectorAll('.btn-delete').forEach(btn => {
         btn.onclick = async () => {
           try {
             await api('DELETE', `/requests/${btn.dataset.id}`, { phone: btn.dataset.phone });
-            const card = document.getElementById('card-' + btn.dataset.id);
-            card.style.opacity = '0.4';
+            document.getElementById('card-' + btn.dataset.id).style.opacity = '0.4';
             btn.disabled = true;
             document.getElementById('msg-' + btn.dataset.id).textContent = s.deleteOk;
           } catch {
@@ -2294,73 +2338,25 @@ function renderMyAlerts() {
           }
         };
       });
-    } catch (err) {
-      const div = document.createElement('div');
-      div.className = 'error';
-      div.textContent = err.message;
-      list.replaceChildren(div);
-    }
-  };
-  if (p.phone) document.getElementById('my-alerts-form').requestSubmit();
-}
-
-
-// ── My requests (contact requests I've made as a searcher) ────────────────────
-
-async function renderMyRequests() {
-  pushRoute('/my-requests');
-  const s = t();
-  const p = getProfile();
-  app.innerHTML = `
-    ${pageBar()}
-    <h2>${s.myRequestsTitle}</h2>
-    <form id="my-requests-form">
-      <div class="form-group"><label>${s.labelPhoneCheck}</label><input name="phone" type="tel" value="${esc(p.phone)}" required></div>
-      <button class="btn btn-primary" type="submit">${s.btnShowRequests}</button>
-    </form>
-    <div id="my-requests-list"></div>`;
-  document.getElementById('back').onclick = renderHome;
-  bindControls();
-
-  document.getElementById('my-requests-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const phone = new FormData(e.target).get('phone');
-    const list = document.getElementById('my-requests-list');
-    try {
-      const interests = await api('GET', '/interests', null, { 'X-Phone': phone });
-      if (!interests.length) {
-        list.innerHTML = `<div class="empty">${s.noMyRequests}</div>`;
-        return;
-      }
-      list.innerHTML = interests.map(r => {
-        const isPending  = r.status === 'pending';
-        const statusTag  = isPending
-          ? `<span class="tag">${s.reqStatusPending}</span>`
-          : `<span class="tag tag-accepted">${s.reqStatusAccepted}</span>`;
-        const action = isPending
-          ? `<div class="interest-pending-label">${s.interestPending}</div>`
-          : `<a class="btn-contact-link" href="/interests/${esc(r.id)}">${s.contactRevealed} →</a>`;
-        return `
-        <div class="card" id="req-card-${esc(r.id)}">
-          <div class="card-route" translate="no">${esc(r.origin)} → ${esc(r.destination)}</div>
-          <div class="card-meta">${formatTime(r.departure_at)} · <strong>${esc(r.driver_name)}</strong> ${statusTag}</div>
-          <div class="req-action">${action}</div>
-        </div>`;
-      }).join('');
-      // Clicking accepted link navigates to the contact page
-      list.querySelectorAll('.btn-contact-link').forEach(a => {
-        a.onclick = (e) => {
-          e.preventDefault();
+      content.querySelectorAll('.btn-contact-link').forEach(a => {
+        a.onclick = (ev) => {
+          ev.preventDefault();
           const parts = a.href.split('/');
           renderInterestContact(parts[parts.length - 1]);
         };
       });
     } catch (err) {
-      list.innerHTML = `<div class="error">${esc(err.message)}</div>`;
+      document.getElementById('my-searches-content').innerHTML =
+        `<div class="error">${esc(err.message)}</div>`;
     }
   };
-  if (p.phone) document.getElementById('my-requests-form').requestSubmit();
+
+  if (p.phone) document.getElementById('my-searches-form').requestSubmit();
 }
+
+// Keep old entry points so push notification deep links (/my-alerts, /my-requests) still work.
+function renderMyAlerts()   { renderMySearches(); }
+function renderMyRequests() { renderMySearches(); }
 async function renderInterestContact(interestID) {
   pushRoute('/interests/' + interestID);
   const s = t();
@@ -2456,8 +2452,9 @@ async function handleDeepLink() {
     }
     case '/my-rides':     renderMyRides();           return true;
     case '/me':           renderMe();                return true;
-    case '/my-alerts':    renderMyAlerts();          return true;
-    case '/my-requests':  renderMyRequests();        return true;
+    case '/my-searches':  renderMySearches();        return true;
+    case '/my-alerts':    renderMySearches();        return true;
+    case '/my-requests':  renderMySearches();        return true;
     case '/post-request': await renderPostRequest(); return true;
     case '/stats':        await renderStats();       return true;
   }

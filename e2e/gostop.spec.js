@@ -251,13 +251,13 @@ test('searcher views and deletes an alert', async ({ page }) => {
   const errors = [];
   page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
 
-  await page.evaluate(() => { localStorage.setItem('lang', 'fr'); renderMyAlerts(); });
-  await page.waitForSelector('#my-alerts-form');
+  await page.evaluate(() => { localStorage.setItem('lang', 'fr'); renderMySearches(); });
+  await page.waitForSelector('#my-searches-form');
 
-  // Submit and wait for API response
+  // Submit and wait for API response (combined page fetches /requests and /interests in parallel)
   const [response] = await Promise.all([
     page.waitForResponse(r => r.url().includes('/api/requests') && r.request().method() === 'GET'),
-    page.click('#my-alerts-form button[type=submit]'),
+    page.click('#my-searches-form button[type=submit]'),
   ]);
   expect(response.status()).toBe(200);
   const alerts = await response.json();
