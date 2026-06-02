@@ -110,6 +110,12 @@ func (h *RequestHandler) Get(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
+	// Only the request owner may retrieve the full record (including their phone).
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" || phone != req.Phone {
+		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+		return
+	}
 	c.JSON(http.StatusOK, req)
 }
 
