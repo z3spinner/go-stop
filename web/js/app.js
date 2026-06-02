@@ -68,6 +68,12 @@ const STRINGS = {
     notifRouteBody:   'We\'ll alert you when a ride matching this route is posted. Enter your details below.',
     notifRouteSet:    '✓ You\'ll be notified when a matching ride appears.',
     alertModeTime:    'Specific time',
+    a2hsHint:         'Add to Home Screen',
+    a2hsTitle:        'Enable notifications on iPhone',
+    a2hsBody:         `Safari on iPhone doesn't support notifications in the browser. Add this page to your Home Screen to enable them.`,
+    a2hsStep1:        '1. Tap the Share button ⬆',
+    a2hsStep2:        "2. Tap 'Add to Home Screen'",
+    a2hsStep3:        '3. Open the app from your Home Screen',
     alertModeDay:     'Any time this day',
     alertModeAnytime: 'Any time, any date',
     alertModeDaily:   'Daily at a time',
@@ -224,6 +230,12 @@ const STRINGS = {
     labelDeparture:   'Départ',
     labelContact:     'Contact',
     btnActivate:     'Activer',
+    a2hsHint:        'Ajouter à l\'écran d\'accueil',
+    a2hsTitle:       'Activer les notifications',
+    a2hsBody:        'Pour recevoir des notifications sur iPhone, ajoutez cette page à votre écran d\'accueil.',
+    a2hsStep1:       '1. Appuyez sur le bouton Partager',
+    a2hsStep2:       "2. Appuyez sur 'Sur l'écran d'accueil'",
+    a2hsStep3:       "3. Ouvrez l'app depuis votre écran d'accueil",
     notifEnabled:    'Notifications activées ✓ — vous serez alerté(e) pour les nouveaux trajets et les contacts acceptés.',
     notifDeniedTip:  'Notifications bloquées. Activez-les dans les paramètres de votre navigateur puis rechargez.',
     footerPrivacy:    'Confidentialité',
@@ -365,6 +377,12 @@ const STRINGS = {
     labelDeparture: 'Salida',
     labelContact:   'Contacto',
     btnActivate:   'Activar',
+    a2hsHint:        'Añadir a pantalla de inicio',
+    a2hsTitle:       'Activar notificaciones',
+    a2hsBody:        'Para recibir notificaciones en iPhone, añade esta página a tu pantalla de inicio.',
+    a2hsStep1:       '1. Toca el botón Compartir',
+    a2hsStep2:       "2. Toca 'Añadir a la pantalla de inicio'",
+    a2hsStep3:       '3. Abre la app desde tu pantalla de inicio',
     notifEnabled:  'Notificaciones activadas ✓',
     notifDeniedTip:'Notificaciones bloqueadas. Actívalas en la configuración del navegador.',
     footerPrivacy:  'Privacidad',
@@ -483,6 +501,12 @@ const STRINGS = {
     labelDeparture: 'Partenza',
     labelContact:   'Contatto',
     btnActivate:   'Attiva',
+    a2hsHint:        'Aggiungi alla schermata Home',
+    a2hsTitle:       'Attiva notifiche',
+    a2hsBody:        'Per ricevere notifiche su iPhone, aggiungi questa pagina alla schermata Home.',
+    a2hsStep1:       '1. Tocca il pulsante Condividi',
+    a2hsStep2:       "2. Tocca 'Aggiungi a schermata Home'",
+    a2hsStep3:       "3. Apri l'app dalla schermata Home",
     notifEnabled:  'Notifiche attivate ✓',
     notifDeniedTip:'Notifiche bloccate. Attivale nelle impostazioni del browser.',
     footerPrivacy:  'Privacy',
@@ -601,6 +625,12 @@ const STRINGS = {
     labelDeparture: 'Abfahrt',
     labelContact:   'Kontakt',
     btnActivate:   'Aktivieren',
+    a2hsHint:        'Zum Home-Bildschirm hinzufügen',
+    a2hsTitle:       'Benachrichtigungen aktivieren',
+    a2hsBody:        'Um Benachrichtigungen auf dem iPhone zu erhalten, füge diese Seite zum Home-Bildschirm hinzu.',
+    a2hsStep1:       '1. Tippe auf Teilen',
+    a2hsStep2:       "2. Tippe auf 'Zum Home-Bildschirm'",
+    a2hsStep3:       '3. Öffne die App vom Home-Bildschirm',
     notifEnabled:  'Benachrichtigungen aktiviert ✓',
     notifDeniedTip:'Benachrichtigungen gesperrt. Aktiviere sie in den Browsereinstellungen.',
     footerPrivacy:  'Datenschutz',
@@ -719,6 +749,12 @@ const STRINGS = {
     labelDeparture: 'Vertrek',
     labelContact:   'Contact',
     btnActivate:   'Activeren',
+    a2hsHint:        'Voeg toe aan beginscherm',
+    a2hsTitle:       'Meldingen inschakelen',
+    a2hsBody:        'Om meldingen op iPhone te ontvangen, voeg deze pagina toe aan je beginscherm.',
+    a2hsStep1:       '1. Tik op de Deel-knop',
+    a2hsStep2:       "2. Tik op 'Zet op beginscherm'",
+    a2hsStep3:       '3. Open de app vanaf je beginscherm',
     notifEnabled:  'Meldingen ingeschakeld ✓',
     notifDeniedTip:'Meldingen geblokkeerd. Schakel ze in via de browserinstellingen.',
     footerPrivacy:  'Privacy',
@@ -1066,9 +1102,51 @@ function bellIcon() {
   return `<button class="btn-bell" id="btn-bell" aria-label="Notifications"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>`;
 }
 
+function isIOSBrowser() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+    !window.MSStream &&
+    !window.navigator.standalone &&
+    !window.matchMedia('(display-mode: standalone)').matches;
+}
+
+function showA2HSModal() {
+  const s = t();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h2>${s.a2hsTitle}</h2>
+        <button class="btn-modal-close" id="btn-a2hs-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>${s.a2hsBody}</p>
+        <div class="a2hs-steps">
+          <div class="a2hs-step">${s.a2hsStep1} <span class="a2hs-icon">⬆</span></div>
+          <div class="a2hs-step">${s.a2hsStep2}</div>
+          <div class="a2hs-step">${s.a2hsStep3}</div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#btn-a2hs-close').onclick = () => overlay.remove();
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+}
+
 async function updateBellState() {
   const btn = document.getElementById('btn-bell');
   if (!btn) return;
+  // iOS Safari (non-standalone) can't use Web Push — show A2HS hint instead
+  if (isIOSBrowser()) {
+    btn.style.display = 'none';
+    const label = document.getElementById('bell-activate-label');
+    if (label) {
+      label.textContent = t().a2hsHint;
+      label.classList.remove('hidden');
+      label.onclick = showA2HSModal;
+    }
+    return;
+  }
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {
     btn.style.display = 'none';
     return;

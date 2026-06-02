@@ -621,3 +621,6 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-contact-link { color: var(--blue); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
 .btn-contact-link:hover { text-decoration: underline; }
 .tag-interest-count { background: #fef3c7; color: #92400e; font-weight: 600; }
+.a2hs-steps { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.a2hs-step { background: var(--gray-100); border-radius: var(--radius); padding: 10px 14px; font-size: 0.95rem; }
+.a2hs-icon { font-style: normal; }
