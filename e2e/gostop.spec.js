@@ -584,3 +584,50 @@ test('time-only search shows rides within ±60min window', async ({ page }) => {
   expect(ids).toContain(nearID);
   expect(ids).not.toContain(farID);
 });
+
+// ── 30. Driver can notify a matching searcher (Prévenir button) ───────────────
+test('driver sees Prévenir button next to matching searcher and can click it', async ({ page }) => {
+  await page.goto(BASE);
+  await setFr(page);
+
+  const origin = `PingTest${Date.now()}`;
+  const dest   = `PingDest${Date.now()}`;
+
+  // Searcher (Bob) posts an anytime alert
+  await page.evaluate(async ({ searcher, origin, dest }) => {
+    await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: searcher.name, phone: searcher.phone, origin, destination: dest }),
+    });
+  }, { searcher: SEARCHER, origin, dest });
+
+  // Driver (Alice) posts a matching ride
+  await page.context().grantPermissions(['notifications'], { origin: BASE });
+  await setProfile(page, DRIVER);
+  await page.evaluate(async ({ driver, origin, dest }) => {
+    const r = await fetch('/api/rides', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driver_name: driver.name, phone: driver.phone,
+        origin, destination: dest, flexibility: 0,
+        departure_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+      }),
+    });
+    return (await r.json()).ID;
+  }, { driver: DRIVER, origin, dest });
+
+  // Open My Rides — should show the seeker row with Prévenir button
+  await page.evaluate(() => renderMyRides());
+  await page.waitForSelector('#my-rides-form');
+  await page.click('#my-rides-form button[type=submit]');
+  await page.waitForSelector('.btn-ping-searcher', { timeout: 8000 });
+
+  // Verify no phone number is shown in the seeker row
+  const seekerText = await page.locator('.seeker-row').first().innerText();
+  expect(seekerText).toContain(SEARCHER.name);
+  expect(seekerText).not.toContain(SEARCHER.phone);
+
+  // Click Prévenir — should disable the button and show ✓
+  await page.locator('.btn-ping-searcher').first().click();
+  await expect(page.locator('.btn-ping-searcher').first()).toBeDisabled({ timeout: 3000 });
+});
