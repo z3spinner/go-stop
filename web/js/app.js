@@ -80,6 +80,7 @@ const STRINGS = {
     a2hsStep1:        '1. Tap the Share button ⬆',
     a2hsStep2:        "2. Tap 'Add to Home Screen'",
     a2hsStep3:        '3. Open the app from your Home Screen',
+    a2hsNote:         'Requires iOS 16.4 or later.',
     alertModeDay:     'Any time this day',
     alertModeAnytime: 'Any time, any date',
     alertModeDaily:   'Daily at a time',
@@ -248,6 +249,7 @@ const STRINGS = {
     a2hsStep1:       '1. Appuyez sur le bouton Partager',
     a2hsStep2:       "2. Appuyez sur 'Sur l'écran d'accueil'",
     a2hsStep3:       "3. Ouvrez l'app depuis votre écran d'accueil",
+    a2hsNote:        'Nécessite iOS 16.4 ou version ultérieure.',
     notifEnabled:    'Notifications activées ✓ — vous serez alerté(e) pour les nouveaux trajets et les contacts acceptés.',
     notifDeniedTip:  'Notifications bloquées. Activez-les dans les paramètres de votre navigateur puis rechargez.',
     footerPrivacy:    'Confidentialité',
@@ -401,6 +403,7 @@ const STRINGS = {
     a2hsStep1:       '1. Toca el botón Compartir',
     a2hsStep2:       "2. Toca 'Añadir a la pantalla de inicio'",
     a2hsStep3:       '3. Abre la app desde tu pantalla de inicio',
+    a2hsNote:        'Requiere iOS 16.4 o posterior.',
     notifEnabled:  'Notificaciones activadas ✓',
     notifDeniedTip:'Notificaciones bloqueadas. Actívalas en la configuración del navegador.',
     footerPrivacy:  'Privacidad',
@@ -531,6 +534,7 @@ const STRINGS = {
     a2hsStep1:       '1. Tocca il pulsante Condividi',
     a2hsStep2:       "2. Tocca 'Aggiungi a schermata Home'",
     a2hsStep3:       "3. Apri l'app dalla schermata Home",
+    a2hsNote:        'Richiede iOS 16.4 o versione successiva.',
     notifEnabled:  'Notifiche attivate ✓',
     notifDeniedTip:'Notifiche bloccate. Attivale nelle impostazioni del browser.',
     footerPrivacy:  'Privacy',
@@ -661,6 +665,7 @@ const STRINGS = {
     a2hsStep1:       '1. Tippe auf Teilen',
     a2hsStep2:       "2. Tippe auf 'Zum Home-Bildschirm'",
     a2hsStep3:       '3. Öffne die App vom Home-Bildschirm',
+    a2hsNote:        'Erfordert iOS 16.4 oder neuer.',
     notifEnabled:  'Benachrichtigungen aktiviert ✓',
     notifDeniedTip:'Benachrichtigungen gesperrt. Aktiviere sie in den Browsereinstellungen.',
     footerPrivacy:  'Datenschutz',
@@ -791,6 +796,7 @@ const STRINGS = {
     a2hsStep1:       '1. Tik op de Deel-knop',
     a2hsStep2:       "2. Tik op 'Zet op beginscherm'",
     a2hsStep3:       '3. Open de app vanaf je beginscherm',
+    a2hsNote:        'Vereist iOS 16.4 of hoger.',
     notifEnabled:  'Meldingen ingeschakeld ✓',
     notifDeniedTip:'Meldingen geblokkeerd. Schakel ze in via de browserinstellingen.',
     footerPrivacy:  'Privacy',
@@ -1178,6 +1184,7 @@ function showA2HSModal() {
           <div class="a2hs-step">${s.a2hsStep2}</div>
           <div class="a2hs-step">${s.a2hsStep3}</div>
         </div>
+        <p class="a2hs-note">${s.a2hsNote}</p>
       </div>
     </div>`;
   document.body.appendChild(overlay);
