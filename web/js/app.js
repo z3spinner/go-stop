@@ -1851,6 +1851,8 @@ function renderMyRides() {
                 ${i.status === 'pending'
                   ? `<div class="interest-pending-info">${i.searcher_name ? `<strong>${esc(i.searcher_name)}</strong> — ` : ''}${s.btnInterest.toLowerCase()}</div>
                      <button class="btn-accept-interest" data-id="${esc(i.id)}" data-phone="${esc(phone)}">${s.btnAccept}</button>`
+                  : i.status === 'driver_shared'
+                  ? `<span class="interest-accepted">${i.searcher_name ? `<strong>${esc(i.searcher_name)}</strong> — ` : ''}notification envoyée ✓</span>`
                   : `<span class="interest-accepted">${s.contactRevealed}${i.searcher_name ? ` (${esc(i.searcher_name)})` : ''}: <a href="tel:${esc(i.searcher_phone)}">${esc(i.searcher_phone)}</a></span>`
                 }
               </div>`).join('');

@@ -297,7 +297,8 @@ func (h *RideHandler) ListInterests(c *gin.Context) {
 	}
 	out := make([]interestResponse, len(interests))
 	for i, interest := range interests {
-		// Name is always shown to the driver; phone only after accepted
+		// Name always shown; phone shown for mutual-accepted only.
+		// driver_shared = driver pinged searcher (one-way) — no phone shown to driver.
 		out[i] = interestResponse{
 			ID:           interest.ID,
 			Status:       interest.Status,
