@@ -1802,7 +1802,6 @@ function renderMyRides() {
               <div class="seeker-row">
                 <strong>${esc(req.SearcherName)}</strong>
                 <span class="seeker-meta">${formatTime(req.DepartureAt)} <span class="tag">${s.flexLabel[req.Flexibility] || esc(req.Flexibility) + ' min'}</span></span>
-                <a href="tel:${esc(req.Phone)}" class="seeker-phone">${esc(req.Phone)}</a>
               </div>`).join('');
         }).catch(() => {
           const el = document.getElementById('seekers-' + r.ID);

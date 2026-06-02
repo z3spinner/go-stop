@@ -224,7 +224,28 @@ func (h *RideHandler) ListMatchingRequests(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, requests)
+	// Strip phone — searchers who set up alerts have not consented to sharing
+	// their number with every driver. Only the searcher's name and timing are shown.
+	type publicRequest struct {
+		ID           string    `json:"ID"`
+		SearcherName string    `json:"SearcherName"`
+		Origin       string    `json:"Origin"`
+		Destination  string    `json:"Destination"`
+		DepartureAt  time.Time `json:"DepartureAt"`
+		Flexibility  int       `json:"Flexibility"`
+	}
+	out := make([]publicRequest, len(requests))
+	for i, r := range requests {
+		out[i] = publicRequest{
+			ID:           r.ID,
+			SearcherName: r.SearcherName,
+			Origin:       r.Origin,
+			Destination:  r.Destination,
+			DepartureAt:  r.DepartureAt,
+			Flexibility:  int(r.Flexibility),
+		}
+	}
+	c.JSON(http.StatusOK, out)
 }
 
 type deleteRideRequest struct {
