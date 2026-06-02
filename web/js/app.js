@@ -1284,7 +1284,7 @@ async function renderStats() {
     const rows = stats.top_routes && stats.top_routes.length
       ? stats.top_routes.map(r => `
           <div class="stats-row">
-            <span class="stats-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
+            <span class="stats-route" translate="no">${esc(r.Origin)} → ${esc(r.Destination)}</span>
             <span class="stats-count">${s.statsRouteCount(r.Count)}</span>
           </div>`).join('')
       : `<p class="section-hint">${s.statsEmpty}</p>`;
@@ -1373,7 +1373,7 @@ async function loadHomeStats() {
     if (!stats.top_routes || !stats.top_routes.length) return;
     const rows = stats.top_routes.map(r =>
       `<button class="stats-row stats-row-btn" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}">
-        <span class="stats-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
+        <span class="stats-route" translate="no">${esc(r.Origin)} → ${esc(r.Destination)}</span>
         <span class="stats-count">${s.statsRouteCount(r.Count)}</span>
       </button>`
     ).join('');
@@ -1454,7 +1454,7 @@ async function loadHomeFeed() {
         <div class="home-feed-title">${s.homeFeedTitle}</div>
         ${rides.map(r => `
           <div class="home-feed-card">
-            <span class="home-feed-route">${esc(r.Origin)} → ${esc(r.Destination)}</span>
+            <span class="home-feed-route" translate="no">${esc(r.Origin)} → ${esc(r.Destination)}</span>
             <span class="home-feed-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span>${r.DriverName ? ' · <strong>' + esc(r.DriverName) + '</strong>' : ''}${r.InterestCount > 0 ? ' <span class="tag tag-interest-count">' + s.interestCount(r.InterestCount) + '</span>' : ''}</span>
             ${contactOrInterestBtn(r, contacts, s)}
           </div>`).join('')}
@@ -1676,11 +1676,11 @@ async function renderSearchRides(autoQuery = null) {
       results.innerHTML = `
         <div class="results-grid">
           <div class="results-col">
-            <div class="results-col-header">${esc(origin)} → ${esc(dest)}</div>
+            <div class="results-col-header" translate="no">${esc(origin)} → ${esc(dest)}</div>
             ${rides.length ? rides.map(rideCard).join('') + colNotify(origin, dest) : colEmpty(origin, dest)}
           </div>
           <div class="results-col">
-            <div class="results-col-header">${esc(dest)} → ${esc(origin)}</div>
+            <div class="results-col-header" translate="no">${esc(dest)} → ${esc(origin)}</div>
             ${returnRides.length ? returnRides.map(rideCard).join('') + colNotify(dest, origin) : colEmpty(dest, origin)}
           </div>
         </div>`;
@@ -1794,7 +1794,7 @@ function renderMyRides() {
           </div>` : '';
         return `
           <div class="card" id="card-${esc(r.ID)}">
-            <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
+            <div class="card-route" translate="no">${esc(r.Origin)} → ${esc(r.Destination)}</div>
             <div class="card-meta">${formatTime(r.DepartureAt)} <span class="tag">${s.flexLabel[r.Flexibility] || esc(r.Flexibility) + ' min'}</span></div>
             <div class="seekers-section" id="seekers-${esc(r.ID)}">
               <div class="seekers-loading">…</div>
@@ -2077,7 +2077,7 @@ function renderMyAlerts() {
         }
         return `
         <div class="card" id="card-${esc(r.ID)}">
-          <div class="card-route">${esc(r.Origin)} → ${esc(r.Destination)}</div>
+          <div class="card-route" translate="no">${esc(r.Origin)} → ${esc(r.Destination)}</div>
           <div class="card-meta">${meta}</div>
           <div class="alert-actions">
             <button class="btn-see-matches" data-origin="${esc(r.Origin)}" data-dest="${esc(r.Destination)}" data-dept="${esc(noDate && !noDept ? '' : r.DepartureAt)}">${s.btnSeeMatches}</button>
@@ -2154,7 +2154,7 @@ async function renderMyRequests() {
           : `<a class="btn-contact-link" href="/interests/${esc(r.id)}">${s.contactRevealed} →</a>`;
         return `
         <div class="card" id="req-card-${esc(r.id)}">
-          <div class="card-route">${esc(r.origin)} → ${esc(r.destination)}</div>
+          <div class="card-route" translate="no">${esc(r.origin)} → ${esc(r.destination)}</div>
           <div class="card-meta">${formatTime(r.departure_at)} · <strong>${esc(r.driver_name)}</strong> ${statusTag}</div>
           <div class="req-action">${action}</div>
         </div>`;
@@ -2189,7 +2189,7 @@ async function renderInterestContact(interestID) {
     const personLabel = res.role === 'driver' ? s.labelDriver : s.labelSearcher;
     document.getElementById('contact-result').innerHTML = `
       <div class="card contact-card">
-        <div class="card-route">${esc(res.origin)} → ${esc(res.destination)}</div>
+        <div class="card-route" translate="no">${esc(res.origin)} → ${esc(res.destination)}</div>
         <div class="card-meta">${formatTime(res.departure_at)}</div>
         <table class="detail-table" style="margin-top:12px">
           ${res.name ? `<tr><td>${personLabel}</td><td><strong>${esc(res.name)}</strong></td></tr>` : ''}
@@ -2221,7 +2221,7 @@ async function renderItemDetail(type, item) {
     ${pageBar()}
     <h2>${title}</h2>
     <div class="card detail-card">
-      <div class="card-route">${esc(item.Origin)} → ${esc(item.Destination)}</div>
+      <div class="card-route" translate="no">${esc(item.Origin)} → ${esc(item.Destination)}</div>
       <div class="card-meta">${formatTime(item.DepartureAt)} <span class="tag">${s.flexLabel[item.Flexibility] || esc(item.Flexibility) + ' min'}</span></div>
       <table class="detail-table">
         <tr><td>${personLabel}</td><td><strong>${esc(name)}</strong></td></tr>
