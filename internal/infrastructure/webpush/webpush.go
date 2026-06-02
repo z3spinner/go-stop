@@ -25,8 +25,22 @@ func New(vapidPublic, vapidPrivate, vapidEmail string) *WebPushNotifier {
 	}
 }
 
+// pushPayload is the minimal envelope the service worker needs.
+// Sending only these three fields keeps the encrypted payload well under
+// the 4 KB Web Push limit (the full domain.Message struct — with phone,
+// origin, destination, departure_at — was exceeding it).
+type pushPayload struct {
+	Title string `json:"title"`
+	Body  string `json:"body"`
+	URL   string `json:"url"`
+}
+
 func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) error {
-	payload, err := json.Marshal(msg)
+	payload, err := json.Marshal(pushPayload{
+		Title: msg.Title,
+		Body:  msg.Body,
+		URL:   msg.URL,
+	})
 	if err != nil {
 		return fmt.Errorf("marshal message: %w", err)
 	}
