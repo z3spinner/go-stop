@@ -11,6 +11,7 @@ import (
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
 	"github.com/z3spinner/go-stop/internal/infrastructure/webpush"
 	"github.com/z3spinner/go-stop/internal/usecase"
+	"github.com/z3spinner/go-stop/internal/version"
 )
 
 func main() {
@@ -115,9 +116,13 @@ func main() {
 	r.StaticFile("/manifest.json", "./web/manifest.json")
 	r.StaticFile("/sw.js", "./web/js/sw.js")
 	r.StaticFile("/logo.svg", "./web/logo.svg")
-	r.NoRoute(func(c *gin.Context) {
-		c.File("./web/index.html")
-	})
+	buildVersion := version.Get()
+	indexH, err := handler.NewIndexHandler("./web/index.html", buildVersion)
+	if err != nil {
+		log.Fatalf("index template: %v", err)
+	}
+	log.Printf("build version: %s", buildVersion)
+	r.NoRoute(indexH.Serve)
 
 	api := r.Group("/api")
 	{
