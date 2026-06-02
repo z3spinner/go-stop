@@ -1025,6 +1025,11 @@ async function trySubscribePush(phone) {
 // Calls onDone() when the user has either enabled or skipped.
 function renderNotificationPrompt(phone, onDone) {
   const s = t();
+  // iOS Safari and some browsers don't support the Notifications API at all
+  if (!('Notification' in window)) {
+    onDone();
+    return;
+  }
   const alreadyGranted = Notification.permission === 'granted';
 
   if (alreadyGranted) {
