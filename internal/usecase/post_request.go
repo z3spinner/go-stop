@@ -50,11 +50,7 @@ func (uc *PostRequest) Execute(req domain.Request) (domain.Request, error) {
 	}
 
 	for _, ride := range matching {
-		sub, err := uc.subs.FindByPhone(ride.Phone)
-		if err != nil {
-			continue
-		}
-		_ = NotifyDriver(sub, req, uc.notifier)
+		NotifyDriver(ride.Phone, req, uc.subs, uc.notifier)
 	}
 	return req, nil
 }

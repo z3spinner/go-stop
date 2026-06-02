@@ -19,6 +19,8 @@ type Querier interface {
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
 	DeleteRide(ctx context.Context, id pgtype.UUID) error
 	DeleteSubscription(ctx context.Context, phone string) error
+	// Removes a specific device subscription (e.g. when push returns 410 Gone).
+	DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	// Matches all alert modes inferred from NULL state of date/departure_at:
 	//   anytime: date IS NULL AND departure_at IS NULL
 	//   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match)
@@ -36,7 +38,6 @@ type Querier interface {
 	GetRideEventCounts(ctx context.Context) (GetRideEventCountsRow, error)
 	GetRideStatsTotals(ctx context.Context) (GetRideStatsTotalsRow, error)
 	GetSearchEventCounts(ctx context.Context) (GetSearchEventCountsRow, error)
-	GetSubscriptionByPhone(ctx context.Context, phone string) (Subscription, error)
 	GetTopRoutes(ctx context.Context) ([]GetTopRoutesRow, error)
 	InsertInterest(ctx context.Context, arg InsertInterestParams) error
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
@@ -56,6 +57,7 @@ type Querier interface {
 	ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ride, error)
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)
 	ListRidesPendingFeedback(ctx context.Context) ([]Ride, error)
+	ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error)
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)
 	SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error)
 	// Returns rides on the given date whose departure window (±flexibility) overlaps
@@ -64,6 +66,7 @@ type Querier interface {
 	// Time-only search: any date, departure window overlaps search_time ± tolerance.
 	SearchRidesByTime(ctx context.Context, arg SearchRidesByTimeParams) ([]Ride, error)
 	SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error
+	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }
 

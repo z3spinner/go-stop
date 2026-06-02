@@ -24,14 +24,25 @@ func (r *SubscriptionRepo) Save(sub domain.Subscription) error {
 	})
 }
 
-func (r *SubscriptionRepo) FindByPhone(phone string) (domain.Subscription, error) {
-	row, err := r.q.GetSubscriptionByPhone(context.Background(), phone)
+func (r *SubscriptionRepo) FindByPhone(phone string) ([]domain.Subscription, error) {
+	rows, err := r.q.ListSubscriptionsByPhone(context.Background(), phone)
 	if err != nil {
-		return domain.Subscription{}, errors.New("subscription not found")
+		return nil, err
 	}
-	return subscriptionFromRow(row), nil
+	if len(rows) == 0 {
+		return nil, errors.New("subscription not found")
+	}
+	out := make([]domain.Subscription, len(rows))
+	for i, row := range rows {
+		out[i] = subscriptionFromRow(row)
+	}
+	return out, nil
 }
 
 func (r *SubscriptionRepo) Delete(phone string) error {
 	return r.q.DeleteSubscription(context.Background(), phone)
+}
+
+func (r *SubscriptionRepo) DeleteByEndpoint(endpoint string) error {
+	return r.q.DeleteSubscriptionByEndpoint(context.Background(), endpoint)
 }

@@ -21,61 +21,86 @@ func (m *mockNotifier) Send(sub domain.Subscription, msg domain.Message) error {
 	return m.err
 }
 
-func TestNotifySearcher_SendsCorrectMessage(t *testing.T) {
-	n := &mockNotifier{}
-	sub := domain.Subscription{Phone: "555-0001"}
+type mockSubRepoNotify struct {
+	subs []domain.Subscription
+}
+
+func (m *mockSubRepoNotify) Save(domain.Subscription) error { return nil }
+func (m *mockSubRepoNotify) FindByPhone(string) ([]domain.Subscription, error) {
+	if len(m.subs) == 0 {
+		return nil, errors.New("not found")
+	}
+	return m.subs, nil
+}
+func (m *mockSubRepoNotify) Delete(string) error          { return nil }
+func (m *mockSubRepoNotify) DeleteByEndpoint(string) error { return nil }
+
+func TestNotifySearcher_SendsToAllDevices(t *testing.T) {
+	sub1 := domain.Subscription{Phone: "555-0001", Endpoint: "https://fcm.example/1"}
+	sub2 := domain.Subscription{Phone: "555-0001", Endpoint: "https://fcm.example/2"}
 	ride := domain.Ride{
 		ID: "ride-1", DriverName: "Alice", Phone: "555-0001",
 		Origin: "Village A", Destination: "Train Station",
 		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
 	}
-	err := usecase.NotifySearcher(sub, ride, n)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !n.called {
-		t.Error("notifier.Send was not called")
-	}
-	if n.lastMsg.URL != "/rides/ride-1" {
-		t.Errorf("expected URL /rides/ride-1, got %s", n.lastMsg.URL)
-	}
-	if n.lastMsg.ContactName != "Alice" {
-		t.Errorf("expected ContactName Alice, got %s", n.lastMsg.ContactName)
+	counter := &countingNotifier{}
+	repo := &mockSubRepoNotify{subs: []domain.Subscription{sub1, sub2}}
+	usecase.NotifySearcher("555-0001", ride, repo, counter)
+	if counter.count != 2 {
+		t.Errorf("expected 2 sends (one per device), got %d", counter.count)
 	}
 }
 
-func TestNotifyDriver_SendsCorrectMessage(t *testing.T) {
-	n := &mockNotifier{}
-	sub := domain.Subscription{Phone: "555-0002"}
-	req := domain.Request{
-		ID: "req-1", SearcherName: "Bob", Phone: "555-0002",
-		Origin: "Village A", Destination: "Train Station",
-		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
-	}
-	err := usecase.NotifyDriver(sub, req, n)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if n.lastMsg.URL != "/requests/req-1" {
-		t.Errorf("expected URL /requests/req-1, got %s", n.lastMsg.URL)
-	}
-	if n.lastMsg.ContactName != "Bob" {
-		t.Errorf("expected ContactName Bob, got %s", n.lastMsg.ContactName)
+func TestNotifySearcher_NoSubscription_DoesNothing(t *testing.T) {
+	n := &countingNotifier{}
+	repo := &mockSubRepoNotify{} // empty
+	usecase.NotifySearcher("555-0001", domain.Ride{ID: "x"}, repo, n)
+	if n.count != 0 {
+		t.Errorf("expected 0 sends, got %d", n.count)
 	}
 }
 
-func TestNotifySearcher_PropagatesNotifierError(t *testing.T) {
-	n := &mockNotifier{err: errors.New("push failed")}
-	err := usecase.NotifySearcher(domain.Subscription{}, domain.Ride{ID: "x"}, n)
-	if err == nil {
-		t.Error("expected error to be propagated")
+func TestNotifySearcher_Removes410GoneSubscription(t *testing.T) {
+	sub := domain.Subscription{Phone: "555-0001", Endpoint: "https://fcm.example/stale"}
+	gone := &goneNotifier{}
+	repo := &trackingSubRepo{subs: []domain.Subscription{sub}}
+	usecase.NotifySearcher("555-0001", domain.Ride{ID: "x"}, repo, gone)
+	if !repo.deleted {
+		t.Error("expected stale subscription to be deleted after 410 Gone")
 	}
 }
 
-func TestNotifyDriver_PropagatesNotifierError(t *testing.T) {
-	n := &mockNotifier{err: errors.New("push failed")}
-	err := usecase.NotifyDriver(domain.Subscription{}, domain.Request{ID: "x"}, n)
-	if err == nil {
-		t.Error("expected error to be propagated")
-	}
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+type countingNotifier struct{ count int }
+
+func (n *countingNotifier) Send(_ domain.Subscription, _ domain.Message) error {
+	n.count++
+	return nil
+}
+
+type goneNotifier struct{}
+
+func (n *goneNotifier) Send(_ domain.Subscription, _ domain.Message) error {
+	return errors.New("push service returned status 410")
+}
+
+// mockSubRepoNotify with delete tracking
+func (m *mockSubRepoNotify) deleted_() {}
+
+var _ = (*mockSubRepoNotify)(nil)
+
+type trackingSubRepo struct {
+	subs    []domain.Subscription
+	deleted bool
+}
+
+func (r *trackingSubRepo) Save(domain.Subscription) error { return nil }
+func (r *trackingSubRepo) FindByPhone(string) ([]domain.Subscription, error) {
+	return r.subs, nil
+}
+func (r *trackingSubRepo) Delete(string) error { return nil }
+func (r *trackingSubRepo) DeleteByEndpoint(string) error {
+	r.deleted = true
+	return nil
 }

@@ -23,10 +23,11 @@ func TestSubscriptionRepo_SaveFindDelete(t *testing.T) {
 		t.Fatalf("Save: %v", err)
 	}
 
-	got, err := repo.FindByPhone("555-0001")
+	subs, err := repo.FindByPhone("555-0001")
 	if err != nil {
 		t.Fatalf("FindByPhone: %v", err)
 	}
+	got := subs[0]
 	if got.Endpoint != sub.Endpoint {
 		t.Errorf("expected endpoint %s, got %s", sub.Endpoint, got.Endpoint)
 	}
@@ -43,24 +44,35 @@ func TestSubscriptionRepo_SaveFindDelete(t *testing.T) {
 	}
 }
 
-func TestSubscriptionRepo_Save_UpdatesOnConflict(t *testing.T) {
+func TestSubscriptionRepo_MultipleDevicesSamePhone(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewSubscriptionRepo(testPool)
 
+	// Two different devices for the same phone
 	_ = repo.Save(domain.Subscription{
-		Phone: "555-0002", Endpoint: "https://push.example.com/old",
-		Keys: domain.PushKeys{P256DH: "old-key", Auth: "old-auth"},
+		Phone: "555-0002", Endpoint: "https://push.example.com/device1",
+		Keys: domain.PushKeys{P256DH: "key1", Auth: "auth1"},
 	})
 	_ = repo.Save(domain.Subscription{
-		Phone: "555-0002", Endpoint: "https://push.example.com/new",
-		Keys: domain.PushKeys{P256DH: "new-key", Auth: "new-auth"},
+		Phone: "555-0002", Endpoint: "https://push.example.com/device2",
+		Keys: domain.PushKeys{P256DH: "key2", Auth: "auth2"},
 	})
 
-	got, err := repo.FindByPhone("555-0002")
+	subs, err := repo.FindByPhone("555-0002")
 	if err != nil {
 		t.Fatalf("FindByPhone: %v", err)
 	}
-	if got.Endpoint != "https://push.example.com/new" {
-		t.Errorf("expected updated endpoint, got %s", got.Endpoint)
+	if len(subs) != 2 {
+		t.Errorf("expected 2 subscriptions (one per device), got %d", len(subs))
+	}
+
+	// Same device re-subscribing updates keys, not adds a row
+	_ = repo.Save(domain.Subscription{
+		Phone: "555-0002", Endpoint: "https://push.example.com/device1",
+		Keys: domain.PushKeys{P256DH: "new-key1", Auth: "new-auth1"},
+	})
+	subs2, _ := repo.FindByPhone("555-0002")
+	if len(subs2) != 2 {
+		t.Errorf("expected still 2 subscriptions after re-subscribe, got %d", len(subs2))
 	}
 }

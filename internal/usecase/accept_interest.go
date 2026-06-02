@@ -39,17 +39,14 @@ func (uc *AcceptInterest) Execute(interestID, driverPhone string) (string, error
 	if err := uc.interests.Accept(interestID); err != nil {
 		return "", err
 	}
-	// Notify searcher (best-effort)
-	if sub, err := uc.subs.FindByPhone(interest.SearcherPhone); err == nil {
-		msg := domain.Message{
-			Title:       "Le conducteur accepte le contact",
-			Body:        fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
-			URL:         "/interests/" + interestID,
-			Origin:      ride.Origin,
-			Destination: ride.Destination,
-			DepartureAt: ride.DepartureAt,
-		}
-		_ = uc.notifier.Send(sub, msg)
-	}
+	// Notify searcher on all their devices (best-effort)
+	sendToAll(interest.SearcherPhone, domain.Message{
+		Title:       "Le conducteur accepte le contact",
+		Body:        fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
+		URL:         "/interests/" + interestID,
+		Origin:      ride.Origin,
+		Destination: ride.Destination,
+		DepartureAt: ride.DepartureAt,
+	}, uc.subs, uc.notifier)
 	return interest.SearcherPhone, nil
 }

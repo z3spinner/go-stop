@@ -2,12 +2,30 @@ package usecase
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/z3spinner/go-stop/internal/boundaries/notification"
+	"github.com/z3spinner/go-stop/internal/boundaries/repository"
 	"github.com/z3spinner/go-stop/internal/domain"
 )
 
-func NotifySearcher(sub domain.Subscription, ride domain.Ride, notifier notification.Notifier) error {
+// sendToAll delivers msg to every subscription for phone.
+// Stale subscriptions (push service returns 410) are removed automatically.
+func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRepository, notifier notification.Notifier) {
+	subList, err := subs.FindByPhone(phone)
+	if err != nil {
+		return // no subscription — nothing to do
+	}
+	for _, sub := range subList {
+		if err := notifier.Send(sub, msg); err != nil {
+			if strings.Contains(err.Error(), "410") {
+				_ = subs.DeleteByEndpoint(sub.Endpoint)
+			}
+		}
+	}
+}
+
+func NotifySearcher(phone string, ride domain.Ride, subs repository.SubscriptionRepository, notifier notification.Notifier) {
 	msg := domain.Message{
 		Title:       "Ride available!",
 		Body:        fmt.Sprintf("%s is driving from %s to %s", ride.DriverName, ride.Origin, ride.Destination),
@@ -18,10 +36,10 @@ func NotifySearcher(sub domain.Subscription, ride domain.Ride, notifier notifica
 		Destination: ride.Destination,
 		DepartureAt: ride.DepartureAt,
 	}
-	return notifier.Send(sub, msg)
+	sendToAll(phone, msg, subs, notifier)
 }
 
-func NotifyDriver(sub domain.Subscription, req domain.Request, notifier notification.Notifier) error {
+func NotifyDriver(phone string, req domain.Request, subs repository.SubscriptionRepository, notifier notification.Notifier) {
 	msg := domain.Message{
 		Title:       "Someone needs a ride!",
 		Body:        fmt.Sprintf("%s needs a ride from %s to %s", req.SearcherName, req.Origin, req.Destination),
@@ -32,5 +50,5 @@ func NotifyDriver(sub domain.Subscription, req domain.Request, notifier notifica
 		Destination: req.Destination,
 		DepartureAt: req.DepartureAt,
 	}
-	return notifier.Send(sub, msg)
+	sendToAll(phone, msg, subs, notifier)
 }

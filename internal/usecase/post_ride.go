@@ -41,11 +41,7 @@ func (uc *PostRide) Execute(ride domain.Ride) (domain.Ride, error) {
 	}
 
 	for _, req := range matching {
-		sub, err := uc.subs.FindByPhone(req.Phone)
-		if err != nil {
-			continue
-		}
-		_ = NotifySearcher(sub, ride, uc.notifier)
+		NotifySearcher(req.Phone, ride, uc.subs, uc.notifier)
 	}
 	return ride, nil
 }

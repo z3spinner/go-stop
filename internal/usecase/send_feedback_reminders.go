@@ -28,11 +28,7 @@ func (uc *SendFeedbackReminders) Execute() error {
 		return err
 	}
 	for _, ride := range pending {
-		sub, err := uc.subs.FindByPhone(ride.Phone)
-		if err != nil {
-			continue
-		}
-		msg := domain.Message{
+		sendToAll(ride.Phone, domain.Message{
 			Title:       "Votre trajet est-il parti avec des passagers ?",
 			Body:        fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
 			URL:         "/my-rides",
@@ -41,8 +37,7 @@ func (uc *SendFeedbackReminders) Execute() error {
 			Origin:      ride.Origin,
 			Destination: ride.Destination,
 			DepartureAt: ride.DepartureAt,
-		}
-		_ = uc.notifier.Send(sub, msg)
+		}, uc.subs, uc.notifier)
 	}
 	return nil
 }

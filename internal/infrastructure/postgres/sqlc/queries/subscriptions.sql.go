@@ -18,28 +18,51 @@ func (q *Queries) DeleteSubscription(ctx context.Context, phone string) error {
 	return err
 }
 
-const getSubscriptionByPhone = `-- name: GetSubscriptionByPhone :one
+const deleteSubscriptionByEndpoint = `-- name: DeleteSubscriptionByEndpoint :exec
+DELETE FROM subscriptions WHERE endpoint = $1
+`
+
+// Removes a specific device subscription (e.g. when push returns 410 Gone).
+func (q *Queries) DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error {
+	_, err := q.db.Exec(ctx, deleteSubscriptionByEndpoint, endpoint)
+	return err
+}
+
+const listSubscriptionsByPhone = `-- name: ListSubscriptionsByPhone :many
 SELECT id, phone, endpoint, p256dh, auth
 FROM subscriptions WHERE phone = $1
 `
 
-func (q *Queries) GetSubscriptionByPhone(ctx context.Context, phone string) (Subscription, error) {
-	row := q.db.QueryRow(ctx, getSubscriptionByPhone, phone)
-	var i Subscription
-	err := row.Scan(
-		&i.ID,
-		&i.Phone,
-		&i.Endpoint,
-		&i.P256dh,
-		&i.Auth,
-	)
-	return i, err
+func (q *Queries) ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error) {
+	rows, err := q.db.Query(ctx, listSubscriptionsByPhone, phone)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscription{}
+	for rows.Next() {
+		var i Subscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.Phone,
+			&i.Endpoint,
+			&i.P256dh,
+			&i.Auth,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const upsertSubscription = `-- name: UpsertSubscription :exec
 INSERT INTO subscriptions (id, phone, endpoint, p256dh, auth)
 VALUES (gen_random_uuid(), $1, $2, $3, $4)
-ON CONFLICT (phone) DO UPDATE SET endpoint = $2, p256dh = $3, auth = $4
+ON CONFLICT (phone, endpoint) DO UPDATE SET p256dh = $3, auth = $4
 `
 
 type UpsertSubscriptionParams struct {
@@ -49,6 +72,7 @@ type UpsertSubscriptionParams struct {
 	Auth     string `db:"auth"`
 }
 
+// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error {
 	_, err := q.db.Exec(ctx, upsertSubscription,
 		arg.Phone,

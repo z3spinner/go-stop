@@ -51,18 +51,15 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone, searcherName string) (
 		interest = existing
 	}
 
-	// Notify driver (best-effort)
-	if sub, err := uc.subs.FindByPhone(ride.Phone); err == nil {
-		msg := domain.Message{
-			Title:       fmt.Sprintf("%s est intéressé(e) par votre trajet", interest.SearcherName),
-			Body:        fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
-			URL:         "/my-rides",
-			Origin:      ride.Origin,
-			Destination: ride.Destination,
-			DepartureAt: ride.DepartureAt,
-		}
-		_ = uc.notifier.Send(sub, msg)
-	}
+	// Notify driver on all their devices (best-effort)
+	sendToAll(ride.Phone, domain.Message{
+		Title:       "Quelqu'un demande votre contact",
+		Body:        fmt.Sprintf("%s cherche un trajet %s → %s", searcherName, ride.Origin, ride.Destination),
+		URL:         "/my-rides",
+		Origin:      ride.Origin,
+		Destination: ride.Destination,
+		DepartureAt: ride.DepartureAt,
+	}, uc.subs, uc.notifier)
 
 	return interest, nil
 }

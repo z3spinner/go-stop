@@ -85,13 +85,11 @@ func (m *mockSubRepo) Save(s domain.Subscription) error {
 	m.saved = append(m.saved, s)
 	return nil
 }
-func (m *mockSubRepo) FindByPhone(phone string) (domain.Subscription, error) {
-	s, ok := m.subs[phone]
-	if !ok {
-		return domain.Subscription{}, errors.New("not found")
-	}
-	return s, nil
+func (m *mockSubRepo) FindByPhone(phone string) ([]domain.Subscription, error) {
+	if s, ok := m.subs[phone]; ok { return []domain.Subscription{s}, nil }
+	return nil, errors.New("not found")
 }
+func (m *mockSubRepo) DeleteByEndpoint(string) error { return nil }
 func (m *mockSubRepo) Delete(phone string) error { delete(m.subs, phone); return nil }
 
 // ── PostRide tests ────────────────────────────────────────────────────────────
