@@ -1,58 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2563eb"/>
-      <stop offset="100%" style="stop-color:#1a56db"/>
+    <clipPath id="c">
+      <rect width="512" height="512" rx="115" ry="115"/>
+    </clipPath>
+    <linearGradient id="gl" x1="0%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#4CD964"/>
+      <stop offset="100%" stop-color="#28A836"/>
     </linearGradient>
+    <linearGradient id="gr" x1="20%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4538"/>
+      <stop offset="100%" stop-color="#C81E1E"/>
+    </linearGradient>
+    <filter id="ds" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="5" stdDeviation="10" flood-color="rgba(0,0,0,0.32)"/>
+    </filter>
   </defs>
 
-  <!-- Background rounded square (iOS-style icon) -->
-  <rect width="512" height="512" rx="112" ry="112" fill="url(#bg)"/>
+  <!-- Background: green left, red right, clipped to rounded square -->
+  <g clip-path="url(#c)">
+    <rect x="0"   y="0" width="256" height="512" fill="url(#gl)"/>
+    <rect x="256" y="0" width="256" height="512" fill="url(#gr)"/>
+  </g>
 
-  <!-- Subtle road stripe at bottom -->
-  <rect x="0" y="390" width="512" height="122" rx="0" ry="0" fill="rgba(0,0,0,0.12)"/>
-  <rect x="112" y="390" width="512" height="122" rx="0" ry="0" fill="rgba(0,0,0,0)" clip-path="url(#round)"/>
+  <!-- G ring + tail + O ring -->
+  <g filter="url(#ds)" fill="none" stroke="white" stroke-width="22"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- G: 310° arc from ~10 o'clock clockwise to 3 o'clock, then tail to O's left edge -->
+    <path d="M 196,175 A 106,106 0 1 0 234,256 L 278,256"/>
+    <!-- O: full circle -->
+    <circle cx="384" cy="256" r="106"/>
+  </g>
 
-  <!-- Road dashes -->
-  <rect x="80"  y="418" width="80" height="14" rx="7" fill="rgba(255,255,255,0.5)"/>
-  <rect x="216" y="418" width="80" height="14" rx="7" fill="rgba(255,255,255,0.5)"/>
-  <rect x="352" y="418" width="80" height="14" rx="7" fill="rgba(255,255,255,0.5)"/>
+  <!-- Play triangle (centred in left circle) -->
+  <g filter="url(#ds)">
+    <polygon points="90,196 90,316 198,256" fill="white"/>
+  </g>
 
-  <!-- Hitchhiker hand (simple geometric thumb-up, pointing right) -->
-  <!-- Fist body -->
-  <rect x="54" y="175" width="90" height="108" rx="18" fill="white" opacity="0.95"/>
-  <!-- Thumb extending right-up -->
-  <path d="M144 200 C144 200 200 178 208 170 C220 158 224 142 210 138 C196 134 180 148 168 162 L144 175 Z"
-        fill="white" opacity="0.95"/>
-  <!-- Knuckle lines on fist (subtle) -->
-  <line x1="144" y1="203" x2="144" y2="283" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" opacity="0.3"/>
-  <line x1="54"  y1="228" x2="144" y2="228" stroke="#2563eb" stroke-width="2"   stroke-linecap="round" opacity="0.15"/>
-  <line x1="54"  y1="252" x2="144" y2="252" stroke="#2563eb" stroke-width="2"   stroke-linecap="round" opacity="0.15"/>
-
-  <!-- GO — large, bold, white -->
-  <text x="196" y="248"
-        font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
-        font-weight="900"
-        font-size="148"
-        fill="white"
-        text-anchor="start"
-        letter-spacing="-6">GO</text>
-
-  <!-- STOP — same size, lower opacity -->
-  <text x="196" y="368"
-        font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
-        font-weight="900"
-        font-size="100"
-        fill="rgba(255,255,255,0.65)"
-        text-anchor="start"
-        letter-spacing="-3">STOP</text>
-
-  <!-- Saillans — small spaced caption inside road area -->
-  <text x="256" y="456"
-        font-family="'Helvetica Neue', Arial, sans-serif"
-        font-weight="600"
-        font-size="32"
-        fill="rgba(255,255,255,0.7)"
-        text-anchor="middle"
-        letter-spacing="4">SAILLANS</text>
+  <!-- Stop square (centred in right circle) -->
+  <g filter="url(#ds)">
+    <rect x="330" y="202" width="108" height="108" rx="20" ry="20" fill="white"/>
+  </g>
 </svg>
