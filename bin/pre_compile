@@ -1,0 +1,15 @@
+#!/bin/bash
+# Scalingo calls this before running go install.
+# SOURCE_VERSION is the full git SHA provided by Scalingo at build time.
+SHA="${SOURCE_VERSION:0:8}"
+if [ -z "$SHA" ]; then
+  echo "pre_compile: SOURCE_VERSION not set, using 'dev'"
+  SHA="dev"
+fi
+echo "pre_compile: setting build version to ${SHA}"
+cat > internal/version/build.go << GOEOF
+package version
+
+// Build is injected by bin/pre_compile at Scalingo build time.
+var Build = "${SHA}"
+GOEOF

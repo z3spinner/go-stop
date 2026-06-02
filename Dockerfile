@@ -1,9 +1,12 @@
 # ── production build ──────────────────────────────────────────────────────────
 FROM golang:1.25-alpine AS builder
+ARG GIT_SHA=dev
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+# Inject the build SHA into version/build.go before compiling
+RUN printf 'package version\n\nvar Build = "%s"\n' "${GIT_SHA}" > internal/version/build.go
 RUN CGO_ENABLED=0 go build -o go-stop . && CGO_ENABLED=0 go build -o migratedb ./cmd/migratedb
 
 FROM alpine:latest AS production
