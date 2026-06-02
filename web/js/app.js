@@ -1025,7 +1025,12 @@ async function trySubscribePush(phone) {
 // Calls onDone() when the user has either enabled or skipped.
 function renderNotificationPrompt(phone, onDone) {
   const s = t();
-  // iOS Safari and some browsers don't support the Notifications API at all
+  // iOS Safari (non-standalone) can't subscribe to Web Push — show A2HS modal instead
+  if (isIOSBrowser()) {
+    showA2HSModal();
+    onDone();
+    return;
+  }
   if (!('Notification' in window)) {
     onDone();
     return;
@@ -1178,6 +1183,21 @@ function showA2HSModal() {
   document.body.appendChild(overlay);
   overlay.querySelector('#btn-a2hs-close').onclick = () => overlay.remove();
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+}
+
+function iosA2HSBanner() {
+  if (!isIOSBrowser() || localStorage.getItem('a2hs_dismissed')) return '';
+  const s = t();
+  return `
+    <div class="a2hs-banner" id="a2hs-banner">
+      <div class="a2hs-banner-header">
+        <span class="a2hs-banner-icon">🔔</span>
+        <strong>${s.a2hsTitle}</strong>
+      </div>
+      <p class="a2hs-banner-desc">${s.a2hsBody}</p>
+      <button class="a2hs-banner-cta" id="a2hs-banner-open">${s.a2hsHint}</button>
+      <button class="a2hs-banner-dismiss" id="a2hs-banner-dismiss" aria-label="Dismiss">✕</button>
+    </div>`;
 }
 
 async function updateBellState() {
@@ -1362,6 +1382,7 @@ async function renderHome() {
   const s = t();
   app.innerHTML = `
     ${topBar()}
+    ${iosA2HSBanner()}
     <div class="hero">
       <h1>${esc(SITE_NAME)}</h1>
       <p class="tagline">${s.tagline}</p>
@@ -1385,6 +1406,11 @@ async function renderHome() {
   document.getElementById('btn-my-rides').onclick = renderMyRides;
   document.getElementById('btn-my-alerts').onclick = renderMyAlerts;
   document.getElementById('btn-my-requests').onclick = renderMyRequests;
+  document.getElementById('a2hs-banner-open')?.addEventListener('click', showA2HSModal);
+  document.getElementById('a2hs-banner-dismiss')?.addEventListener('click', () => {
+    localStorage.setItem('a2hs_dismissed', '1');
+    document.getElementById('a2hs-banner')?.remove();
+  });
   bindControls();
   loadHomeStats();
   loadHomeFeed();
