@@ -81,6 +81,7 @@ const STRINGS = {
     a2hsStep2:        "2. Tap 'Add to Home Screen'",
     a2hsStep3:        '3. Open the app from your Home Screen',
     a2hsNote:         'Requires iOS 16.4 or later.',
+    pollToastView:    'View',
     alertModeDay:     'Any time this day',
     alertModeAnytime: 'Any time, any date',
     alertModeDaily:   'Daily at a time',
@@ -250,6 +251,7 @@ const STRINGS = {
     a2hsStep2:       "2. Appuyez sur 'Sur l'écran d'accueil'",
     a2hsStep3:       "3. Ouvrez l'app depuis votre écran d'accueil",
     a2hsNote:        'Nécessite iOS 16.4 ou version ultérieure.',
+    pollToastView:   'Voir',
     notifEnabled:    'Notifications activées ✓ — vous serez alerté(e) pour les nouveaux trajets et les contacts acceptés.',
     notifDeniedTip:  'Notifications bloquées. Activez-les dans les paramètres de votre navigateur puis rechargez.',
     footerPrivacy:    'Confidentialité',
@@ -404,6 +406,7 @@ const STRINGS = {
     a2hsStep2:       "2. Toca 'Añadir a la pantalla de inicio'",
     a2hsStep3:       '3. Abre la app desde tu pantalla de inicio',
     a2hsNote:        'Requiere iOS 16.4 o posterior.',
+    pollToastView:   'Ver',
     notifEnabled:  'Notificaciones activadas ✓',
     notifDeniedTip:'Notificaciones bloqueadas. Actívalas en la configuración del navegador.',
     footerPrivacy:  'Privacidad',
@@ -535,6 +538,7 @@ const STRINGS = {
     a2hsStep2:       "2. Tocca 'Aggiungi a schermata Home'",
     a2hsStep3:       "3. Apri l'app dalla schermata Home",
     a2hsNote:        'Richiede iOS 16.4 o versione successiva.',
+    pollToastView:   'Vedi',
     notifEnabled:  'Notifiche attivate ✓',
     notifDeniedTip:'Notifiche bloccate. Attivale nelle impostazioni del browser.',
     footerPrivacy:  'Privacy',
@@ -666,6 +670,7 @@ const STRINGS = {
     a2hsStep2:       "2. Tippe auf 'Zum Home-Bildschirm'",
     a2hsStep3:       '3. Öffne die App vom Home-Bildschirm',
     a2hsNote:        'Erfordert iOS 16.4 oder neuer.',
+    pollToastView:   'Ansehen',
     notifEnabled:  'Benachrichtigungen aktiviert ✓',
     notifDeniedTip:'Benachrichtigungen gesperrt. Aktiviere sie in den Browsereinstellungen.',
     footerPrivacy:  'Datenschutz',
@@ -797,6 +802,7 @@ const STRINGS = {
     a2hsStep2:       "2. Tik op 'Zet op beginscherm'",
     a2hsStep3:       '3. Open de app vanaf je beginscherm',
     a2hsNote:        'Vereist iOS 16.4 of hoger.',
+    pollToastView:   'Bekijk',
     notifEnabled:  'Meldingen ingeschakeld ✓',
     notifDeniedTip:'Meldingen geblokkeerd. Schakel ze in via de browserinstellingen.',
     footerPrivacy:  'Privacy',
@@ -1191,6 +1197,68 @@ function showA2HSModal() {
   overlay.querySelector('#btn-a2hs-close').onclick = () => overlay.remove();
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 }
+
+function isStandalone() {
+  return !!window.navigator.standalone ||
+         window.matchMedia('(display-mode: standalone)').matches;
+}
+
+// On first launch from the home screen, prompt for notification permission.
+// This is the most common reason iOS users don't receive push notifications —
+// they installed the PWA but never granted permission.
+function maybeShowStandaloneNotifPrompt() {
+  if (!isStandalone()) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (Notification.permission === 'granted') return;
+  if (localStorage.getItem('standalone_notif_prompted')) return;
+  localStorage.setItem('standalone_notif_prompted', '1');
+  setTimeout(() => showNotifModal('default'), 800);
+}
+
+// ── In-app polling fallback ───────────────────────────────────────────────────
+// For users without push (or whose push didn't deliver), check for new
+// notification queue entries whenever the tab becomes visible.
+
+let _lastPollMs = 0;
+
+async function pollForNotifications() {
+  const p = getProfile();
+  if (!p.phone) return;
+  const now = Date.now();
+  if (now - _lastPollMs < 60_000) return; // at most once per minute
+  _lastPollMs = now;
+  try {
+    const notifs = await api('GET', '/notifications', null, { 'X-Phone': p.phone });
+    if (!Array.isArray(notifs) || !notifs.length) return;
+    const seen = new Set(JSON.parse(localStorage.getItem('poll_seen') || '[]'));
+    const fresh = notifs.filter(n => !seen.has(n.ride_id));
+    if (!fresh.length) return;
+    fresh.forEach(showPollToast);
+    localStorage.setItem('poll_seen',
+      JSON.stringify([...seen, ...fresh.map(n => n.ride_id)].slice(-100)));
+  } catch {}
+}
+
+function showPollToast(notif) {
+  const s = t();
+  const el = document.createElement('div');
+  el.className = 'poll-toast';
+  el.innerHTML = `
+    <div class="poll-toast-body">
+      <strong>🚗 ${esc(notif.driver_name)}</strong>
+      <span>${esc(notif.origin)} → ${esc(notif.destination)}</span>
+    </div>
+    <button class="poll-toast-view">${s.pollToastView}</button>
+    <button class="poll-toast-close" aria-label="Dismiss">✕</button>`;
+  document.body.appendChild(el);
+  el.querySelector('.poll-toast-view').onclick = () => { el.remove(); renderMyAlerts(); };
+  el.querySelector('.poll-toast-close').onclick = () => el.remove();
+  setTimeout(() => el.isConnected && el.remove(), 8000);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') pollForNotifications();
+});
 
 function iosA2HSBanner() {
   if (!isIOSBrowser() || localStorage.getItem('a2hs_dismissed')) return '';
@@ -2407,6 +2475,7 @@ async function handleDeepLink() {
   } catch {}
   renderFooter();
   if (!await handleDeepLink()) renderHome();
+  maybeShowStandaloneNotifPrompt();
 })();
 
 if ('serviceWorker' in navigator) {
