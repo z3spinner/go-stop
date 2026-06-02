@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 
 	webpushlib "github.com/SherClockHolmes/webpush-go"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -38,10 +39,14 @@ func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) erro
 		},
 	}
 
+	// webpush-go prepends "mailto:" automatically for non-HTTPS subscribers,
+	// so pass the bare email address — strip the prefix if the env var includes it.
+	subscriber := strings.TrimPrefix(n.vapidEmail, "mailto:")
+
 	resp, err := webpushlib.SendNotification(payload, s, &webpushlib.Options{
 		VAPIDPublicKey:  n.vapidPublic,
 		VAPIDPrivateKey: n.vapidPrivate,
-		Subscriber:      n.vapidEmail,
+		Subscriber:      subscriber,
 		TTL:             86400,
 		Urgency:         webpushlib.UrgencyHigh,
 	})
