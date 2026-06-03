@@ -15,6 +15,13 @@ func NewStatsHandler(getStats *usecase.GetStats) *StatsHandler {
 	return &StatsHandler{getStats: getStats}
 }
 
+// Get returns aggregate usage statistics.
+// @ID       getStats
+// @Tags     stats
+// @Produce  json
+// @Success  200  {object}  domain.Stats
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /stats [get]
 func (h *StatsHandler) Get(c *gin.Context) {
 	stats, err := h.getStats.Execute()
 	if err != nil {

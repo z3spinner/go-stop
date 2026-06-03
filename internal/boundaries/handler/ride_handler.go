@@ -11,8 +11,8 @@ import (
 	"github.com/z3spinner/go-stop/internal/usecase"
 )
 
-// publicRide is returned for public search/feed requests. Phone is absent; DriverName is visible.
-type publicRide struct {
+// PublicRide is returned for public search/feed requests. Phone is absent; DriverName is visible.
+type PublicRide struct {
 	ID             string    `json:"ID"`
 	DriverName     string    `json:"DriverName"`
 	Origin         string    `json:"Origin"`
@@ -26,10 +26,10 @@ type publicRide struct {
 	InterestCount  int       `json:"InterestCount"`
 }
 
-func toPublicRides(rides []domain.Ride) []publicRide {
-	out := make([]publicRide, len(rides))
+func toPublicRides(rides []domain.Ride) []PublicRide {
+	out := make([]PublicRide, len(rides))
 	for i, r := range rides {
-		out[i] = publicRide{
+		out[i] = PublicRide{
 			ID:            r.ID,
 			DriverName:    r.DriverName,
 			Origin:        r.Origin,
@@ -45,7 +45,7 @@ func toPublicRides(rides []domain.Ride) []publicRide {
 	return out
 }
 
-func attachInterestCounts(rides []publicRide, interestRepo repository.InterestRepository) []publicRide {
+func attachInterestCounts(rides []PublicRide, interestRepo repository.InterestRepository) []PublicRide {
 	if len(rides) == 0 {
 		return rides
 	}
@@ -111,6 +111,16 @@ type postRideRequest struct {
 	Flexibility int    `json:"flexibility"`
 }
 
+// Post creates a new ride offer.
+// @ID       createRide
+// @Tags     rides
+// @Accept   json
+// @Produce  json
+// @Param    body  body  handler.PostRideBody  true  "Ride to create"
+// @Success  201  {object}  domain.Ride
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides [post]
 func (h *RideHandler) Post(c *gin.Context) {
 	var req postRideRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -142,6 +152,20 @@ func (h *RideHandler) Post(c *gin.Context) {
 	c.JSON(http.StatusCreated, saved)
 }
 
+// List returns rides. With an X-Phone header it returns the caller's own rides
+// (full domain.Ride incl. phone); otherwise the public feed/search of PublicRide.
+// @ID       listRides
+// @Tags     rides
+// @Produce  json
+// @Param    origin       query   string  false  "Origin filter"
+// @Param    destination  query   string  false  "Destination filter"
+// @Param    departure_at query   string  false  "Departure time (RFC3339)"
+// @Param    search_date  query   string  false  "Search date (YYYY-MM-DD)"
+// @Param    search_time  query   string  false  "Search time (HH:MM, local)"
+// @Param    X-Phone      header  string  false  "Caller phone for my-rides mode"
+// @Success  200  {array}  handler.PublicRide
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides [get]
 func (h *RideHandler) List(c *gin.Context) {
 	origin := normalizeLocation(c.Query("origin"))
 	destination := normalizeLocation(c.Query("destination"))
@@ -193,6 +217,14 @@ func (h *RideHandler) List(c *gin.Context) {
 	}
 }
 
+// Get returns a single ride by ID (full domain.Ride).
+// @ID       getRide
+// @Tags     rides
+// @Produce  json
+// @Param    id  path  string  true  "Ride ID"
+// @Success  200  {object}  domain.Ride
+// @Failure  404  {object}  handler.ErrorResponse
+// @Router   /rides/{id} [get]
 func (h *RideHandler) Get(c *gin.Context) {
 	ride, err := h.rideRepo.FindByID(c.Param("id"))
 	if err != nil {
@@ -202,6 +234,19 @@ func (h *RideHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, ride)
 }
 
+// ListMatchingRequests returns searcher alerts matching the driver's ride
+// (phone-stripped). Requires the ride owner's X-Phone header.
+// @ID       listRideRequests
+// @Tags     rides
+// @Produce  json
+// @Param    id       path    string  true   "Ride ID"
+// @Param    X-Phone  header  string  true   "Ride owner phone"
+// @Success  200  {array}  handler.PublicRequest
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides/{id}/requests [get]
 func (h *RideHandler) ListMatchingRequests(c *gin.Context) {
 	// Require the driver's phone via X-Phone header — same lightweight auth as delete.
 	phone := c.GetHeader("X-Phone")
@@ -226,17 +271,9 @@ func (h *RideHandler) ListMatchingRequests(c *gin.Context) {
 	}
 	// Strip phone — searchers who set up alerts have not consented to sharing
 	// their number with every driver. Only the searcher's name and timing are shown.
-	type publicRequest struct {
-		ID           string    `json:"ID"`
-		SearcherName string    `json:"SearcherName"`
-		Origin       string    `json:"Origin"`
-		Destination  string    `json:"Destination"`
-		DepartureAt  time.Time `json:"DepartureAt"`
-		Flexibility  int       `json:"Flexibility"`
-	}
-	out := make([]publicRequest, len(requests))
+	out := make([]PublicRequest, len(requests))
 	for i, r := range requests {
-		out[i] = publicRequest{
+		out[i] = PublicRequest{
 			ID:           r.ID,
 			SearcherName: r.SearcherName,
 			Origin:       r.Origin,
@@ -252,6 +289,17 @@ type deleteRideRequest struct {
 	Phone string `json:"phone" binding:"required"`
 }
 
+// Delete removes a ride owned by the caller.
+// @ID       deleteRide
+// @Tags     rides
+// @Accept   json
+// @Param    id    path  string                  true  "Ride ID"
+// @Param    body  body  handler.DeleteRideBody  true  "Owner phone"
+// @Success  204
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides/{id} [delete]
 func (h *RideHandler) Delete(c *gin.Context) {
 	var req deleteRideRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -269,6 +317,19 @@ func (h *RideHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// ListInterests returns the interests expressed in the caller's ride (driver view).
+// Requires the ride owner's X-Phone header.
+// @ID       listRideInterests
+// @Tags     interests
+// @Produce  json
+// @Param    id       path    string  true  "Ride ID"
+// @Param    X-Phone  header  string  true  "Ride owner phone"
+// @Success  200  {array}  handler.InterestListItem
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides/{id}/interests [get]
 func (h *RideHandler) ListInterests(c *gin.Context) {
 	phone := normalizePhone(c.GetHeader("X-Phone"))
 	if phone == "" {
@@ -289,17 +350,11 @@ func (h *RideHandler) ListInterests(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	type interestResponse struct {
-		SearcherName  string `json:"searcher_name,omitempty"`
-		ID            string `json:"id"`
-		Status        string `json:"status"`
-		SearcherPhone string `json:"searcher_phone,omitempty"`
-	}
-	out := make([]interestResponse, len(interests))
+	out := make([]InterestListItem, len(interests))
 	for i, interest := range interests {
 		// Name always shown; phone shown for mutual-accepted only.
 		// driver_shared = driver pinged searcher (one-way) — no phone shown to driver.
-		out[i] = interestResponse{
+		out[i] = InterestListItem{
 			ID:           interest.ID,
 			Status:       interest.Status,
 			SearcherName: interest.SearcherName,

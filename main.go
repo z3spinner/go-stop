@@ -17,6 +17,10 @@ import (
 	"github.com/z3spinner/go-stop/internal/version"
 )
 
+// @title        Go-Stop API
+// @version      1.0
+// @description  Local ride-sharing notice board API.
+// @BasePath     /api
 func main() {
 	pool, err := postgres.NewPool()
 	if err != nil {

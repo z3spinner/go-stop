@@ -1,0 +1,1519 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Local ride-sharing notice board API.",
+        "title": "Go-Stop API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api",
+    "paths": {
+        "/config": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "operationId": "getConfig",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ConfigResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/destinations": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "destinations"
+                ],
+                "operationId": "listDestinations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/interests": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interests"
+                ],
+                "operationId": "listMyInterests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Searcher phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.MyInterest"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/interests/{id}/accept": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interests"
+                ],
+                "operationId": "acceptInterest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Interest ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Driver phone",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AcceptInterestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AcceptInterestResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/interests/{id}/contact": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interests"
+                ],
+                "operationId": "getInterestContact",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Interest ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Caller phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ContactInfo"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "operationId": "listNotifications",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Searcher phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.NotificationItem"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "requests"
+                ],
+                "operationId": "listRequests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Searcher phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Request"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "requests"
+                ],
+                "operationId": "createRequest",
+                "parameters": [
+                    {
+                        "description": "Alert to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.PostRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Request"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "requests"
+                ],
+                "operationId": "getRequest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Owner phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Request"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "requests"
+                ],
+                "operationId": "deleteRequest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Owner phone",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.DeleteRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/requests/{id}/ping": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "requests"
+                ],
+                "operationId": "pingRequest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Request ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Driver phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Matching ride ID",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.PingRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rides": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rides"
+                ],
+                "operationId": "listRides",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Origin filter",
+                        "name": "origin",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Destination filter",
+                        "name": "destination",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Departure time (RFC3339)",
+                        "name": "departure_at",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search date (YYYY-MM-DD)",
+                        "name": "search_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search time (HH:MM, local)",
+                        "name": "search_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Caller phone for my-rides mode",
+                        "name": "X-Phone",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.PublicRide"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rides"
+                ],
+                "operationId": "createRide",
+                "parameters": [
+                    {
+                        "description": "Ride to create",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.PostRideBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Ride"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rides/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rides"
+                ],
+                "operationId": "getRide",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Ride"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rides"
+                ],
+                "operationId": "deleteRide",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Owner phone",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.DeleteRideBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rides/{id}/feedback": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rides"
+                ],
+                "operationId": "submitRideFeedback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Owner phone and taken flag",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.FeedbackBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rides/{id}/interest": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interests"
+                ],
+                "operationId": "expressInterest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Searcher phone and name",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ExpressInterestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ExpressInterestResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rides/{id}/interests": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interests"
+                ],
+                "operationId": "listRideInterests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ride owner phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.InterestListItem"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/rides/{id}/requests": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rides"
+                ],
+                "operationId": "listRideRequests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ride ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ride owner phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.PublicRequest"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/stats": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "operationId": "getStats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Stats"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/subscriptions": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "operationId": "upsertSubscription",
+                "parameters": [
+                    {
+                        "description": "Push subscription",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SubscriptionBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/subscriptions/{phone}": {
+            "delete": {
+                "tags": [
+                    "subscriptions"
+                ],
+                "operationId": "removeSubscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phone",
+                        "name": "phone",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/vapid-public-key": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vapid"
+                ],
+                "operationId": "getVapidPublicKey",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.VapidKeyResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.ActivityCounts": {
+            "type": "object",
+            "properties": {
+                "all_time": {
+                    "type": "integer"
+                },
+                "this_month": {
+                    "type": "integer"
+                },
+                "this_year": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.Flexibility": {
+            "type": "integer",
+            "enum": [
+                0,
+                30,
+                60
+            ],
+            "x-enum-varnames": [
+                "Exact",
+                "Approximate",
+                "Flexible"
+            ]
+        },
+        "domain.Request": {
+            "type": "object",
+            "properties": {
+                "Date": {
+                    "description": "zero → anytime (no date constraint)",
+                    "type": "string"
+                },
+                "DepartureAt": {
+                    "description": "zero → day or anytime (no time constraint)",
+                    "type": "string"
+                },
+                "Destination": {
+                    "type": "string"
+                },
+                "ExpiresAt": {
+                    "type": "string"
+                },
+                "Flexibility": {
+                    "description": "only meaningful when DepartureAt is set",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Flexibility"
+                        }
+                    ]
+                },
+                "ID": {
+                    "type": "string"
+                },
+                "Origin": {
+                    "type": "string"
+                },
+                "Phone": {
+                    "type": "string"
+                },
+                "PostedAt": {
+                    "type": "string"
+                },
+                "SearcherName": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.Ride": {
+            "type": "object",
+            "properties": {
+                "Date": {
+                    "type": "string"
+                },
+                "DepartureAt": {
+                    "type": "string"
+                },
+                "Destination": {
+                    "type": "string"
+                },
+                "DriverName": {
+                    "type": "string"
+                },
+                "ExpiresAt": {
+                    "type": "string"
+                },
+                "FeedbackGiven": {
+                    "type": "boolean"
+                },
+                "Flexibility": {
+                    "$ref": "#/definitions/domain.Flexibility"
+                },
+                "ID": {
+                    "type": "string"
+                },
+                "Origin": {
+                    "type": "string"
+                },
+                "Phone": {
+                    "type": "string"
+                },
+                "PostedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.RouteStat": {
+            "type": "object",
+            "properties": {
+                "Count": {
+                    "type": "integer"
+                },
+                "Destination": {
+                    "type": "string"
+                },
+                "Origin": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.Stats": {
+            "type": "object",
+            "properties": {
+                "rides_posted": {
+                    "$ref": "#/definitions/domain.ActivityCounts"
+                },
+                "searches": {
+                    "$ref": "#/definitions/domain.ActivityCounts"
+                },
+                "top_routes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.RouteStat"
+                    }
+                },
+                "total_confirmed": {
+                    "type": "integer"
+                },
+                "total_this_week": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.AcceptInterestBody": {
+            "type": "object",
+            "properties": {
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.AcceptInterestResponse": {
+            "type": "object",
+            "properties": {
+                "searcher_phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ConfigResponse": {
+            "type": "object",
+            "properties": {
+                "returnDelayHours": {
+                    "type": "integer"
+                },
+                "siteName": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ContactInfo": {
+            "type": "object",
+            "properties": {
+                "departure_at": {
+                    "type": "string"
+                },
+                "destination": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.DeleteRequestBody": {
+            "type": "object",
+            "properties": {
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.DeleteRideBody": {
+            "type": "object",
+            "properties": {
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ExpressInterestBody": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ExpressInterestResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.FeedbackBody": {
+            "type": "object",
+            "properties": {
+                "phone": {
+                    "type": "string"
+                },
+                "taken": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handler.InterestListItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "searcher_name": {
+                    "type": "string"
+                },
+                "searcher_phone": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.MyInterest": {
+            "type": "object",
+            "properties": {
+                "departure_at": {
+                    "type": "string"
+                },
+                "destination": {
+                    "type": "string"
+                },
+                "driver_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "ride_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.NotificationItem": {
+            "type": "object",
+            "properties": {
+                "departure_at": {
+                    "type": "string"
+                },
+                "destination": {
+                    "type": "string"
+                },
+                "driver_name": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "ride_id": {
+                    "type": "string"
+                },
+                "sent_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.PingRequestBody": {
+            "type": "object",
+            "properties": {
+                "ride_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PostRequestBody": {
+            "type": "object",
+            "properties": {
+                "departure_at": {
+                    "description": "RFC3339 — specific time mode",
+                    "type": "string"
+                },
+                "departure_date": {
+                    "description": "YYYY-MM-DD — day mode",
+                    "type": "string"
+                },
+                "departure_time": {
+                    "description": "HH:MM — daily mode",
+                    "type": "string"
+                },
+                "destination": {
+                    "type": "string"
+                },
+                "flexibility": {
+                    "type": "integer"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "searcher_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PostRideBody": {
+            "type": "object",
+            "properties": {
+                "departure_at": {
+                    "type": "string"
+                },
+                "destination": {
+                    "type": "string"
+                },
+                "driver_name": {
+                    "type": "string"
+                },
+                "flexibility": {
+                    "type": "integer"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PublicRequest": {
+            "type": "object",
+            "properties": {
+                "DepartureAt": {
+                    "type": "string"
+                },
+                "Destination": {
+                    "type": "string"
+                },
+                "Flexibility": {
+                    "type": "integer"
+                },
+                "ID": {
+                    "type": "string"
+                },
+                "Origin": {
+                    "type": "string"
+                },
+                "SearcherName": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PublicRide": {
+            "type": "object",
+            "properties": {
+                "Date": {
+                    "type": "string"
+                },
+                "DepartureAt": {
+                    "type": "string"
+                },
+                "Destination": {
+                    "type": "string"
+                },
+                "DriverName": {
+                    "type": "string"
+                },
+                "ExpiresAt": {
+                    "type": "string"
+                },
+                "FeedbackGiven": {
+                    "type": "boolean"
+                },
+                "Flexibility": {
+                    "type": "integer"
+                },
+                "ID": {
+                    "type": "string"
+                },
+                "InterestCount": {
+                    "type": "integer"
+                },
+                "Origin": {
+                    "type": "string"
+                },
+                "PostedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SubscriptionBody": {
+            "type": "object",
+            "properties": {
+                "auth": {
+                    "type": "string"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "p256dh": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.VapidKeyResponse": {
+            "type": "object",
+            "properties": {
+                "publicKey": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

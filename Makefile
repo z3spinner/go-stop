@@ -17,3 +17,9 @@ dev:
 
 test-e2e: build-web
 	npm run test:e2e
+
+swagger-install:
+	go install github.com/swaggo/swag/cmd/swag@latest
+
+swagger:
+	swag init -g main.go -o docs --parseDependency --parseInternal --propertyStrategy pascalcase
