@@ -26,8 +26,10 @@
 	let isHome = $derived(page.url.pathname === '/');
 
 	function back() {
-		if (browser && history.length > 1) history.back();
-		else goto('/');
+		// Always return to the home hub. history.back() is unreliable here because
+		// history.length counts entries from before the app loaded (other sites in
+		// the same tab), so it could navigate out of the app instead of home.
+		goto('/');
 	}
 
 	if (browser) registerLangStrategy();
