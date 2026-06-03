@@ -9,10 +9,12 @@
 	import { userPhone } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import { updateBellState, pollForNotifications, isStandalone, maybeMarkStandalonePrompted } from '$lib/pwa';
+	import { openNotifModal } from '$lib/notifModal';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
 	import AboutModal from '$lib/components/layout/AboutModal.svelte';
 	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
 	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
+	import A2HSModal from '$lib/components/notifications/A2HSModal.svelte';
 	import PollToastHost from '$lib/components/notifications/PollToast.svelte';
 	import NotifModal from '$lib/components/notifications/NotifModal.svelte';
 	import { m } from '$lib/paraglide/messages';
@@ -34,7 +36,7 @@
 		const phone = get(userPhone);
 		updateBellState(phone);
 		if (isStandalone() && maybeMarkStandalonePrompted()) {
-			// NotifModal opens itself via pushState (Task 18)
+			openNotifModal('default');
 		}
 		const onVis = () => {
 			if (document.visibilityState === 'visible') pollForNotifications(get(userPhone));
@@ -61,7 +63,8 @@
 	<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
 </footer>
 
-<A2HSBanner onopen={() => (undefined)} />
+<A2HSBanner />
+<A2HSModal />
 <PollToastHost />
 <NotifModal />
 {#if showAbout}<AboutModal onclose={() => (showAbout = false)} />{/if}
