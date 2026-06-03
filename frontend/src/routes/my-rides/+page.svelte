@@ -21,8 +21,8 @@
 </script>
 
 <h2 class="mb-3 text-xl font-semibold">{m.myRidesTitle()}</h2>
-<form id="my-rides-form" onsubmit={load} class="mb-4 flex items-end gap-2">
-	<label class="grow">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
+<form id="my-rides-form" onsubmit={load} class="mb-4">
+	<label class="mb-3 block">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
 	<button type="submit" class="btn btn-primary">{m.btnShowRides()}</button>
 </form>
 

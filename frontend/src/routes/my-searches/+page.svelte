@@ -32,8 +32,8 @@
 </script>
 
 <h2 class="mb-3 text-xl font-semibold">{m.mySearchesTitle()}</h2>
-<form id="my-searches-form" onsubmit={load} class="mb-4 flex items-end gap-2">
-	<label class="grow">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
+<form id="my-searches-form" onsubmit={load} class="mb-4">
+	<label class="mb-3 block">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
 	<button type="submit" class="btn btn-primary">{m.btnShowSearches()}</button>
 </form>
 

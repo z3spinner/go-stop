@@ -21,6 +21,9 @@ body {
   background: var(--gray-50);
   color: var(--gray-900);
   min-height: 100vh;
+  /* Restore the live site's default line-height; SvelteKit/Tailwind's base sets
+     1.5 which inherits into buttons and makes them taller than the live site. */
+  line-height: normal;
 }
 
 #app { max-width: 600px; margin: 0 auto; padding: 16px; }
