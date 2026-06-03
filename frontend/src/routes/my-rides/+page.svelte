@@ -10,6 +10,9 @@
 	let phone = $state(get(userPhone));
 	let rides = $state<Ride[]>([]);
 	let loaded = $state(false);
+	// Returning users have their phone saved, so the page auto-loads on mount and
+	// the lookup form is redundant. Only show it when there's no saved profile phone.
+	let needsPhone = $state(get(userPhone).trim() === '');
 
 	async function load(e?: SubmitEvent) {
 		e?.preventDefault();
@@ -21,10 +24,12 @@
 </script>
 
 <h2 class="mb-3 text-xl font-semibold">{m.myRidesTitle()}</h2>
-<form id="my-rides-form" onsubmit={load} class="mb-4">
-	<label class="mb-3 block">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
-	<button type="submit" class="btn btn-primary">{m.btnShowRides()}</button>
-</form>
+{#if needsPhone}
+	<form id="my-rides-form" onsubmit={load} class="mb-4">
+		<label class="mb-3 block">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
+		<button type="submit" class="btn btn-primary">{m.btnShowRides()}</button>
+	</form>
+{/if}
 
 <div id="my-rides-list" class="flex flex-col gap-3">
 	{#if loaded && rides.length === 0}

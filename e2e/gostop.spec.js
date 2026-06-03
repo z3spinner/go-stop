@@ -887,9 +887,9 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
   // Open My Rides — should show the seeker row with Prévenir button.
   // Scope to THIS ride's card (unique route) so pre-existing rides/seekers in the
   // shared dev DB don't shadow the assertions.
+  // My Rides auto-loads from the saved profile phone (no lookup form needed).
   await page.goto('/my-rides');
-  await page.waitForSelector('#my-rides-form');
-  await page.click('#my-rides-form button[type=submit]');
+  await page.waitForSelector('.card');
   const rideCard = page.locator('.card', { hasText: `${origin} → ${dest}` });
   await rideCard.locator('.btn-ping-searcher').first().waitFor({ timeout: 8000 });
 
