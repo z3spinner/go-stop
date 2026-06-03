@@ -80,6 +80,21 @@ type SubscriptionBody struct {
 
 // --- Response shapes ---
 
+// PublicRide is returned for public search/feed requests. Phone is absent; DriverName is visible.
+type PublicRide struct {
+	ID            string    `json:"ID"`
+	DriverName    string    `json:"DriverName"`
+	Origin        string    `json:"Origin"`
+	Destination   string    `json:"Destination"`
+	Date          time.Time `json:"Date"`
+	DepartureAt   time.Time `json:"DepartureAt"`
+	Flexibility   int       `json:"Flexibility"`
+	PostedAt      time.Time `json:"PostedAt"`
+	ExpiresAt     time.Time `json:"ExpiresAt"`
+	FeedbackGiven bool      `json:"FeedbackGiven"`
+	InterestCount int       `json:"InterestCount"`
+}
+
 // PublicRequest is a phone-stripped request matched to a driver's ride
 // (GET /rides/{id}/requests). PascalCase to match the wire format.
 type PublicRequest struct {

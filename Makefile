@@ -21,5 +21,8 @@ test-e2e: build-web
 swagger-install:
 	go install github.com/swaggo/swag/cmd/swag@latest
 
+# --propertyStrategy pascalcase: tag-less domain structs (domain.Ride/Request) then
+# serialize as PascalCase to match the real Gin wire format; json-tagged DTOs are
+# unaffected because swag reads their json tags first.
 swagger:
 	swag init -g main.go -o docs --parseDependency --parseInternal --propertyStrategy pascalcase
