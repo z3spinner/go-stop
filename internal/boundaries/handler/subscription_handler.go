@@ -28,6 +28,15 @@ type subscribeRequest struct {
 	Auth     string `json:"auth" binding:"required"`
 }
 
+// Subscribe registers (or updates) a Web Push subscription for a phone.
+// @ID       upsertSubscription
+// @Tags     subscriptions
+// @Accept   json
+// @Param    body  body  handler.SubscriptionBody  true  "Push subscription"
+// @Success  201
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /subscriptions [post]
 func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	var req subscribeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -106,6 +115,13 @@ func validatePushEndpoint(endpoint string) error {
 	return nil
 }
 
+// Unsubscribe removes all Web Push subscriptions for a phone.
+// @ID       removeSubscription
+// @Tags     subscriptions
+// @Param    phone  path  string  true  "Phone"
+// @Success  204
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /subscriptions/{phone} [delete]
 func (h *SubscriptionHandler) Unsubscribe(c *gin.Context) {
 	if err := h.unsubscribe.Execute(normalizePhone(c.Param("phone"))); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

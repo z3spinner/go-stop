@@ -1,11 +1,15 @@
 {
-  "name": "go-stop-e2e",
-  "private": true,
-  "scripts": {
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.60.0"
-  }
+	"name": "go-stop",
+	"private": true,
+	"engines": {
+		"node": "22.x"
+	},
+	"scripts": {
+		"build": "npm ci --include=dev --prefix frontend && npm run build --prefix frontend",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.60.0"
+	}
 }

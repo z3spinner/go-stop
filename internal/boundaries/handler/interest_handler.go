@@ -36,6 +36,19 @@ type expressInterestRequest struct {
 	Name  string `json:"name"`
 }
 
+// Express records a searcher's interest in a ride.
+// @ID       expressInterest
+// @Tags     interests
+// @Accept   json
+// @Produce  json
+// @Param    id    path  string                       true  "Ride ID"
+// @Param    body  body  handler.ExpressInterestBody  true  "Searcher phone and name"
+// @Success  201  {object}  handler.ExpressInterestResponse
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides/{id}/interest [post]
 func (h *InterestHandler) Express(c *gin.Context) {
 	var req expressInterestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -55,9 +68,9 @@ func (h *InterestHandler) Express(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{
-		"id":     interest.ID,
-		"status": interest.Status,
+	c.JSON(http.StatusCreated, ExpressInterestResponse{
+		ID:     interest.ID,
+		Status: interest.Status,
 	})
 }
 
@@ -65,6 +78,18 @@ type acceptInterestRequest struct {
 	Phone string `json:"phone" binding:"required"`
 }
 
+// Accept lets a driver accept a searcher's interest, revealing the searcher's phone.
+// @ID       acceptInterest
+// @Tags     interests
+// @Accept   json
+// @Produce  json
+// @Param    id    path  string                      true  "Interest ID"
+// @Param    body  body  handler.AcceptInterestBody  true  "Driver phone"
+// @Success  200  {object}  handler.AcceptInterestResponse
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Router   /interests/{id}/accept [post]
 func (h *InterestHandler) Accept(c *gin.Context) {
 	var req acceptInterestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -80,9 +105,21 @@ func (h *InterestHandler) Accept(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"searcher_phone": searcherPhone})
+	c.JSON(http.StatusOK, AcceptInterestResponse{SearcherPhone: searcherPhone})
 }
 
+// GetContact returns the contact details for an accepted/shared interest.
+// Requires the caller's X-Phone header (must be a party to the interest).
+// @ID       getInterestContact
+// @Tags     interests
+// @Produce  json
+// @Param    id       path    string  true  "Interest ID"
+// @Param    X-Phone  header  string  true  "Caller phone"
+// @Success  200  {object}  handler.ContactInfo
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Router   /interests/{id}/contact [get]
 func (h *InterestHandler) GetContact(c *gin.Context) {
 	phone := normalizePhone(c.GetHeader("X-Phone"))
 	if phone == "" {
@@ -98,18 +135,26 @@ func (h *InterestHandler) GetContact(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"phone":        info.Phone,
-		"name":         info.Name,
-		"role":         info.Role,
-		"origin":       info.Origin,
-		"destination":  info.Destination,
-		"departure_at": info.DepartureAt,
+	c.JSON(http.StatusOK, ContactInfo{
+		Phone:       info.Phone,
+		Name:        info.Name,
+		Role:        info.Role,
+		Origin:      info.Origin,
+		Destination: info.Destination,
+		DepartureAt: info.DepartureAt,
 	})
 }
 
 // ListMyRequests returns all contact requests made by the authenticated searcher.
 // GET /api/interests  (X-Phone header)
+// @ID       listMyInterests
+// @Tags     interests
+// @Produce  json
+// @Param    X-Phone  header  string  true  "Searcher phone"
+// @Success  200  {array}  handler.MyInterest
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /interests [get]
 func (h *InterestHandler) ListMyRequests(c *gin.Context) {
 	phone := normalizePhone(c.GetHeader("X-Phone"))
 	if phone == "" {
@@ -121,18 +166,9 @@ func (h *InterestHandler) ListMyRequests(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	type row struct {
-		ID          string `json:"id"`
-		RideID      string `json:"ride_id"`
-		Status      string `json:"status"`
-		DriverName  string `json:"driver_name"`
-		Origin      string `json:"origin"`
-		Destination string `json:"destination"`
-		DepartureAt string `json:"departure_at"`
-	}
-	out := make([]row, len(interests))
+	out := make([]MyInterest, len(interests))
 	for i, r := range interests {
-		out[i] = row{
+		out[i] = MyInterest{
 			ID:          r.ID,
 			RideID:      r.RideID,
 			Status:      r.Status,

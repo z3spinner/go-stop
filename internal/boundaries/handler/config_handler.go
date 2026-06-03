@@ -15,9 +15,15 @@ func NewConfigHandler(siteName string, returnDelayHours int) *ConfigHandler {
 	return &ConfigHandler{siteName: siteName, returnDelayHours: returnDelayHours}
 }
 
+// Get returns the public site configuration.
+// @ID       getConfig
+// @Tags     config
+// @Produce  json
+// @Success  200  {object}  handler.ConfigResponse
+// @Router   /config [get]
 func (h *ConfigHandler) Get(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"siteName":         h.siteName,
-		"returnDelayHours": h.returnDelayHours,
+	c.JSON(http.StatusOK, ConfigResponse{
+		SiteName:         h.siteName,
+		ReturnDelayHours: h.returnDelayHours,
 	})
 }

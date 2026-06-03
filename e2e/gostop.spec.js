@@ -8,15 +8,20 @@ const BASE = 'http://localhost:8080';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function setProfile(page, user) {
-  await page.evaluate(({ name, phone }) => {
-    localStorage.setItem('user_name', name);
-    localStorage.setItem('user_phone', phone);
+  // svelte-persisted-store JSON-encodes values, so user_name/user_phone are
+  // stored as quoted JSON. `lang` stays a RAW string (Paraglide reads it raw).
+  // addInitScript applies the values before each (subsequent) navigation so
+  // the SvelteKit app picks them up on load.
+  await page.addInitScript((u) => {
+    localStorage.setItem('user_name', JSON.stringify(u.name));
+    localStorage.setItem('user_phone', JSON.stringify(u.phone));
     localStorage.setItem('lang', 'fr');
   }, user);
 }
 
 async function setFr(page) {
-  await page.evaluate(() => localStorage.setItem('lang', 'fr'));
+  // `lang` is read raw by the Paraglide locale strategy.
+  await page.addInitScript(() => localStorage.setItem('lang', 'fr'));
 }
 
 // Navigate and ensure French UI
@@ -99,9 +104,12 @@ test('searcher finds ride with driver name but no phone', async ({ page }) => {
   await page.goto(`${BASE}/search?origin=Saillans&destination=Crest`);
   await page.waitForSelector('.card');
 
-  await expect(page.locator('.card').first()).toContainText(DRIVER.name);
-  await expect(page.locator('.card').first()).not.toContainText(DRIVER.phone);
-  await expect(page.locator('.btn-interest').first()).toBeVisible();
+  // Scope to the Alice ride seeded by test 3 (the shared dev DB may hold other
+  // Saillans→Crest rides from manual testing that would otherwise sort first).
+  const aliceCard = page.locator('.card', { hasText: DRIVER.name }).first();
+  await expect(aliceCard).toContainText(DRIVER.name);
+  await expect(aliceCard).not.toContainText(DRIVER.phone);
+  await expect(aliceCard.locator('.btn-interest')).toBeVisible();
 });
 
 // ── 6. Full mutual interest flow ──────────────────────────────────────────────
@@ -142,8 +150,10 @@ test('searcher requests contact, driver accepts, phone revealed to both', async 
   const rideId = await firstCard.locator('.btn-interest').getAttribute('data-ride-id');
   await firstCard.locator('.btn-interest').click();
 
-  // Button becomes disabled with pending text, confirmation message appears
-  await expect(firstCard.locator('.btn-interest')).toBeDisabled({ timeout: 5000 });
+  // After requesting, the card switches to the pending/resend state and shows a
+  // confirmation message (the new UI offers a re-sendable button rather than a
+  // permanently-disabled one).
+  await expect(firstCard.locator('.btn-interest-resend')).toBeVisible({ timeout: 5000 });
   await expect(firstCard.locator('.interest-state')).toBeVisible({ timeout: 5000 });
 
   // Get interest ID from localStorage
@@ -196,12 +206,11 @@ test('searcher requests contact, driver accepts, phone revealed to both', async 
 
 // ── 7. Driver sees searcher name in My Rides ──────────────────────────────────
 test('driver sees pending interests with searcher name', async ({ page }) => {
-  await page.goto(BASE);
   await setProfile(page, DRIVER);
-  await page.reload();
+  await page.goto(BASE);
 
-  // Navigate to My Rides via button
-  await page.evaluate(() => renderMyRides());
+  // Navigate to My Rides — the gate form auto-submits when a profile phone is set.
+  await page.goto('/my-rides');
   await page.waitForSelector('.card');
 
   // Wait for interests to load async
@@ -212,8 +221,8 @@ test('driver sees pending interests with searcher name', async ({ page }) => {
 
 // ── 8. Alert creation — all 4 modes ──────────────────────────────────────────
 test('searcher creates alerts in all four modes', async ({ page }) => {
-  await page.goto(BASE);
   await setProfile(page, SEARCHER);
+  await page.goto(BASE);
 
   for (const { mode, extra } of [
     { mode: 'time',    extra: async p => {
@@ -228,7 +237,7 @@ test('searcher creates alerts in all four modes', async ({ page }) => {
     }},
     { mode: 'anytime', extra: async () => {} },
   ]) {
-    await page.evaluate(() => renderNotifyRoute('Saillans', 'Crest'));
+    await page.goto('/post-request?origin=Saillans&destination=Crest');
     await page.waitForSelector('#notify-form');
 
     await page.fill('input[name=searcher_name]', SEARCHER.name);
@@ -246,12 +255,12 @@ test('searcher creates alerts in all four modes', async ({ page }) => {
 
 // ── 9. My Alerts lists and deletes ───────────────────────────────────────────
 test('searcher views and deletes an alert', async ({ page }) => {
-  await page.goto(BASE);
   await setProfile(page, SEARCHER);
+  await page.goto(BASE);
   const errors = [];
   page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
 
-  await page.evaluate(() => { localStorage.setItem('lang', 'fr'); renderMySearches(); });
+  await page.goto('/my-searches');
   await page.waitForSelector('#my-searches-form');
 
   // Submit and wait for API response (combined page fetches /requests and /interests in parallel)
@@ -282,10 +291,9 @@ test('searcher views and deletes an alert', async ({ page }) => {
 
 // ── 10. Return journey defaults to outbound + 2h ──────────────────────────────
 test('return journey defaults to outbound + 2 hours', async ({ page }) => {
-  await page.goto(BASE);
   await setFr(page);
-  await page.reload();
-  await page.evaluate(() => renderPostRide());
+  await page.goto('/post-ride');
+  await page.waitForSelector('input[name=departure_at]');
   await page.fill('input[name=departure_at]', '2030-12-01T09:00');
   await page.click('#btn-return');
   const val = await page.inputValue('input[name=return_departure_at]');
@@ -709,24 +717,27 @@ test('driver sees Prévenir button next to matching searcher and can click it', 
     return (await r.json()).ID;
   }, { driver: DRIVER, origin, dest });
 
-  // Open My Rides — should show the seeker row with Prévenir button
-  await page.evaluate(() => renderMyRides());
+  // Open My Rides — should show the seeker row with Prévenir button.
+  // Scope to THIS ride's card (unique route) so pre-existing rides/seekers in the
+  // shared dev DB don't shadow the assertions.
+  await page.goto('/my-rides');
   await page.waitForSelector('#my-rides-form');
   await page.click('#my-rides-form button[type=submit]');
-  await page.waitForSelector('.btn-ping-searcher', { timeout: 8000 });
+  const rideCard = page.locator('.card', { hasText: `${origin} → ${dest}` });
+  await rideCard.locator('.btn-ping-searcher').first().waitFor({ timeout: 8000 });
 
   // Verify no phone number is shown in the seeker row
-  const seekerText = await page.locator('.seeker-row').first().innerText();
+  const seekerText = await rideCard.locator('.seeker-row').first().innerText();
   expect(seekerText).toContain(SEARCHER.name);
   expect(seekerText).not.toContain(SEARCHER.phone);
 
   // Click Prévenir — should disable the button (API call succeeds)
   const [pingResp] = await Promise.all([
     page.waitForResponse(r => r.url().includes('/ping') && r.request().method() === 'POST'),
-    page.locator('.btn-ping-searcher').first().click(),
+    rideCard.locator('.btn-ping-searcher').first().click(),
   ]);
   expect(pingResp.status()).toBe(204);
-  await expect(page.locator('.btn-ping-searcher').first()).toBeDisabled({ timeout: 3000 });
+  await expect(rideCard.locator('.btn-ping-searcher').first()).toBeDisabled({ timeout: 3000 });
 
   // After pinging, Bob can see Alice's phone via the interest contact endpoint
   const contactResp = await page.evaluate(async ({ searcherPhone }) => {
@@ -788,23 +799,25 @@ test('Me page saves name and phone to localStorage', async ({ page }) => {
 
   await expect(page.locator('#me-saved')).toBeVisible({ timeout: 3000 });
 
+  // svelte-persisted-store JSON-encodes values, so read through JSON.parse.
   const stored = await page.evaluate(() => ({
     name:  localStorage.getItem('user_name'),
     phone: localStorage.getItem('user_phone'),
   }));
-  expect(stored.name).toBe('Marie');
-  expect(stored.phone).toBe('0644000001');
+  expect(JSON.parse(stored.name)).toBe('Marie');
+  expect(JSON.parse(stored.phone)).toBe('0644000001');
 });
 
 test('Me page pre-fills from existing localStorage profile', async ({ page }) => {
-  await page.goto(BASE);
-  await page.evaluate(() => {
+  // Seed the persisted-store keys (JSON-encoded) before navigation so the store
+  // hydrates from them; `lang` stays raw.
+  await page.addInitScript(() => {
     localStorage.setItem('lang', 'fr');
-    localStorage.setItem('user_name', 'Jean');
-    localStorage.setItem('user_phone', '0655000002');
+    localStorage.setItem('user_name', JSON.stringify('Jean'));
+    localStorage.setItem('user_phone', JSON.stringify('0655000002'));
   });
 
-  await page.evaluate(() => renderMe());
+  await page.goto('/me');
   await page.waitForSelector('#me-form');
 
   await expect(page.locator('input[name=name]')).toHaveValue('Jean');
@@ -813,11 +826,9 @@ test('Me page pre-fills from existing localStorage profile', async ({ page }) =>
 
 test('Me page values pre-fill the post-ride form', async ({ page }) => {
   await page.context().grantPermissions(['notifications'], { origin: BASE });
-  await page.goto(BASE);
   await setFr(page);
-  await page.reload();
 
-  await page.evaluate(() => renderMe());
+  await page.goto('/me');
   await page.waitForSelector('#me-form');
   await page.fill('input[name=name]', 'Sophie');
   await page.fill('input[name=phone]', '0666000003');

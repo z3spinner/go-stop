@@ -1,0 +1,17 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, fireEvent } from '@testing-library/svelte';
+import RideForm from './RideForm.svelte';
+import { config } from '$lib/config';
+
+beforeEach(() => { localStorage.clear(); config.set({ siteName: 'Go-Stop', returnDelayHours: 2 }); });
+
+describe('RideForm', () => {
+	it('return toggle defaults return time to outbound + returnDelayHours', async () => {
+		const { container } = render(RideForm, { props: { destinations: [] } });
+		const dep = container.querySelector('input[name=departure_at]') as HTMLInputElement;
+		await fireEvent.input(dep, { target: { value: '2030-12-01T09:00' } });
+		await fireEvent.click(container.querySelector('#btn-return')!);
+		const ret = container.querySelector('input[name=return_departure_at]') as HTMLInputElement;
+		expect(ret.value).toBe('2030-12-01T11:00');
+	});
+});

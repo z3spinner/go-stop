@@ -15,6 +15,13 @@ func NewDestinationHandler(getDestinations *usecase.GetDestinations) *Destinatio
 	return &DestinationHandler{getDestinations: getDestinations}
 }
 
+// List returns all known destinations (for autocomplete).
+// @ID       listDestinations
+// @Tags     destinations
+// @Produce  json
+// @Success  200  {array}  string
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /destinations [get]
 func (h *DestinationHandler) List(c *gin.Context) {
 	destinations, err := h.getDestinations.Execute()
 	if err != nil {

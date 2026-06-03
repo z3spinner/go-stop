@@ -1,0 +1,992 @@
+basePath: /api
+definitions:
+  domain.ActivityCounts:
+    properties:
+      all_time:
+        type: integer
+      this_month:
+        type: integer
+      this_year:
+        type: integer
+    type: object
+  domain.Flexibility:
+    enum:
+    - 0
+    - 30
+    - 60
+    type: integer
+    x-enum-varnames:
+    - Exact
+    - Approximate
+    - Flexible
+  domain.Request:
+    properties:
+      Date:
+        description: zero → anytime (no date constraint)
+        type: string
+      DepartureAt:
+        description: zero → day or anytime (no time constraint)
+        type: string
+      Destination:
+        type: string
+      ExpiresAt:
+        type: string
+      Flexibility:
+        allOf:
+        - $ref: '#/definitions/domain.Flexibility'
+        description: only meaningful when DepartureAt is set
+      ID:
+        type: string
+      Origin:
+        type: string
+      Phone:
+        type: string
+      PostedAt:
+        type: string
+      SearcherName:
+        type: string
+    type: object
+  domain.Ride:
+    properties:
+      Date:
+        type: string
+      DepartureAt:
+        type: string
+      Destination:
+        type: string
+      DriverName:
+        type: string
+      ExpiresAt:
+        type: string
+      FeedbackGiven:
+        type: boolean
+      Flexibility:
+        $ref: '#/definitions/domain.Flexibility'
+      ID:
+        type: string
+      Origin:
+        type: string
+      Phone:
+        type: string
+      PostedAt:
+        type: string
+    type: object
+  domain.RouteStat:
+    properties:
+      Count:
+        type: integer
+      Destination:
+        type: string
+      Origin:
+        type: string
+    type: object
+  domain.Stats:
+    properties:
+      rides_posted:
+        $ref: '#/definitions/domain.ActivityCounts'
+      searches:
+        $ref: '#/definitions/domain.ActivityCounts'
+      top_routes:
+        items:
+          $ref: '#/definitions/domain.RouteStat'
+        type: array
+      total_confirmed:
+        type: integer
+      total_this_week:
+        type: integer
+    type: object
+  handler.AcceptInterestBody:
+    properties:
+      phone:
+        type: string
+    type: object
+  handler.AcceptInterestResponse:
+    properties:
+      searcher_phone:
+        type: string
+    type: object
+  handler.ConfigResponse:
+    properties:
+      returnDelayHours:
+        type: integer
+      siteName:
+        type: string
+    type: object
+  handler.ContactInfo:
+    properties:
+      departure_at:
+        type: string
+      destination:
+        type: string
+      name:
+        type: string
+      origin:
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+    type: object
+  handler.DeleteRequestBody:
+    properties:
+      phone:
+        type: string
+    type: object
+  handler.DeleteRideBody:
+    properties:
+      phone:
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  handler.ExpressInterestBody:
+    properties:
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+  handler.ExpressInterestResponse:
+    properties:
+      id:
+        type: string
+      status:
+        type: string
+    type: object
+  handler.FeedbackBody:
+    properties:
+      phone:
+        type: string
+      taken:
+        type: boolean
+    type: object
+  handler.InterestListItem:
+    properties:
+      id:
+        type: string
+      searcher_name:
+        type: string
+      searcher_phone:
+        type: string
+      status:
+        type: string
+    type: object
+  handler.MyInterest:
+    properties:
+      departure_at:
+        type: string
+      destination:
+        type: string
+      driver_name:
+        type: string
+      id:
+        type: string
+      origin:
+        type: string
+      ride_id:
+        type: string
+      status:
+        type: string
+    type: object
+  handler.NotificationItem:
+    properties:
+      departure_at:
+        type: string
+      destination:
+        type: string
+      driver_name:
+        type: string
+      origin:
+        type: string
+      request_id:
+        type: string
+      ride_id:
+        type: string
+      sent_count:
+        type: integer
+    type: object
+  handler.PingRequestBody:
+    properties:
+      ride_id:
+        type: string
+    type: object
+  handler.PostRequestBody:
+    properties:
+      departure_at:
+        description: RFC3339 — specific time mode
+        type: string
+      departure_date:
+        description: YYYY-MM-DD — day mode
+        type: string
+      departure_time:
+        description: HH:MM — daily mode
+        type: string
+      destination:
+        type: string
+      flexibility:
+        type: integer
+      origin:
+        type: string
+      phone:
+        type: string
+      searcher_name:
+        type: string
+    type: object
+  handler.PostRideBody:
+    properties:
+      departure_at:
+        type: string
+      destination:
+        type: string
+      driver_name:
+        type: string
+      flexibility:
+        type: integer
+      origin:
+        type: string
+      phone:
+        type: string
+    type: object
+  handler.PublicRequest:
+    properties:
+      DepartureAt:
+        type: string
+      Destination:
+        type: string
+      Flexibility:
+        type: integer
+      ID:
+        type: string
+      Origin:
+        type: string
+      SearcherName:
+        type: string
+    type: object
+  handler.PublicRide:
+    properties:
+      Date:
+        type: string
+      DepartureAt:
+        type: string
+      Destination:
+        type: string
+      DriverName:
+        type: string
+      ExpiresAt:
+        type: string
+      FeedbackGiven:
+        type: boolean
+      Flexibility:
+        type: integer
+      ID:
+        type: string
+      InterestCount:
+        type: integer
+      Origin:
+        type: string
+      PostedAt:
+        type: string
+    type: object
+  handler.SubscriptionBody:
+    properties:
+      auth:
+        type: string
+      endpoint:
+        type: string
+      p256dh:
+        type: string
+      phone:
+        type: string
+    type: object
+  handler.VapidKeyResponse:
+    properties:
+      publicKey:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Local ride-sharing notice board API.
+  title: Go-Stop API
+  version: "1.0"
+paths:
+  /config:
+    get:
+      operationId: getConfig
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ConfigResponse'
+      tags:
+      - config
+  /destinations:
+    get:
+      operationId: listDestinations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - destinations
+  /interests:
+    get:
+      operationId: listMyInterests
+      parameters:
+      - description: Searcher phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.MyInterest'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - interests
+  /interests/{id}/accept:
+    post:
+      consumes:
+      - application/json
+      operationId: acceptInterest
+      parameters:
+      - description: Interest ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Driver phone
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AcceptInterestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AcceptInterestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - interests
+  /interests/{id}/contact:
+    get:
+      operationId: getInterestContact
+      parameters:
+      - description: Interest ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Caller phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ContactInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - interests
+  /notifications:
+    get:
+      operationId: listNotifications
+      parameters:
+      - description: Searcher phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.NotificationItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
+  /requests:
+    get:
+      operationId: listRequests
+      parameters:
+      - description: Searcher phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Request'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+    post:
+      consumes:
+      - application/json
+      operationId: createRequest
+      parameters:
+      - description: Alert to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PostRequestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Request'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+  /requests/{id}:
+    delete:
+      consumes:
+      - application/json
+      operationId: deleteRequest
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Owner phone
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.DeleteRequestBody'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+    get:
+      operationId: getRequest
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Owner phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Request'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+  /requests/{id}/ping:
+    post:
+      consumes:
+      - application/json
+      operationId: pingRequest
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Driver phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      - description: Matching ride ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PingRequestBody'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+  /rides:
+    get:
+      operationId: listRides
+      parameters:
+      - description: Origin filter
+        in: query
+        name: origin
+        type: string
+      - description: Destination filter
+        in: query
+        name: destination
+        type: string
+      - description: Departure time (RFC3339)
+        in: query
+        name: departure_at
+        type: string
+      - description: Search date (YYYY-MM-DD)
+        in: query
+        name: search_date
+        type: string
+      - description: Search time (HH:MM, local)
+        in: query
+        name: search_time
+        type: string
+      - description: Caller phone for my-rides mode
+        in: header
+        name: X-Phone
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.PublicRide'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
+    post:
+      consumes:
+      - application/json
+      operationId: createRide
+      parameters:
+      - description: Ride to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PostRideBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Ride'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
+  /rides/{id}:
+    delete:
+      consumes:
+      - application/json
+      operationId: deleteRide
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Owner phone
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.DeleteRideBody'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
+    get:
+      operationId: getRide
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Ride'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
+  /rides/{id}/feedback:
+    post:
+      consumes:
+      - application/json
+      operationId: submitRideFeedback
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Owner phone and taken flag
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.FeedbackBody'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
+  /rides/{id}/interest:
+    post:
+      consumes:
+      - application/json
+      operationId: expressInterest
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Searcher phone and name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ExpressInterestBody'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.ExpressInterestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - interests
+  /rides/{id}/interests:
+    get:
+      operationId: listRideInterests
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Ride owner phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.InterestListItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - interests
+  /rides/{id}/requests:
+    get:
+      operationId: listRideRequests
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Ride owner phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.PublicRequest'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
+  /stats:
+    get:
+      operationId: getStats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Stats'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - stats
+  /subscriptions:
+    post:
+      consumes:
+      - application/json
+      operationId: upsertSubscription
+      parameters:
+      - description: Push subscription
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SubscriptionBody'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - subscriptions
+  /subscriptions/{phone}:
+    delete:
+      operationId: removeSubscription
+      parameters:
+      - description: Phone
+        in: path
+        name: phone
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - subscriptions
+  /vapid-public-key:
+    get:
+      operationId: getVapidPublicKey
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.VapidKeyResponse'
+      tags:
+      - vapid
+swagger: "2.0"

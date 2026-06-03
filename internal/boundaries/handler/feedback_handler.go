@@ -21,6 +21,17 @@ type feedbackRequest struct {
 	Taken bool   `json:"taken"`
 }
 
+// Post records whether the caller (driver) actually took the ride.
+// @ID       submitRideFeedback
+// @Tags     rides
+// @Accept   json
+// @Param    id    path  string                true  "Ride ID"
+// @Param    body  body  handler.FeedbackBody  true  "Owner phone and taken flag"
+// @Success  204
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides/{id}/feedback [post]
 func (h *FeedbackHandler) Post(c *gin.Context) {
 	var req feedbackRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

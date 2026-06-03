@@ -17,6 +17,14 @@ func NewNotificationQueueHandler(getPending *usecase.GetPendingNotifications) *N
 
 // List returns pending ride notifications for the authenticated searcher.
 // GET /api/notifications?phone=... or X-Phone header.
+// @ID       listNotifications
+// @Tags     notifications
+// @Produce  json
+// @Param    X-Phone  header  string  true  "Searcher phone"
+// @Success  200  {array}  handler.NotificationItem
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /notifications [get]
 func (h *NotificationQueueHandler) List(c *gin.Context) {
 	phone := normalizePhone(c.GetHeader("X-Phone"))
 	if phone == "" {
@@ -28,18 +36,9 @@ func (h *NotificationQueueHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	type item struct {
-		RideID      string `json:"ride_id"`
-		RequestID   string `json:"request_id"`
-		DriverName  string `json:"driver_name"`
-		Origin      string `json:"origin"`
-		Destination string `json:"destination"`
-		DepartureAt string `json:"departure_at"`
-		SentCount   int    `json:"sent_count"`
-	}
-	out := make([]item, len(summaries))
+	out := make([]NotificationItem, len(summaries))
 	for i, s := range summaries {
-		out[i] = item{
+		out[i] = NotificationItem{
 			RideID:      s.Entry.RideID,
 			RequestID:   s.Entry.RequestID,
 			DriverName:  s.Ride.DriverName,

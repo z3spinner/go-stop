@@ -41,6 +41,18 @@ type pingSearcherBody struct {
 
 // Ping notifies the searcher that a driver's ride matches their alert.
 // POST /requests/:id/ping  (X-Phone = driver's phone)
+// @ID       pingRequest
+// @Tags     requests
+// @Accept   json
+// @Param    id       path    string                   true  "Request ID"
+// @Param    X-Phone  header  string                   true  "Driver phone"
+// @Param    body     body    handler.PingRequestBody  true  "Matching ride ID"
+// @Success  204
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Router   /requests/{id}/ping [post]
 func (h *RequestHandler) Ping(c *gin.Context) {
 	driverPhone := normalizePhone(c.GetHeader("X-Phone"))
 	if driverPhone == "" {
@@ -63,6 +75,15 @@ func (h *RequestHandler) Ping(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// List returns the caller's own ride-search alerts.
+// @ID       listRequests
+// @Tags     requests
+// @Produce  json
+// @Param    X-Phone  header  string  true  "Searcher phone"
+// @Success  200  {array}  domain.Request
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /requests [get]
 func (h *RequestHandler) List(c *gin.Context) {
 	phone := c.GetHeader("X-Phone")
 	phone = normalizePhone(phone)
@@ -89,6 +110,16 @@ type postRequestBody struct {
 	Flexibility     int    `json:"flexibility"`
 }
 
+// Post creates a new ride-search alert.
+// @ID       createRequest
+// @Tags     requests
+// @Accept   json
+// @Produce  json
+// @Param    body  body  handler.PostRequestBody  true  "Alert to create"
+// @Success  201  {object}  domain.Request
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /requests [post]
 func (h *RequestHandler) Post(c *gin.Context) {
 	var body postRequestBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -135,6 +166,16 @@ func (h *RequestHandler) Post(c *gin.Context) {
 	c.JSON(http.StatusCreated, saved)
 }
 
+// Get returns a single alert by ID. Only the owner (matching X-Phone) may read it.
+// @ID       getRequest
+// @Tags     requests
+// @Produce  json
+// @Param    id       path    string  true  "Request ID"
+// @Param    X-Phone  header  string  true  "Owner phone"
+// @Success  200  {object}  domain.Request
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Router   /requests/{id} [get]
 func (h *RequestHandler) Get(c *gin.Context) {
 	req, err := h.requestRepo.FindByID(c.Param("id"))
 	if err != nil {
@@ -154,6 +195,17 @@ type deleteRequestBody struct {
 	Phone string `json:"phone" binding:"required"`
 }
 
+// Delete removes an alert owned by the caller.
+// @ID       deleteRequest
+// @Tags     requests
+// @Accept   json
+// @Param    id    path  string                     true  "Request ID"
+// @Param    body  body  handler.DeleteRequestBody  true  "Owner phone"
+// @Success  204
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /requests/{id} [delete]
 func (h *RequestHandler) Delete(c *gin.Context) {
 	var body deleteRequestBody
 	if err := c.ShouldBindJSON(&body); err != nil {
