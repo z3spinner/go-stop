@@ -405,6 +405,8 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 
 /* Language picker dropdown */
 .lang-picker { position: relative; display: inline-flex; }
+.btn-lang { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 1rem; line-height: 1; }
+.btn-lang:hover { filter: brightness(0.9); }
 .lang-dropdown {
   position: absolute;
   top: calc(100% + 4px);
