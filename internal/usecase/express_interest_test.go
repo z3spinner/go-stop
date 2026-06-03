@@ -15,6 +15,7 @@ type mockInterestRepo struct {
 	byID         map[string]domain.Interest
 	saveErr      error
 	acceptCalled []string
+	deleteCalled []string
 }
 
 func (m *mockInterestRepo) Save(i domain.Interest) error {
@@ -58,6 +59,11 @@ func (m *mockInterestRepo) Accept(id string) error {
 		i.Status = "accepted"
 		m.byID[id] = i
 	}
+	return nil
+}
+func (m *mockInterestRepo) Delete(id string) error {
+	m.deleteCalled = append(m.deleteCalled, id)
+	delete(m.byID, id)
 	return nil
 }
 func (m *mockInterestRepo) CountByRides([]string) (map[string]int, error) { return nil, nil }

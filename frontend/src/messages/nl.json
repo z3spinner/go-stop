@@ -113,6 +113,8 @@
 	"interestSent": "Verzoek verstuurd — je wordt gewaarschuwd als de bestuurder accepteert.",
 	"interestPending": "Wachten op bestuurder",
 	"btnResend": "Opnieuw aanvragen",
+	"btnCancelRequest": "Verzoek annuleren",
+	"requestCancelled": "Verzoek geannuleerd.",
 	"pendingInterests": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

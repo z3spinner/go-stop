@@ -113,6 +113,8 @@
 	"interestSent": "Anfrage gesendet — du wirst benachrichtigt, wenn der Fahrer akzeptiert.",
 	"interestPending": "Warte auf Fahrer/in",
 	"btnResend": "Erneut anfragen",
+	"btnCancelRequest": "Anfrage zurückziehen",
+	"requestCancelled": "Anfrage zurückgezogen.",
 	"pendingInterests": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

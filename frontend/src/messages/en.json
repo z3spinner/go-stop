@@ -113,6 +113,8 @@
 	"interestSent": "Request sent — you'll be notified when the driver accepts.",
 	"interestPending": "Waiting for driver",
 	"btnResend": "Request again",
+	"btnCancelRequest": "Cancel request",
+	"requestCancelled": "Request cancelled.",
 	"pendingInterests": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

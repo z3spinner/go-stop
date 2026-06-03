@@ -19,6 +19,9 @@ ORDER BY created_at ASC;
 -- name: AcceptInterest :exec
 UPDATE interests SET status = 'accepted' WHERE id = $1;
 
+-- name: DeleteInterest :exec
+DELETE FROM interests WHERE id = $1;
+
 -- name: ListInterestsBySearcher :many
 -- Returns all interests made by a searcher, joined with ride info for display.
 -- Includes rides that may have expired (so the searcher can see their full history).

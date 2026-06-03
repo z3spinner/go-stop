@@ -53,6 +53,15 @@ func (q *Queries) CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.U
 	return items, nil
 }
 
+const deleteInterest = `-- name: DeleteInterest :exec
+DELETE FROM interests WHERE id = $1
+`
+
+func (q *Queries) DeleteInterest(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteInterest, id)
+	return err
+}
+
 const getInterestByID = `-- name: GetInterestByID :one
 SELECT id, ride_id, searcher_phone, searcher_name, status, created_at
 FROM interests WHERE id = $1

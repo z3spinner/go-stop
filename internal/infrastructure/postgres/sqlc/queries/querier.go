@@ -17,6 +17,7 @@ type Querier interface {
 	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
 	DeleteExpiredRides(ctx context.Context) error
+	DeleteInterest(ctx context.Context, id pgtype.UUID) error
 	DeleteNotificationsForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
 	DeleteRide(ctx context.Context, id pgtype.UUID) error

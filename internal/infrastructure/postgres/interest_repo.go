@@ -57,6 +57,10 @@ func (r *InterestRepo) Accept(id string) error {
 	return r.q.AcceptInterest(context.Background(), uuidFrom(id))
 }
 
+func (r *InterestRepo) Delete(id string) error {
+	return r.q.DeleteInterest(context.Background(), uuidFrom(id))
+}
+
 func (r *InterestRepo) FindBySearcherPhone(phone string) ([]domain.InterestWithRide, error) {
 	rows, err := r.q.ListInterestsBySearcher(context.Background(), phone)
 	if err != nil {

@@ -54,7 +54,7 @@
 			{#if loaded && requests.length === 0}
 				<p class="empty text-gray-500">{m.noMyRequests()}</p>
 			{:else}
-				{#each requests as r (r.id)}<RequestCard interest={r} />{/each}
+				{#each requests as r (r.id)}<RequestCard interest={r} {phone} oncancelled={(id) => (requests = requests.filter((x) => x.id !== id))} />{/each}
 			{/if}
 		</div>
 	</section>

@@ -14,6 +14,7 @@ type InterestHandler struct {
 	expressInterest    *usecase.ExpressInterest
 	acceptInterest     *usecase.AcceptInterest
 	getInterestContact *usecase.GetInterestContact
+	cancelInterest     *usecase.CancelInterest
 	interestRepo       *postgres.InterestRepo
 }
 
@@ -21,12 +22,14 @@ func NewInterestHandler(
 	expressInterest *usecase.ExpressInterest,
 	acceptInterest *usecase.AcceptInterest,
 	getInterestContact *usecase.GetInterestContact,
+	cancelInterest *usecase.CancelInterest,
 	interestRepo *postgres.InterestRepo,
 ) *InterestHandler {
 	return &InterestHandler{
 		expressInterest:    expressInterest,
 		acceptInterest:     acceptInterest,
 		getInterestContact: getInterestContact,
+		cancelInterest:     cancelInterest,
 		interestRepo:       interestRepo,
 	}
 }
@@ -106,6 +109,40 @@ func (h *InterestHandler) Accept(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, AcceptInterestResponse{SearcherPhone: searcherPhone})
+}
+
+// Cancel lets a searcher withdraw their own pending contact request.
+// Requires the caller's X-Phone header (must be the searcher who created it).
+// @ID       cancelInterest
+// @Tags     interests
+// @Produce  json
+// @Param    id       path    string  true  "Interest ID"
+// @Param    X-Phone  header  string  true  "Searcher phone"
+// @Success  204  "No Content"
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  409  {object}  handler.ErrorResponse
+// @Router   /interests/{id} [delete]
+func (h *InterestHandler) Cancel(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	err := h.cancelInterest.Execute(c.Param("id"), phone)
+	if err != nil {
+		switch {
+		case errors.Is(err, usecase.ErrUnauthorized):
+			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+		case errors.Is(err, usecase.ErrNotPending):
+			c.JSON(http.StatusConflict, gin.H{"error": "interest is no longer pending"})
+		default:
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 // GetContact returns the contact details for an accepted/shared interest.

@@ -343,6 +343,61 @@ export const listMyInterests = async ( options?: RequestInit): Promise<listMyInt
 
 
 
+export type cancelInterestResponse204 = {
+  data: void
+  status: 204
+}
+
+export type cancelInterestResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type cancelInterestResponse403 = {
+  data: HandlerErrorResponse
+  status: 403
+}
+
+export type cancelInterestResponse404 = {
+  data: HandlerErrorResponse
+  status: 404
+}
+
+export type cancelInterestResponse409 = {
+  data: HandlerErrorResponse
+  status: 409
+}
+
+export type cancelInterestResponseSuccess = (cancelInterestResponse204) & {
+  headers: Headers;
+};
+export type cancelInterestResponseError = (cancelInterestResponse401 | cancelInterestResponse403 | cancelInterestResponse404 | cancelInterestResponse409) & {
+  headers: Headers;
+};
+
+export type cancelInterestResponse = (cancelInterestResponseSuccess | cancelInterestResponseError)
+
+export const getCancelInterestUrl = (id: string,) => {
+
+
+
+
+  return `/interests/${id}`
+}
+
+export const cancelInterest = async (id: string, options?: RequestInit): Promise<cancelInterestResponse> => {
+
+  return customFetch<cancelInterestResponse>(getCancelInterestUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
 export type acceptInterestResponse200 = {
   data: HandlerAcceptInterestResponse
   status: 200

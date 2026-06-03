@@ -246,6 +246,62 @@ test('driver sees pending interests with searcher name', async ({ page }) => {
   await expect(page.locator(`#card-${rideId}`)).toContainText(SEARCHER.name, { timeout: 5000 });
 });
 
+// ── 7b. Searcher cancels a pending contact request ────────────────────────────
+test('searcher cancels a pending contact request', async ({ page }) => {
+  await page.goto(BASE);
+
+  // Seed a unique ride so we own a fresh, un-accepted interest to cancel.
+  const uniqueOrigin = `CancA${Date.now()}`;
+  const uniqueDest   = `CancB${Date.now()}`;
+  const rideId = await page.evaluate(async ({ driver, origin, destination }) => {
+    const r = await fetch('/api/rides', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driver_name: driver.name, phone: driver.phone, origin, destination,
+        departure_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(), flexibility: 0,
+      }),
+    });
+    return (await r.json()).ID;
+  }, { driver: DRIVER, origin: uniqueOrigin, destination: uniqueDest });
+  expect(rideId).toBeTruthy();
+
+  // As Bob, express interest via the search UI.
+  await page.evaluate(() => {
+    for (const k of Object.keys(localStorage).filter(k => k.startsWith('interest_'))) localStorage.removeItem(k);
+  });
+  await setProfile(page, SEARCHER);
+  await page.goto(`${BASE}/search?origin=${encodeURIComponent(uniqueOrigin)}&destination=${encodeURIComponent(uniqueDest)}`);
+  await page.waitForSelector('.btn-interest');
+  const card = page.locator('.card').first();
+  await card.locator('.btn-interest').click();
+
+  // Pending state shows a cancel button; capture the interest id.
+  await expect(card.locator('.btn-interest-cancel')).toBeVisible({ timeout: 5000 });
+  const interestId = await page.evaluate(id => localStorage.getItem('interest_' + id), rideId);
+  expect(interestId).toBeTruthy();
+
+  // Expressing interest pops the "enable notifications" modal; dismiss it so its
+  // overlay doesn't intercept the cancel click.
+  const overlay = page.locator('.modal-overlay');
+  await overlay.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  await page.keyboard.press('Escape');
+  await expect(overlay).toHaveCount(0, { timeout: 5000 });
+
+  // Cancel it.
+  await card.locator('.btn-interest-cancel').click();
+
+  // UI reverts (no cancel/resend button) and the localStorage key is cleared.
+  await expect(card.locator('.btn-interest-cancel')).toHaveCount(0, { timeout: 5000 });
+  await expect.poll(() => page.evaluate(id => localStorage.getItem('interest_' + id), rideId)).toBeNull();
+
+  // Backend: the interest row is gone, so contact lookup 404s.
+  const status = await page.evaluate(async ({ id, phone }) => {
+    const r = await fetch(`/api/interests/${id}/contact`, { headers: { 'X-Phone': phone } });
+    return r.status;
+  }, { id: interestId, phone: SEARCHER.phone });
+  expect(status).toBe(404);
+});
+
 // ── 8. Alert creation — all 4 modes ──────────────────────────────────────────
 test('searcher creates alerts in all four modes', async ({ page }) => {
   await setProfile(page, SEARCHER);

@@ -34,6 +34,24 @@
 			busy = false;
 		}
 	}
+
+	async function cancel() {
+		if (busy) return;
+		const id = storedInterest();
+		if (!id) return;
+		busy = true;
+		stateMsg = '';
+		try {
+			await api.interests.cancel(id, get(userPhone));
+			if (browser) localStorage.removeItem(`interest_${ride.ID}`);
+			pending = false;
+			stateMsg = m.requestCancelled();
+		} catch (e) {
+			stateMsg = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
+	}
 </script>
 
 {#if contactPhone}
@@ -45,6 +63,7 @@
 	<div class="interest-pending-row flex items-center gap-2">
 		<span class="interest-pending-label text-sm text-gray-600">{m.interestPending()}</span>
 		<button type="button" class="btn-interest btn-interest-resend" data-ride-id={ride.ID} disabled={busy} onclick={express}>{m.btnResend()}</button>
+		<button type="button" class="btn-interest-cancel btn-ghost-inline" data-ride-id={ride.ID} disabled={busy} onclick={cancel}>{m.btnCancelRequest()}</button>
 		<span class="interest-state" id="int-state-{ride.ID}">{stateMsg}</span>
 	</div>
 {:else}
