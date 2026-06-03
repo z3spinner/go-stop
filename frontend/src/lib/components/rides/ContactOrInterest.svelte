@@ -38,7 +38,8 @@
 
 {#if contactPhone}
 	<div class="contact-revealed">
-		<a class="btn btn-primary" href="tel:{contactPhone}">{m.btnCallNow()}</a>
+		<span class="contact-revealed-label">{m.contactRevealed()}:</span>
+		<a href="tel:{contactPhone}">📞 {contactPhone}</a>
 	</div>
 {:else if pending}
 	<div class="interest-pending-row flex items-center gap-2">
