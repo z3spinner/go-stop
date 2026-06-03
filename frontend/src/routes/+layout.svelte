@@ -32,6 +32,7 @@
 	if (browser) registerLangStrategy();
 
 	onMount(() => {
+		if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 		loadConfig();
 		const phone = get(userPhone);
 		updateBellState(phone);

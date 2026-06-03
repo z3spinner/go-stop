@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <clipPath id="c">
+      <rect width="512" height="512" rx="115" ry="115"/>
+    </clipPath>
+    <linearGradient id="gl" x1="0%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#4CD964"/>
+      <stop offset="100%" stop-color="#28A836"/>
+    </linearGradient>
+    <linearGradient id="gr" x1="20%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4538"/>
+      <stop offset="100%" stop-color="#C81E1E"/>
+    </linearGradient>
+    <filter id="ds" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="5" stdDeviation="10" flood-color="rgba(0,0,0,0.32)"/>
+    </filter>
+  </defs>
+
+  <!-- Background: green left, red right, clipped to rounded square -->
+  <g clip-path="url(#c)">
+    <rect x="0"   y="0" width="256" height="512" fill="url(#gl)"/>
+    <rect x="256" y="0" width="256" height="512" fill="url(#gr)"/>
+  </g>
+
+  <!-- G ring + tail + O ring -->
+  <g filter="url(#ds)" fill="none" stroke="white" stroke-width="22"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- G: 310° arc from ~10 o'clock clockwise to 3 o'clock, then tail to O's left edge -->
+    <path d="M 196,175 A 106,106 0 1 0 234,256 L 278,256"/>
+    <!-- O: full circle -->
+    <circle cx="384" cy="256" r="106"/>
+  </g>
+
+  <!-- Play triangle (centred in left circle) -->
+  <g filter="url(#ds)">
+    <polygon points="90,196 90,316 198,256" fill="white"/>
+  </g>
+
+  <!-- Stop square (centred in right circle) -->
+  <g filter="url(#ds)">
+    <rect x="330" y="202" width="108" height="108" rx="20" ry="20" fill="white"/>
+  </g>
+</svg>
