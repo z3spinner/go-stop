@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { defineConfig } from 'vitest/config';
+import { svelteTesting } from '@testing-library/svelte/vite';
 
 export default defineConfig({
 	plugins: [
@@ -11,7 +12,8 @@ export default defineConfig({
 			outdir: './src/lib/paraglide',
 			strategy: ['custom-lang', 'preferredLanguage', 'baseLocale']
 		}),
-		sveltekit()
+		sveltekit(),
+		svelteTesting()
 	],
 	server: { proxy: { '/api': 'http://localhost:8080' } },
 	test: { environment: 'jsdom', globals: true, setupFiles: ['./vitest-setup.js'] }
