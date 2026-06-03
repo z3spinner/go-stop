@@ -8,13 +8,13 @@ const BASE = 'http://localhost:8080';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function setProfile(page, user) {
-  // svelte-persisted-store JSON-encodes values, so user_name/user_phone are
-  // stored as quoted JSON. `lang` stays a RAW string (Paraglide reads it raw).
-  // addInitScript applies the values before each (subsequent) navigation so
-  // the SvelteKit app picks them up on load.
+  // The profile/last-search stores write RAW strings (legacy-compatible), so
+  // user_name/user_phone are plain values (not JSON-quoted). `lang` is also raw
+  // (Paraglide reads it raw). addInitScript applies the values before each
+  // (subsequent) navigation so the SvelteKit app picks them up on load.
   await page.addInitScript((u) => {
-    localStorage.setItem('user_name', JSON.stringify(u.name));
-    localStorage.setItem('user_phone', JSON.stringify(u.phone));
+    localStorage.setItem('user_name', u.name);
+    localStorage.setItem('user_phone', u.phone);
     localStorage.setItem('lang', 'fr');
   }, user);
 }
@@ -206,17 +206,44 @@ test('searcher requests contact, driver accepts, phone revealed to both', async 
 
 // ── 7. Driver sees searcher name in My Rides ──────────────────────────────────
 test('driver sees pending interests with searcher name', async ({ page }) => {
-  await setProfile(page, DRIVER);
   await page.goto(BASE);
 
+  // Self-seed a ride owned by the driver with a *pending* interest from the
+  // searcher. (Test 6 accepts its interest, and an accepted interest renders the
+  // phone rather than the name — so nothing leaves a pending interest behind for
+  // this test to find. Seeding our own makes it order-independent.)
+  const uniqueOrigin = `PendA${Date.now()}`;
+  const uniqueDest   = `PendB${Date.now()}`;
+  const rideId = await page.evaluate(async ({ driver, searcher, origin, destination }) => {
+    const r = await fetch('/api/rides', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driver_name: driver.name, phone: driver.phone,
+        origin, destination,
+        departure_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(),
+        flexibility: 0,
+      }),
+    });
+    const ride = await r.json();
+    // Searcher expresses interest; driver does NOT accept -> the interest stays
+    // pending, so My Rides renders the searcher's name.
+    await fetch(`/api/rides/${ride.ID}/interest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: searcher.phone, name: searcher.name }),
+    });
+    return ride.ID;
+  }, { driver: DRIVER, searcher: SEARCHER, origin: uniqueOrigin, destination: uniqueDest });
+  expect(rideId).toBeTruthy();
+
   // Navigate to My Rides — the gate form auto-submits when a profile phone is set.
+  await setProfile(page, DRIVER);
   await page.goto('/my-rides');
   await page.waitForSelector('.card');
 
-  // Wait for interests to load async
-  await page.waitForTimeout(1000);
-  const pageText = await page.locator('#app').innerText();
-  expect(pageText).toContain(SEARCHER.name);
+  // The pending interest on the seeded ride renders the searcher's name.
+  await expect(page.locator(`#card-${rideId}`)).toContainText(SEARCHER.name, { timeout: 5000 });
 });
 
 // ── 8. Alert creation — all 4 modes ──────────────────────────────────────────
@@ -799,22 +826,22 @@ test('Me page saves name and phone to localStorage', async ({ page }) => {
 
   await expect(page.locator('#me-saved')).toBeVisible({ timeout: 3000 });
 
-  // svelte-persisted-store JSON-encodes values, so read through JSON.parse.
+  // stores write RAW strings (legacy-compatible), so read them directly.
   const stored = await page.evaluate(() => ({
     name:  localStorage.getItem('user_name'),
     phone: localStorage.getItem('user_phone'),
   }));
-  expect(JSON.parse(stored.name)).toBe('Marie');
-  expect(JSON.parse(stored.phone)).toBe('0644000001');
+  expect(stored.name).toBe('Marie');
+  expect(stored.phone).toBe('0644000001');
 });
 
 test('Me page pre-fills from existing localStorage profile', async ({ page }) => {
-  // Seed the persisted-store keys (JSON-encoded) before navigation so the store
-  // hydrates from them; `lang` stays raw.
+  // Seed the persisted-store keys (RAW strings, as the legacy app + existing
+  // users store them) before navigation so the store hydrates from them.
   await page.addInitScript(() => {
     localStorage.setItem('lang', 'fr');
-    localStorage.setItem('user_name', JSON.stringify('Jean'));
-    localStorage.setItem('user_phone', JSON.stringify('0655000002'));
+    localStorage.setItem('user_name', 'Jean');
+    localStorage.setItem('user_phone', '0655000002');
   });
 
   await page.goto('/me');
