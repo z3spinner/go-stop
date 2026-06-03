@@ -26,3 +26,9 @@ swagger-install:
 # unaffected because swag reads their json tags first.
 swagger:
 	swag init -g main.go -o docs --parseDependency --parseInternal --propertyStrategy pascalcase
+
+# Regenerate the swagger spec then the typed frontend API client (orval).
+# The generated client (frontend/src/lib/api/generated) is committed, so the
+# production build needs no codegen — this target is for refreshing it.
+api-generate: swagger
+	npm run api:generate --prefix frontend
