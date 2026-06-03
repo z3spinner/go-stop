@@ -92,6 +92,8 @@ export const api = {
 			unwrap<AcceptInterestResponse>(gen.acceptInterest(interestId, { phone })),
 		getContact: (interestId: string, phone: string) =>
 			unwrap<ContactInfo>(gen.getInterestContact(interestId, phoneHeader(phone))),
+		cancel: (interestId: string, phone: string) =>
+			unwrap<null>(gen.cancelInterest(interestId, phoneHeader(phone))),
 		listMine: (phone: string) => unwrap<MyInterest[]>(gen.listMyInterests(phoneHeader(phone)))
 	},
 	subscriptions: {

@@ -113,6 +113,8 @@
 	"interestSent": "Richiesta inviata — sarai avvisato/a quando il conducente accetta.",
 	"interestPending": "In attesa del conducente",
 	"btnResend": "Richiedere di nuovo",
+	"btnCancelRequest": "Annulla richiesta",
+	"requestCancelled": "Richiesta annullata.",
 	"pendingInterests": [
 		{
 			"declarations": ["input count", "local countPlural = count: plural"],

@@ -72,6 +72,7 @@ func main() {
 	expressInterest    := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
 	acceptInterest     := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
+	cancelInterest     := usecase.NewCancelInterest(interestRepo)
 
 	serviceTZ := time.UTC
 	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
@@ -84,7 +85,7 @@ func main() {
 	}
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, interestRepo)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, pingSearcher, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
@@ -144,6 +145,7 @@ func main() {
 		api.GET("/rides/:id/interests",   rideH.ListInterests)
 		api.POST("/rides/:id/interest",   interestH.Express)
 		api.POST("/interests/:id/accept", interestH.Accept)
+		api.DELETE("/interests/:id", interestH.Cancel)
 		api.GET("/interests", interestH.ListMyRequests)
 		api.GET("/interests/:id/contact", interestH.GetContact)
 

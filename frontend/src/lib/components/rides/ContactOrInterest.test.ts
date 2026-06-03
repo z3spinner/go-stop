@@ -28,4 +28,25 @@ describe('ContactOrInterest', () => {
 		const { container } = render(ContactOrInterest, { props: { ride, contactPhone: '0611000001' } });
 		expect(container.querySelector('a[href="tel:0611000001"]')).toBeTruthy();
 	});
+
+	it('cancelling a pending request DELETEs it and clears interest_<id>', async () => {
+		localStorage.setItem('interest_42', 'int1'); // start in the pending state
+		const fetchMock = vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 204 }));
+		vi.stubGlobal('fetch', fetchMock);
+		const { container } = render(ContactOrInterest, { props: { ride } });
+
+		const cancelBtn = container.querySelector('.btn-interest-cancel') as HTMLElement;
+		expect(cancelBtn).toBeTruthy();
+		await fireEvent.click(cancelBtn);
+
+		await vi.waitFor(() => expect(localStorage.getItem('interest_42')).toBeNull());
+		// reverted to the plain request-contact button; the resend/cancel are gone
+		expect(container.querySelector('.btn-interest-resend')).toBeNull();
+		expect(container.querySelector('.btn-interest-cancel')).toBeNull();
+		expect(container.querySelector('.interest-state')!.textContent).toMatch(/annulée|cancelled/i);
+
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(String(url)).toContain('/api/interests/int1');
+		expect(init?.method).toBe('DELETE');
+	});
 });

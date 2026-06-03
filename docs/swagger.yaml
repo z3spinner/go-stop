@@ -370,6 +370,43 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:
       - interests
+  /interests/{id}:
+    delete:
+      operationId: cancelInterest
+      parameters:
+      - description: Interest ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Searcher phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - interests
   /interests/{id}/accept:
     post:
       consumes:
