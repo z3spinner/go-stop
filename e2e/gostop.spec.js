@@ -385,8 +385,7 @@ test('searcher creates alerts in all four modes', async ({ page }) => {
     await page.goto('/post-request?origin=Saillans&destination=Crest');
     await page.waitForSelector('#notify-form');
 
-    await page.fill('input[name=searcher_name]', SEARCHER.name);
-    await page.fill('input[name=phone]', SEARCHER.phone);
+    // Name + phone come from the saved profile, so those fields are hidden here.
     await page.click(`.btn-mode[data-mode="${mode}"]`);
     await extra(page);
 
@@ -983,8 +982,14 @@ test('Me page values pre-fill the post-ride form', async ({ page }) => {
   await page.click('#back');
   await page.waitForSelector('button.btn-primary');
   await page.click('button.btn-primary');
-  await page.waitForSelector('input[name=driver_name]');
 
+  // With a saved profile the name/phone inputs are hidden behind a summary.
+  await expect(page.locator('.profile-summary')).toContainText('Sophie');
+  await expect(page.locator('.profile-summary')).toContainText('0666000003');
+  await expect(page.locator('input[name=driver_name]')).toHaveCount(0);
+
+  // "Change" reveals the inputs, pre-filled from the profile.
+  await page.click('.btn-edit-contact');
   await expect(page.locator('input[name=driver_name]')).toHaveValue('Sophie');
   await expect(page.locator('input[name=phone]')).toHaveValue('0666000003');
 });

@@ -4,6 +4,7 @@
 	import { api } from '$lib/api';
 	import { userName, userPhone } from '$lib/stores';
 	import { normalizePhone } from '$lib/utils';
+	import ProfileFields from '$lib/components/ProfileFields.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { Flexibility, PostRequestBody } from '$lib/types';
 
@@ -52,8 +53,7 @@
 </script>
 
 <form id="notify-form" onsubmit={submit} class="flex flex-col gap-3">
-	<label>{m.labelName()}<input name="searcher_name" required bind:value={searcher_name} /></label>
-	<label>{m.labelPhone()}<input name="phone" type="tel" required bind:value={phone} /></label>
+	<ProfileFields bind:name={searcher_name} bind:phone nameField="searcher_name" />
 	<label>{m.labelFrom()}<input name="origin" list="dests-from" required bind:value={originV} /></label>
 	<label>{m.labelTo()}<input name="destination" list="dests-to" required bind:value={destinationV} /></label>
 	<datalist id="dests-from">{#each destinations as d}<option value={d}></option>{/each}</datalist>

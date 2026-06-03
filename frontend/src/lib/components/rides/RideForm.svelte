@@ -4,6 +4,7 @@
 	import { userName, userPhone } from '$lib/stores';
 	import { config } from '$lib/config';
 	import { defaultDeparture, normalizePhone } from '$lib/utils';
+	import ProfileFields from '$lib/components/ProfileFields.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { Flexibility } from '$lib/types';
 
@@ -59,8 +60,7 @@
 </script>
 
 <form id="ride-form" onsubmit={submit} class="flex flex-col gap-3">
-	<label>{m.labelName()}<input name="driver_name" required bind:value={driver_name} /></label>
-	<label>{m.labelPhone()}<input name="phone" type="tel" required bind:value={phone} /></label>
+	<ProfileFields bind:name={driver_name} bind:phone nameField="driver_name" />
 	<label>{m.labelFrom()}<input name="origin" list="dests-from" required bind:value={origin} /></label>
 	<label>{m.labelTo()}<input name="destination" list="dests-to" required bind:value={destination} /></label>
 	<datalist id="dests-from">{#each destinations as d}<option value={d}></option>{/each}</datalist>
