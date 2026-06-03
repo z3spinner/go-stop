@@ -74,9 +74,9 @@
 		</select>
 	</label>
 
-	<div class="trip-type-toggle flex gap-2" role="group" aria-label={m.tripTypeLabel()}>
-		<button id="btn-oneway" type="button" class:active={!isReturn} onclick={() => toggleReturn(false)}>{m.tripOneWay()}</button>
-		<button id="btn-return" type="button" class:active={isReturn} onclick={() => toggleReturn(true)}>{m.tripReturn()}</button>
+	<div class="trip-type-toggle" role="group" aria-label={m.tripTypeLabel()}>
+		<button id="btn-oneway" type="button" class="trip-type-btn" class:active={!isReturn} onclick={() => toggleReturn(false)}>{m.tripOneWay()}</button>
+		<button id="btn-return" type="button" class="trip-type-btn" class:active={isReturn} onclick={() => toggleReturn(true)}>{m.tripReturn()}</button>
 	</div>
 
 	{#if isReturn}

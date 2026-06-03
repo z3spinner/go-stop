@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import '../legacy.css'; // ported live-site styles; targets the preserved semantic class names
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
