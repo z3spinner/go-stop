@@ -11,7 +11,8 @@ describe('me', () => {
 		await fireEvent.input(container.querySelector('input[name=name]')!, { target: { value: 'Marie' } });
 		await fireEvent.input(container.querySelector('input[name=phone]')!, { target: { value: '0644000001' } });
 		await fireEvent.submit(container.querySelector('#me-form')!);
-		expect(localStorage.getItem('user_name')).toBe(JSON.stringify('Marie'));
+		// Stored RAW (legacy-compatible), not JSON-encoded.
+		expect(localStorage.getItem('user_name')).toBe('Marie');
 		const saved = container.querySelector('#me-saved') as HTMLElement;
 		expect(saved.getAttribute('style') ?? '').not.toContain('none');
 	});
