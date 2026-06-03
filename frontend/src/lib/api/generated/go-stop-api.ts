@@ -879,7 +879,7 @@ export const createRide = async (handlerPostRideBody: HandlerPostRideBody, optio
 
 
 export type getRideResponse200 = {
-  data: DomainRide
+  data: HandlerPublicRide
   status: 200
 }
 

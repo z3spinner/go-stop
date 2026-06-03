@@ -202,12 +202,14 @@ func (h *RideHandler) List(c *gin.Context) {
 	}
 }
 
-// Get returns a single ride by ID (full domain.Ride).
+// Get returns a single ride by ID (public — no phone).
+// The detail page is publicly shareable, so the driver's phone is withheld here;
+// it is revealed only through the accepted-interest contact flow.
 // @ID       getRide
 // @Tags     rides
 // @Produce  json
 // @Param    id  path  string  true  "Ride ID"
-// @Success  200  {object}  domain.Ride
+// @Success  200  {object}  handler.PublicRide
 // @Failure  404  {object}  handler.ErrorResponse
 // @Router   /rides/{id} [get]
 func (h *RideHandler) Get(c *gin.Context) {
@@ -216,7 +218,8 @@ func (h *RideHandler) Get(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	c.JSON(http.StatusOK, ride)
+	pub := attachInterestCounts(toPublicRides([]domain.Ride{ride}), h.interestRepo)
+	c.JSON(http.StatusOK, pub[0])
 }
 
 // ListMatchingRequests returns searcher alerts matching the driver's ride

@@ -10,6 +10,7 @@ describe('home', () => {
 		const { container } = render(Home);
 		expect(container.querySelector('button.btn-primary')?.textContent).toMatch(/Je conduis|driving/);
 		expect(container.querySelector('button.btn-secondary')).toBeTruthy();
+		// Me · My rides · My searches (share lives in the header/TopBar, not here)
 		expect(container.querySelectorAll('.btn-ghost-inline').length).toBe(3);
 	});
 });

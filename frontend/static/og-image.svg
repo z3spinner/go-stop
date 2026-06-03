@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'DejaVu Sans','Helvetica Neue',Arial,sans-serif">
+  <rect width="1200" height="630" fill="#f7faf7"/>
+  <rect x="0" y="0" width="1200" height="16" fill="#28a836"/>
+  <rect x="0" y="614" width="1200" height="16" fill="#28a836"/>
+
+  <text x="600" y="248" text-anchor="middle" font-size="94" font-weight="700" fill="#16331c">Go Stop Saillans!</text>
+  <text x="600" y="318" text-anchor="middle" font-size="40" fill="#5b6b5e">Trajets locaux, contact direct</text>
+
+  <!-- route motif: start dot → arrow → destination -->
+  <g>
+    <circle cx="452" cy="438" r="17" fill="#28a836"/>
+    <line x1="470" y1="438" x2="724" y2="438" stroke="#28a836" stroke-width="9" stroke-linecap="round"/>
+    <polygon points="720,419 760,438 720,457" fill="#28a836"/>
+  </g>
+</svg>

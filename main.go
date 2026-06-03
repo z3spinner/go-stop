@@ -132,7 +132,14 @@ func main() {
 	// existing file falls back to index.html (client-side routing).
 	const buildDir = "./web/build"
 	log.Printf("build version: %s", version.Get())
-	r.NoRoute(spaHandler(buildDir))
+	rideOG := func(id string) (ogRide, bool) {
+		ride, err := rideRepo.FindByID(id)
+		if err != nil {
+			return ogRide{}, false
+		}
+		return ogRide{Origin: ride.Origin, Destination: ride.Destination, DepartureAt: ride.DepartureAt, Flexibility: int(ride.Flexibility)}, true
+	}
+	r.NoRoute(spaHandler(buildDir, siteName, rideOG, serviceTZ))
 
 	api := r.Group("/api")
 	{
@@ -180,7 +187,7 @@ func main() {
 // spaHandler serves the SvelteKit static build from buildDir with an SPA
 // fallback: /api/* paths get a JSON 404, existing files are served directly,
 // and everything else falls back to index.html for client-side routing.
-func spaHandler(buildDir string) gin.HandlerFunc {
+func spaHandler(buildDir, siteName string, lookup rideLookupFunc, tz *time.Location) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		p := c.Request.URL.Path
 		if strings.HasPrefix(p, "/api/") || p == "/api" {
@@ -195,6 +202,14 @@ func spaHandler(buildDir string) gin.HandlerFunc {
 				return
 			}
 		}
-		c.File(filepath.Join(buildDir, "index.html"))
+		// SPA fallback — inject per-page Open Graph tags so crawlers that don't
+		// run JS still get a rich link preview.
+		indexPath := filepath.Join(buildDir, "index.html")
+		shell, err := os.ReadFile(indexPath)
+		if err != nil {
+			c.File(indexPath) // preserve the prior behaviour (404 if missing)
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(injectOG(string(shell), c, siteName, lookup, tz)))
 	}
 }

@@ -67,7 +67,8 @@ export const api = {
 		// feed (no args) | search (origin+destination [+date/time]) | my-rides (phone)
 		list: (params: RideSearchParams = {}, phone?: string) =>
 			unwrap<PublicRide[] | Ride[]>(gen.listRides(params, phone ? phoneHeader(phone) : undefined)),
-		get: (id: string) => unwrap<Ride>(gen.getRide(id)),
+		// public — no phone (the detail page is shareable; contact is gated via interests)
+		get: (id: string) => unwrap<PublicRide>(gen.getRide(id)),
 		post: (body: PostRideBody) => unwrap<Ride>(gen.createRide(body)),
 		del: (id: string, phone: string) => unwrap<null>(gen.deleteRide(id, { phone })),
 		listInterests: (id: string, phone: string) =>

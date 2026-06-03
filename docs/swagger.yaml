@@ -790,7 +790,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Ride'
+            $ref: '#/definitions/handler.PublicRide'
         "404":
           description: Not Found
           schema:

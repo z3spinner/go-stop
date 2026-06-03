@@ -302,6 +302,68 @@ test('searcher cancels a pending contact request', async ({ page }) => {
   expect(status).toBe(404);
 });
 
+// ── 7c. Ride detail page: navigation, share, server OG, no phone leak ──────────
+async function seedRide(page, origin, destination, flexibility = 30) {
+  return page.evaluate(async ({ driver, origin, destination, flexibility }) => {
+    const r = await fetch('/api/rides', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driver_name: driver.name, phone: driver.phone, origin, destination,
+        departure_at: new Date(Date.now() + 3 * 3600 * 1000).toISOString(), flexibility,
+      }),
+    });
+    return (await r.json()).ID;
+  }, { driver: DRIVER, origin, destination, flexibility });
+}
+
+test('ride detail page is public-safe: no phone in API or page, OG meta server-rendered', async ({ page, request }) => {
+  await page.goto(BASE);
+  const o = `OgA${Date.now()}`, d = `OgB${Date.now()}`;
+  const rideId = await seedRide(page, o, d, 30);
+  expect(rideId).toBeTruthy();
+
+  // Public API must NOT leak the driver's phone.
+  const ride = await (await request.get(`${BASE}/api/rides/${rideId}`)).json();
+  expect(ride.Phone).toBeUndefined();
+  expect(ride.Origin).toBe(o);
+
+  // The server injects per-ride Open Graph tags into the raw HTML (what crawlers
+  // see — they don't run JS).
+  const html = await (await request.get(`${BASE}/rides/${rideId}`)).text();
+  expect(html).toContain(`<meta property="og:title" content="${o} → ${d}"/>`);
+  expect(html).toContain('property="og:image"');
+  expect(html).toContain('name="twitter:card" content="summary_large_image"');
+
+  // The rendered page shows the request-contact action + a share button, no phone.
+  await setProfile(page, SEARCHER);
+  await page.goto(`${BASE}/rides/${rideId}`);
+  await expect(page.locator('.detail-card .btn-interest')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('.btn-share')).toBeVisible();
+  await expect(page.locator('a[href^="tel:"]')).toHaveCount(0);
+});
+
+test('clicking a ride card opens the ride detail page', async ({ page }) => {
+  await page.goto(BASE);
+  const o = `NavA${Date.now()}`, d = `NavB${Date.now()}`;
+  const rideId = await seedRide(page, o, d, 0);
+  expect(rideId).toBeTruthy();
+
+  await setProfile(page, SEARCHER);
+  await page.goto(`${BASE}/search?origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`);
+  await page.locator(`a.card-detail-link[data-ride-id="${rideId}"]`).first().click();
+
+  await expect(page).toHaveURL(new RegExp(`/rides/${rideId}`));
+  await expect(page.locator('.detail-card')).toBeVisible();
+  await expect(page.locator('.btn-share')).toBeVisible();
+});
+
+test('home page has a share button', async ({ page }) => {
+  await page.goto(BASE);
+  await setFr(page);
+  await page.reload();
+  await expect(page.locator('.btn-share')).toBeVisible();
+});
+
 // ── 8. Alert creation — all 4 modes ──────────────────────────────────────────
 test('searcher creates alerts in all four modes', async ({ page }) => {
   await setProfile(page, SEARCHER);
