@@ -39,7 +39,7 @@
 </svelte:head>
 
 <div class="detail-head mb-3 flex items-center gap-2">
-	<h2 class="text-xl font-semibold">{m.detailRideTitle()}</h2>
+	<h2 class="detail-title text-xl font-semibold">{m.detailRideTitle()}</h2>
 	{#if ride}<ShareButton title={`${ride.Origin} → ${ride.Destination}`} text={m.shareRideText()} />{/if}
 </div>
 
@@ -58,3 +58,12 @@
 		<ContactOrInterest {ride} {contactPhone} />
 	</div>
 {/if}
+
+<style>
+	/* The global `h2 { margin: 0 0 16px }` (legacy.css) would inflate this flex
+	   row and push the share icon below the title's centre; the wrapper's own
+	   mb-3 already provides the spacing, so drop the heading's bottom margin. */
+	.detail-title {
+		margin-bottom: 0;
+	}
+</style>
