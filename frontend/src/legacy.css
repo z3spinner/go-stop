@@ -50,6 +50,7 @@ p.tagline { color: var(--gray-600); margin: 0 0 32px; }
 .btn-primary:hover { background: var(--blue-dark); }
 .btn-secondary { background: white; color: var(--blue); border: 2px solid var(--blue); }
 .btn-secondary:hover { background: var(--gray-100); }
+.btn:disabled { opacity: 0.5; cursor: default; }
 .btn-danger { background: var(--red); color: white; font-size: 0.9rem; padding: 8px 12px; width: auto; }
 .btn-back {
   background: none;
