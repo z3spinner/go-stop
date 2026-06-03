@@ -13,6 +13,9 @@
 	let alerts = $state<Request[]>([]);
 	let requests = $state<MyInterest[]>([]);
 	let loaded = $state(false);
+	// Returning users have their phone saved, so the page auto-loads on mount and
+	// the lookup form is redundant. Only show it when there's no saved profile phone.
+	let needsPhone = $state(get(userPhone).trim() === '');
 
 	async function load(e?: SubmitEvent) {
 		e?.preventDefault();
@@ -32,10 +35,12 @@
 </script>
 
 <h2 class="mb-3 text-xl font-semibold">{m.mySearchesTitle()}</h2>
-<form id="my-searches-form" onsubmit={load} class="mb-4">
-	<label class="mb-3 block">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
-	<button type="submit" class="btn btn-primary">{m.btnShowSearches()}</button>
-</form>
+{#if needsPhone}
+	<form id="my-searches-form" onsubmit={load} class="mb-4">
+		<label class="mb-3 block">{m.labelPhoneCheck()}<input name="phone" type="tel" bind:value={phone} /></label>
+		<button type="submit" class="btn btn-primary">{m.btnShowSearches()}</button>
+	</form>
+{/if}
 
 <div id="my-searches-content">
 	<section>
