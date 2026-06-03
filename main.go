@@ -72,7 +72,7 @@ func main() {
 	expressInterest    := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
 	acceptInterest     := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
-	cancelInterest     := usecase.NewCancelInterest(interestRepo)
+	cancelInterest     := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, notifier)
 
 	serviceTZ := time.UTC
 	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
