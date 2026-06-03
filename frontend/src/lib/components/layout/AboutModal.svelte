@@ -5,10 +5,12 @@
 </script>
 
 <svelte:window onkeydown={(e) => { if (e.key === 'Escape') onclose(); }} />
-<div class="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onclick={onclose} role="presentation">
-	<div class="modal max-h-[85vh] w-full max-w-lg overflow-auto rounded bg-white p-5" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex={-1}>
-		<h3 class="mb-2 text-lg font-semibold">{m.aboutTitle()}</h3>
-		<div class="prose prose-sm">{@html m.aboutBody({ siteName: $config.siteName })}</div>
-		<button type="button" class="btn-modal-close mt-4 rounded border px-3 py-1" onclick={onclose}>{m.privacyClose()}</button>
+<div class="modal-overlay" onclick={onclose} role="presentation">
+	<div class="modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex={-1}>
+		<div class="modal-header">
+			<h2>{m.aboutTitle()}</h2>
+			<button type="button" class="btn-modal-close" onclick={onclose}>{m.privacyClose()}</button>
+		</div>
+		<div class="modal-body">{@html m.aboutBody({ siteName: $config.siteName })}</div>
 	</div>
 </div>

@@ -232,7 +232,7 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-ghost-inline {
   flex: 1; min-width: 0;
   background: none; border: none; border-radius: var(--radius);
-  font-size: 0.75rem; font-weight: 600; line-height: 1.3;
+  font-size: 0.95rem; font-weight: 600; line-height: 1.3;
   color: var(--blue); cursor: pointer; padding: 10px 4px;
   text-align: center;
 }
