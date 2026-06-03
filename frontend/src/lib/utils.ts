@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { getLocale } from '$lib/paraglide/runtime';
-import * as m from '$lib/paraglide/messages';
+import { m } from '$lib/paraglide/messages';
 import type { Flexibility } from './types';
 
 export function cn(...inputs: ClassValue[]) {
@@ -29,9 +29,9 @@ export function normalizePhone(phone: string): string {
 
 /** Compact flexibility tag, e.g. "Exact" / "±30 min" / "±60 min". */
 export function flexLabel(flex: Flexibility | number): string {
-	if (flex === 30) return m['flexLabel30']();
-	if (flex === 60) return m['flexLabel60']();
-	if (flex === 0) return m['flexLabelExact']();
+	if (flex === 30) return m.flexLabel30();
+	if (flex === 60) return m.flexLabel60();
+	if (flex === 0) return m.flexLabelExact();
 	return `${flex} min`;
 }
 
