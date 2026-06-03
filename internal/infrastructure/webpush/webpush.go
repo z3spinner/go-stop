@@ -61,7 +61,10 @@ func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) erro
 		VAPIDPublicKey:  n.vapidPublic,
 		VAPIDPrivateKey: n.vapidPrivate,
 		Subscriber:      subscriber,
-		TTL:             86400,
+		// How long the push service holds an undelivered message for an offline
+		// device before dropping it. Ride alerts are time-sensitive, so 6h avoids
+		// waking a device hours later for a ride that has already departed.
+		TTL:             6 * 60 * 60, // 6 hours
 		Urgency:         webpushlib.UrgencyHigh,
 	})
 	if err != nil {
