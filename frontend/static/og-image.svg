@@ -1,22 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="'DejaVu Sans','Helvetica Neue',Arial,sans-serif">
-  <defs>
-    <linearGradient id="route" gradientUnits="userSpaceOnUse" x1="500" y1="0" x2="700" y2="0">
-      <stop offset="0%" stop-color="#28a836"/>
-      <stop offset="100%" stop-color="#c81e1e"/>
-    </linearGradient>
-  </defs>
-
   <rect width="1200" height="630" fill="#f7faf7"/>
   <rect x="0" y="0" width="1200" height="16" fill="#28a836"/>
   <rect x="0" y="614" width="1200" height="16" fill="#c81e1e"/>
 
-  <text x="600" y="248" text-anchor="middle" font-size="94" font-weight="700" fill="#16331c">Go Stop Saillans!</text>
-  <text x="600" y="318" text-anchor="middle" font-size="40" fill="#5b6b5e">Trajets locaux, contact direct</text>
+  <!-- Real logo mark, vertically centred on the left -->
+  <svg x="96" y="155" width="320" height="320" viewBox="0 0 512 512">
+    <defs>
+      <clipPath id="c">
+        <rect width="512" height="512" rx="115" ry="115"/>
+      </clipPath>
+      <linearGradient id="gl" x1="0%" y1="0%" x2="80%" y2="100%">
+        <stop offset="0%" stop-color="#4CD964"/>
+        <stop offset="100%" stop-color="#28A836"/>
+      </linearGradient>
+      <linearGradient id="gr" x1="20%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#FF4538"/>
+        <stop offset="100%" stop-color="#C81E1E"/>
+      </linearGradient>
+      <filter id="ds" x="-25%" y="-25%" width="150%" height="150%">
+        <feDropShadow dx="0" dy="5" stdDeviation="10" flood-color="rgba(0,0,0,0.32)"/>
+      </filter>
+    </defs>
+    <g clip-path="url(#c)">
+      <rect x="0"   y="0" width="256" height="512" fill="url(#gl)"/>
+      <rect x="256" y="0" width="256" height="512" fill="url(#gr)"/>
+    </g>
+    <g filter="url(#ds)" fill="none" stroke="white" stroke-width="22"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 196,175 A 106,106 0 1 0 234,256 L 278,256"/>
+      <circle cx="384" cy="256" r="106"/>
+    </g>
+    <g filter="url(#ds)">
+      <polygon points="90,196 90,316 198,256" fill="white"/>
+    </g>
+    <g filter="url(#ds)">
+      <rect x="330" y="202" width="108" height="108" rx="20" ry="20" fill="white"/>
+    </g>
+  </svg>
 
-  <!-- "Go → Stop" motif echoing the logo: green play triangle, green→red link, red stop square -->
-  <g>
-    <polygon points="448,404 448,464 502,434" fill="#28a836"/>
-    <rect x="512" y="427" width="176" height="14" rx="7" fill="url(#route)"/>
-    <rect x="698" y="406" width="56" height="56" rx="14" fill="#c81e1e"/>
-  </g>
+  <!-- Title + tagline, left-aligned beside the logo -->
+  <text x="452" y="300" font-size="72" font-weight="700" fill="#16331c">Go Stop Saillans!</text>
+  <text x="455" y="364" font-size="38" fill="#5b6b5e">Trajets locaux, contact direct</text>
 </svg>
