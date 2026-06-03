@@ -82,6 +82,8 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   margin-bottom: 12px;
 }
 .card-route { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+/* the → glyph sits on the baseline and reads low next to cap-height text; nudge it up */
+.route-arrow { vertical-align: 0.1em; }
 .card-meta { font-size: 0.9rem; color: var(--gray-600); margin-bottom: 8px; }
 .card-contact { font-size: 0.95rem; }
 

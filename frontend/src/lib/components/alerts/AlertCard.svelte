@@ -27,7 +27,7 @@
 </script>
 
 <div class="card rounded border p-3" id="card-{request.ID}" style:opacity={deleted ? 0.4 : 1}>
-	<div class="card-route font-medium" translate="no">{m.alertCard({ origin: request.Origin, destination: request.Destination })}</div>
+	<div class="card-route font-medium" translate="no">{request.Origin} <span class="route-arrow">→</span> {request.Destination}</div>
 	<div class="card-meta flex flex-wrap items-center gap-2 text-sm text-gray-600">
 		{#if !hasDate && !hasTime}
 			<span class="tag tag-anytime">{m.alertAnytimeLabel()}</span>

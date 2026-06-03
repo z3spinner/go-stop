@@ -38,7 +38,7 @@
 </script>
 
 <div class="card rounded border p-3" id="card-{ride.ID}" style:opacity={deleted ? 0.4 : 1}>
-	<div class="card-route font-medium" translate="no">{ride.Origin} → {ride.Destination}</div>
+	<div class="card-route font-medium" translate="no">{ride.Origin} <span class="route-arrow">→</span> {ride.Destination}</div>
 	<div class="card-meta flex flex-wrap items-center gap-2 text-sm text-gray-600">
 		<span>{formatTime(ride.DepartureAt)}</span>
 		<span class="tag">{flexLabel(ride.Flexibility)}</span>

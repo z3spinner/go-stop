@@ -8,7 +8,7 @@
 </script>
 
 <div class="card rounded border p-3" id="req-card-{interest.id}">
-	<div class="card-route font-medium" translate="no">{interest.origin} → {interest.destination}</div>
+	<div class="card-route font-medium" translate="no">{interest.origin} <span class="route-arrow">→</span> {interest.destination}</div>
 	<div class="card-meta flex flex-wrap items-center gap-2 text-sm text-gray-600">
 		<span>{formatTime(interest.departure_at)}</span>
 		<span>{interest.driver_name}</span>

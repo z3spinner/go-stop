@@ -19,7 +19,7 @@
 	<p class="error text-red-600">{err}</p>
 {:else if ride}
 	<div class="card detail-card rounded border p-3">
-		<div class="card-route font-medium" translate="no">{ride.Origin} → {ride.Destination}</div>
+		<div class="card-route font-medium" translate="no">{ride.Origin} <span class="route-arrow">→</span> {ride.Destination}</div>
 		<div class="card-meta flex gap-2 text-sm text-gray-600"><span>{formatTime(ride.DepartureAt)}</span><span class="tag">{flexLabel(ride.Flexibility)}</span></div>
 		<div class="detail-table mt-2">
 			<div>{m.labelDriver()}: {ride.DriverName}</div>

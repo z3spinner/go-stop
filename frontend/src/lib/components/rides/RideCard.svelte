@@ -14,7 +14,7 @@
 </script>
 
 <div class="card card-compact rounded border p-3">
-	<div class="card-route font-medium" translate="no">{ride.Origin} → {ride.Destination}</div>
+	<div class="card-route font-medium" translate="no">{ride.Origin} <span class="route-arrow">→</span> {ride.Destination}</div>
 	<div class="card-meta flex flex-wrap items-center gap-2 text-sm text-gray-600">
 		<span>{formatTime(ride.DepartureAt)}</span>
 		<span class="tag rounded bg-gray-100 px-1">{flexLabel(ride.Flexibility)}</span>

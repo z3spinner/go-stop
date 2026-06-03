@@ -21,7 +21,7 @@
 	<p class="error text-red-600">{err}</p>
 {:else if req}
 	<div class="card detail-card rounded border p-3">
-		<div class="card-route font-medium" translate="no">{req.Origin} → {req.Destination}</div>
+		<div class="card-route font-medium" translate="no">{req.Origin} <span class="route-arrow">→</span> {req.Destination}</div>
 		<div class="card-meta flex gap-2 text-sm text-gray-600"><span>{formatTime(req.DepartureAt)}</span><span class="tag">{flexLabel(req.Flexibility)}</span></div>
 		<div class="detail-table mt-2">
 			<div>{m.labelSearcher()}: {req.SearcherName}</div>

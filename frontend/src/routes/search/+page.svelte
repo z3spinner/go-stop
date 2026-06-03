@@ -96,7 +96,7 @@
 	<div id="results" class="results-grid mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
 		{#each [{ list: fwd, o: origin, d: destination }, { list: rev, o: destination, d: origin }] as col}
 			<div class="results-col">
-				<div class="results-col-header font-semibold" translate="no">{col.o} → {col.d}</div>
+				<div class="results-col-header font-semibold" translate="no">{col.o} <span class="route-arrow">→</span> {col.d}</div>
 				{#if col.list.length === 0}
 					<div class="col-empty">
 						<p>{m.noRidesCol()}</p>

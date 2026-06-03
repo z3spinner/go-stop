@@ -25,7 +25,7 @@
 		<p class="error text-red-600">{err}</p>
 	{:else if contact}
 		<div class="card contact-card rounded border p-3">
-			<div class="card-route font-medium" translate="no">{contact.origin} → {contact.destination}</div>
+			<div class="card-route font-medium" translate="no">{contact.origin} <span class="route-arrow">→</span> {contact.destination}</div>
 			<div class="card-meta text-sm text-gray-600">{formatTime(contact.departure_at)}</div>
 			<div class="detail-table mt-2">
 				<div>{contact.role === 'driver' ? m.labelDriver() : m.labelSearcher()}: {contact.name}</div>
