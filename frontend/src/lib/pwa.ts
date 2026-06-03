@@ -45,6 +45,22 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
 	return out;
 }
 
+/**
+ * Upsert a push subscription to the backend. Returns success.
+ * Exported for testing — the `ON CONFLICT (phone, endpoint) DO UPDATE` upsert
+ * makes a repeat call a no-op, which is what lets updateBellState re-post safely.
+ */
+export async function postSubscription(phone: string, sub: PushSubscription): Promise<boolean> {
+	const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+	if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
+	try {
+		await api.subscriptions.upsert({ phone, endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 /** Subscribe to Web Push and register with the backend. Returns success. */
 export async function trySubscribePush(phone: string): Promise<boolean> {
 	if (!browser || !('serviceWorker' in navigator) || !('PushManager' in window)) return false;
@@ -56,10 +72,7 @@ export async function trySubscribePush(phone: string): Promise<boolean> {
 			userVisibleOnly: true,
 			applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource
 		});
-		const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-		if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) return false;
-		await api.subscriptions.upsert({ phone, endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth });
-		return true;
+		return await postSubscription(phone, sub);
 	} catch {
 		return false;
 	}
@@ -75,7 +88,15 @@ export async function updateBellState(phone?: string): Promise<void> {
 	if (perm !== 'granted') return pushState.set('default');
 	const reg = await navigator.serviceWorker.ready;
 	const sub = await reg.pushManager.getSubscription();
-	if (sub) return pushState.set('subscribed');
+	if (sub) {
+		// The browser's pushManager keeps handing back this subscription even after
+		// the push service rotated it (410 Gone) and our server purged the endpoint.
+		// Re-post it on every load so the DB recovers; the upsert is a no-op when
+		// nothing changed. Without this the bell stays green while pushes silently
+		// stop (issue #1).
+		if (phone) await postSubscription(phone, sub);
+		return pushState.set('subscribed');
+	}
 	if (phone && (await trySubscribePush(phone))) return pushState.set('subscribed');
 	pushState.set('granted');
 }

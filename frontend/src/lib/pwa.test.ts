@@ -1,8 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { urlBase64ToUint8Array, filterUnseenNotifications, maybeMarkStandalonePrompted } from './pwa';
+import { get } from 'svelte/store';
+import {
+	urlBase64ToUint8Array,
+	filterUnseenNotifications,
+	maybeMarkStandalonePrompted,
+	postSubscription,
+	updateBellState,
+	pushState
+} from './pwa';
+import { api } from './api';
+
+// updateBellState bails out under SSR (`browser === false`); force it true so the
+// re-post path runs. The pure-function tests below don't read `browser`.
+vi.mock('$app/environment', () => ({ browser: true }));
 
 beforeEach(() => localStorage.clear());
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
+});
+
+/** A minimal PushSubscription whose toJSON() yields the given shape. */
+const fakeSub = (json: unknown) => ({ toJSON: () => json }) as unknown as PushSubscription;
 
 describe('urlBase64ToUint8Array', () => {
 	it('decodes a base64url VAPID key to bytes', () => {
@@ -26,5 +45,61 @@ describe('maybeMarkStandalonePrompted', () => {
 		expect(maybeMarkStandalonePrompted()).toBe(true);
 		expect(maybeMarkStandalonePrompted()).toBe(false);
 		expect(localStorage.getItem('standalone_notif_prompted')).toBe('1');
+	});
+});
+
+describe('postSubscription', () => {
+	it('upserts a complete subscription and returns true', async () => {
+		const upsert = vi.spyOn(api.subscriptions, 'upsert').mockResolvedValue(null);
+		const ok = await postSubscription('0600000001', fakeSub({ endpoint: 'https://push/x', keys: { p256dh: 'p', auth: 'a' } }));
+		expect(ok).toBe(true);
+		expect(upsert).toHaveBeenCalledWith({ phone: '0600000001', endpoint: 'https://push/x', p256dh: 'p', auth: 'a' });
+	});
+
+	it('does not post and returns false when keys are missing', async () => {
+		const upsert = vi.spyOn(api.subscriptions, 'upsert').mockResolvedValue(null);
+		const ok = await postSubscription('0600000001', fakeSub({ endpoint: 'https://push/x', keys: {} }));
+		expect(ok).toBe(false);
+		expect(upsert).not.toHaveBeenCalled();
+	});
+
+	it('swallows upsert errors and returns false', async () => {
+		vi.spyOn(api.subscriptions, 'upsert').mockRejectedValue(new Error('network'));
+		const ok = await postSubscription('0600000001', fakeSub({ endpoint: 'https://push/x', keys: { p256dh: 'p', auth: 'a' } }));
+		expect(ok).toBe(false);
+	});
+});
+
+describe('updateBellState (issue #1: re-post on every load)', () => {
+	// Stub just enough of the browser push surface for updateBellState to reach
+	// the getSubscription() branch.
+	function stubPushEnv(getSubscription: () => unknown) {
+		vi.stubGlobal('Notification', { permission: 'granted' });
+		vi.stubGlobal('matchMedia', () => ({ matches: false }));
+		vi.stubGlobal('navigator', {
+			userAgent: 'vitest',
+			serviceWorker: { ready: Promise.resolve({ pushManager: { getSubscription } }) }
+		});
+	}
+
+	it('re-posts the existing subscription so the DB recovers after a 410 rotation', async () => {
+		const upsert = vi.spyOn(api.subscriptions, 'upsert').mockResolvedValue(null);
+		const sub = fakeSub({ endpoint: 'https://push/old', keys: { p256dh: 'p', auth: 'a' } });
+		stubPushEnv(async () => sub);
+
+		await updateBellState('0600000001');
+
+		expect(upsert).toHaveBeenCalledWith({ phone: '0600000001', endpoint: 'https://push/old', p256dh: 'p', auth: 'a' });
+		expect(get(pushState)).toBe('subscribed');
+	});
+
+	it('reports subscribed without posting when no phone is known', async () => {
+		const upsert = vi.spyOn(api.subscriptions, 'upsert').mockResolvedValue(null);
+		stubPushEnv(async () => fakeSub({ endpoint: 'https://push/old', keys: { p256dh: 'p', auth: 'a' } }));
+
+		await updateBellState();
+
+		expect(upsert).not.toHaveBeenCalled();
+		expect(get(pushState)).toBe('subscribed');
 	});
 });
