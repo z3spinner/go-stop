@@ -46,6 +46,9 @@ shadcn components style via utility classes, not the legacy semantic class names
 **D8 — The Go index template + version cache-busting plumbing is removed.**
 `main.go` static serving is replaced with a single static-dir serve of `web/build` plus an SPA fallback. `internal/boundaries/handler/index_handler.go` and the `{{.Version}}` template are deleted (Vite content-hashes assets). `internal/version` is retained only for the startup log line.
 
+**D9 — The API client and domain types are GENERATED from OpenAPI, not hand-written (mirrors the bizniz toolchain).**
+Instead of a hand-maintained `api.ts`/`types.ts` (the original Appendix A), the Go handlers carry `swaggo/swag` annotations, `make swagger` emits `docs/swagger.json`, and the frontend runs `orval` to generate a typed client + models into `frontend/src/lib/api/generated/`. This makes the TS types correct *by construction* — eliminating the inconsistent-casing risk (PascalCase rides/requests vs snake_case interests) since the schema is derived from the actual Go structs. A thin, hand-written **facade** `frontend/src/lib/api.ts` re-groups the generated operations into the `api.<resource>.<verb>()` surface the components use, and `frontend/src/lib/types.ts` re-exports the generated models under the friendly names (`Ride`, `PublicRide`, …) plus the `Flexibility = 0 | 30 | 60` union. Pattern source: `/home/zeno/bizniz/dev/bizbiz-apiserver` (swag annotations + `make swagger`) and `/home/zeno/bizniz/dev/bizniz-react-frontend` (`orval.config.ts`, `client` + custom mutator, generated file consumed via an adapter layer). Task 9 is split into **Task 9a** (backend annotations + spec) and **Task 9b** (frontend orval client + facade + tests). **Appendix A below is now the FACADE CONTRACT + expected-model reference**: the generated models must match those shapes, and the `api` facade must expose exactly that surface (downstream Tasks 13–28 depend on it and are unchanged).
+
 ---
 
 ## File Structure
@@ -1608,99 +1611,213 @@ git commit -m "feat(frontend): persisted stores (profile, last search)"
 
 ---
 
-### Task 9: `api.ts` + `types.ts` — typed API client
+### Task 9a: Backend — OpenAPI (`swaggo/swag`) annotations + `make swagger`
+
+> Mirrors `/home/zeno/bizniz/dev/bizbiz-apiserver`. Annotate every Gin handler so `swag init` emits an accurate `docs/swagger.json` the frontend generates from. The schema is derived from the actual Go structs, so the inconsistent casing (PascalCase rides/requests, snake_case interests/notifications, camelCase config/vapid) is captured automatically — that is the whole point.
 
 **Files:**
-- Create: `frontend/src/lib/types.ts` (Appendix A)
-- Create: `frontend/src/lib/api.ts` (Appendix A)
-- Test: `frontend/src/lib/api.test.ts`
+- Modify: `main.go` (general API info annotations above `func main()`)
+- Modify: every handler in `internal/boundaries/handler/*.go` (swag comment block per handler func)
+- Create (if needed): named response DTO structs for handlers that currently return `gin.H`/inline objects, so swag can name + shape them (e.g. `ContactInfo`, `ExpressInterestResponse`, `AcceptInterestResponse`, `ConfigResponse`, `VapidKeyResponse`, `ErrorResponse`)
+- Create (generated): `docs/docs.go`, `docs/swagger.json`, `docs/swagger.yaml`
+- Modify: `go.mod` (`github.com/swaggo/swag`), `Makefile` (`swagger`, `swagger-install` targets)
 
-- [ ] **Step 1: Add the type definitions**
+- [ ] **Step 1: Study the reference annotation style**
 
-Create `frontend/src/lib/types.ts` from Appendix A (verbatim).
+Read 1–2 annotated handlers in `/home/zeno/bizniz/dev/bizbiz-apiserver/internal/interfaces/webservice/gin/handlers_authuser.go` (the `@Summary`/`@Tags`/`@Param`/`@Success {object} T`/`@Failure`/`@Router` block above each func). Read `/home/zeno/bizniz/dev/bizbiz-apiserver/Makefile` `swagger`/`swagger-install` targets.
 
-- [ ] **Step 2: Write the failing API-client test**
+- [ ] **Step 2: General info in `main.go`**
 
-`frontend/src/lib/api.test.ts`:
-```typescript
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { api, ApiError } from './api';
-
-function mockFetch(status: number, body: unknown, capture?: (url: string, init: RequestInit) => void) {
-	return vi.fn(async (url: string, init: RequestInit) => {
-		capture?.(url, init);
-		const text = body === undefined ? '' : JSON.stringify(body);
-		return new Response(status === 204 ? null : text, { status });
-	});
-}
-
-afterEach(() => vi.unstubAllGlobals());
-
-describe('api client', () => {
-	it('GET /api/config parses JSON', async () => {
-		vi.stubGlobal('fetch', mockFetch(200, { siteName: 'Go-Stop', returnDelayHours: 2 }));
-		const cfg = await api.config.get();
-		expect(cfg.siteName).toBe('Go-Stop');
-	});
-
-	it('throws ApiError with the server error message on non-2xx', async () => {
-		vi.stubGlobal('fetch', mockFetch(403, { error: 'unauthorized' }));
-		await expect(api.rides.del('1', '0600000000')).rejects.toMatchObject({
-			name: 'ApiError', status: 403, message: 'unauthorized'
-		});
-	});
-
-	it('returns null for 204 responses', async () => {
-		vi.stubGlobal('fetch', mockFetch(204, undefined));
-		await expect(api.subscriptions.remove('0600000000')).resolves.toBeNull();
-	});
-
-	it('sets X-Phone header for owner-scoped reads', async () => {
-		let seen: RequestInit | undefined;
-		vi.stubGlobal('fetch', mockFetch(200, [], (_u, init) => (seen = init)));
-		await api.requests.list('0611000001');
-		expect((seen!.headers as Record<string, string>)['X-Phone']).toBe('0611000001');
-	});
-
-	it('sends phone in the body for mutations and JSON content-type', async () => {
-		let url = '', init: RequestInit | undefined;
-		vi.stubGlobal('fetch', mockFetch(204, undefined, (u, i) => { url = u; init = i; }));
-		await api.rides.del('42', '0611000001');
-		expect(url).toBe('/api/rides/42');
-		expect(init!.method).toBe('DELETE');
-		expect(JSON.parse(init!.body as string)).toEqual({ phone: '0611000001' });
-		expect((init!.headers as Record<string, string>)['Content-Type']).toBe('application/json');
-	});
-
-	it('builds search query strings, omitting empty params', async () => {
-		let url = '';
-		vi.stubGlobal('fetch', mockFetch(200, [], (u) => (url = u)));
-		await api.rides.list({ origin: 'Saillans', destination: 'Crest', search_time: '' });
-		expect(url).toBe('/api/rides?origin=Saillans&destination=Crest');
-	});
-});
+Above `func main()`:
+```go
+// @title        Go-Stop API
+// @version      1.0
+// @description  Local ride-sharing notice board API.
+// @BasePath     /api
 ```
 
-- [ ] **Step 3: Run it to confirm failure**
+- [ ] **Step 3: Annotate every handler.** First enumerate the routes by reading the `api := r.Group("/api")` block in `main.go`, then annotate each handler function. Use these stable `@ID`s (they become the generated TS function names — keep them EXACT):
 
-Run: `cd frontend && npm run test:unit -- --run src/lib/api.test.ts`
-Expected: FAIL (module missing).
+| Method & path (under `/api`) | `@ID` | `@Tags` | Request | Success |
+|---|---|---|---|---|
+| GET `/rides` | `listRides` | rides | query: origin, destination, departure_at, search_date, search_time; header `X-Phone` (optional) | 200 `{array}` publicRide (or full Ride[] in my-rides mode — annotate the public shape) |
+| POST `/rides` | `createRide` | rides | body PostRideBody | 201 `{object}` Ride |
+| GET `/rides/{id}` | `getRide` | rides | path id | 200 `{object}` Ride |
+| DELETE `/rides/{id}` | `deleteRide` | rides | path id; body `{phone}` | 204 |
+| GET `/rides/{id}/interests` | `listRideInterests` | interests | path id; header X-Phone | 200 `{array}` InterestListItem |
+| GET `/rides/{id}/requests` | `listRideRequests` | rides | path id; header X-Phone | 200 `{array}` PublicRequest |
+| POST `/rides/{id}/interest` | `expressInterest` | interests | path id; body `{phone,name}` | 201 `{object}` ExpressInterestResponse |
+| POST `/rides/{id}/feedback` | `submitRideFeedback` | rides | path id; body `{phone,taken}` | 204 |
+| POST `/interests/{id}/accept` | `acceptInterest` | interests | path id; body `{phone}` | 200 `{object}` AcceptInterestResponse |
+| GET `/interests` | `listMyInterests` | interests | header X-Phone | 200 `{array}` MyInterest |
+| GET `/interests/{id}/contact` | `getInterestContact` | interests | path id; header X-Phone | 200 `{object}` ContactInfo |
+| POST `/requests` | `createRequest` | requests | body PostRequestBody | 201 `{object}` Request |
+| GET `/requests` | `listRequests` | requests | header X-Phone | 200 `{array}` Request |
+| GET `/requests/{id}` | `getRequest` | requests | path id; header X-Phone | 200 `{object}` Request |
+| DELETE `/requests/{id}` | `deleteRequest` | requests | path id; body `{phone}` | 204 |
+| POST `/requests/{id}/ping` | `pingRequest` | requests | path id; header X-Phone; body `{ride_id}` | 204 |
+| POST `/subscriptions` | `upsertSubscription` | subscriptions | body SubscriptionBody | 201 |
+| DELETE `/subscriptions/{phone}` | `removeSubscription` | subscriptions | path phone | 204 |
+| GET `/notifications` | `listNotifications` | notifications | header X-Phone | 200 `{array}` NotificationItem |
+| GET `/config` | `getConfig` | config | — | 200 `{object}` ConfigResponse |
+| GET `/stats` | `getStats` | stats | — | 200 `{object}` Stats |
+| GET `/vapid-public-key` | `getVapidPublicKey` | vapid | — | 200 `{object}` VapidKeyResponse |
+| GET `/destinations` | `listDestinations` | destinations | — | 200 `{array}` string |
 
-- [ ] **Step 4: Implement the client**
+Example block (adapt per handler; `@Router` path is relative to `@BasePath /api`):
+```go
+// DeleteRide deletes a ride owned by the caller.
+// @ID       deleteRide
+// @Tags     rides
+// @Accept   json
+// @Param    id    path  string                 true  "Ride ID"
+// @Param    body  body  handler.DeleteRideBody true  "Owner phone"
+// @Success  204
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Router   /rides/{id} [delete]
+func (h *RideHandler) Delete(c *gin.Context) { ... }
+```
+For handlers that bind an inline anonymous body or return `gin.H`, introduce a named struct in the handler package (e.g. `type DeleteRideBody struct { Phone string \`json:"phone"\` }`, `type ErrorResponse struct { Error string \`json:"error"\` }`, `type ContactInfo struct { Phone string \`json:"phone"\`; Name string \`json:"name"\`; Role string \`json:"role"\`; Origin string \`json:"origin"\`; Destination string \`json:"destination"\`; DepartureAt string \`json:"departure_at"\` }`, etc.) and reference it in the annotation. Where the handler returns a domain struct directly (`domain.Ride`, `domain.Request` — PascalCase, no json tags), reference that type so the generated schema is PascalCase (matching the wire format). Where it returns the handler-local `publicRide`/`publicRequest`, reference those (export them if swag can't resolve unexported types).
 
-Create `frontend/src/lib/api.ts` from Appendix A (verbatim).
+- [ ] **Step 4: Makefile targets**
 
-- [ ] **Step 5: Run the test to confirm pass**
+Append to `/home/zeno/dev/go-stop/Makefile` (tabs):
+```makefile
+swagger-install:
+	go install github.com/swaggo/swag/cmd/swag@latest
 
-Run: `cd frontend && npm run test:unit -- --run src/lib/api.test.ts`
-Expected: PASS (6 tests).
+swagger:
+	swag init -g main.go -o docs --parseDependency --parseInternal
+```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Generate the spec**
+
+Run: `cd /home/zeno/dev/go-stop && (command -v swag || make swagger-install) && make swagger`
+Expected: `docs/swagger.json`, `docs/swagger.yaml`, `docs/docs.go` created. `go build ./...` still succeeds (docs.go compiles).
+
+- [ ] **Step 6: Verify the spec reflects real casing**
+
+Inspect `docs/swagger.json`: the `Ride`/`domain.Ride` schema must have PascalCase properties (`ID`, `DriverName`, `Phone`, `Origin`, `Destination`, `DepartureAt`, `Flexibility`, …); the interest/notification/contact schemas snake_case (`searcher_name`, `ride_id`, `departure_at`); config/vapid camelCase (`siteName`, `returnDelayHours`, `publicKey`). If any are wrong, the struct/annotation needs the right `json` tag or DTO. (Note: `swag` uses the `json` tag when present, else the Go field name.)
+
+- [ ] **Step 7: Commit**
 
 ```bash
 cd /home/zeno/dev/go-stop
-git add frontend
-git commit -m "feat(frontend): typed API client + tests"
+go mod tidy
+git add main.go internal/ docs/ Makefile go.mod go.sum
+git commit -m "feat(server): OpenAPI (swag) annotations + make swagger; generate docs/swagger.json"
+```
+
+---
+
+### Task 9b: Frontend — generate the API client + types via `orval`, facade, tests
+
+> Mirrors `/home/zeno/bizniz/dev/bizniz-react-frontend` (`orval.config.ts`, single generated file, custom mutator, consumed via an adapter). The generated file + spec are COMMITTED so the production build needs no codegen step. The hand-written facade (`api.ts`) and `types.ts` re-exports give downstream Tasks 13–28 the exact `api.<resource>.<verb>()` surface and friendly type names from **Appendix A** (the FACADE CONTRACT).
+
+**Files:**
+- Modify: `frontend/package.json` (orval devDep + `api:generate` script)
+- Create: `frontend/orval.config.ts`
+- Create: `frontend/src/lib/api/fetchMutator.ts`
+- Create (generated, committed): `frontend/src/lib/api/generated/go-stop-api.ts`
+- Create: `frontend/src/lib/api.ts` (facade), update `frontend/src/lib/types.ts` (re-exports)
+- Test: `frontend/src/lib/api.test.ts`
+- Modify: `Makefile` (root `api-generate` target), `.gitignore` (do NOT ignore the generated client — it is committed)
+
+- [ ] **Step 1: Install orval + add scripts**
+
+`cd frontend && npm i -D orval`. Add to `frontend/package.json` scripts: `"api:generate": "orval --config ./orval.config.ts"`.
+
+- [ ] **Step 2: `frontend/orval.config.ts`** (input = the Task 9a spec; single file; fetch client + custom mutator)
+```typescript
+import { defineConfig } from 'orval';
+
+export default defineConfig({
+	gostop: {
+		input: { target: '../docs/swagger.json' },
+		output: {
+			target: './src/lib/api/generated/go-stop-api.ts',
+			mode: 'single',
+			client: 'fetch',
+			override: {
+				mutator: { path: './src/lib/api/fetchMutator.ts', name: 'customFetch' }
+			}
+		}
+	}
+});
+```
+> If the installed `orval` version's `fetch` client + mutator integration proves awkward, the documented fallback is `client: 'axios-functions'` with an axios mutator (exactly the bizniz setup: `npm i axios`, mutator returns an axios call). Prefer `fetch` (no extra dep, same-origin `/api`); only fall back if needed, and note it.
+
+- [ ] **Step 3: `frontend/src/lib/api/fetchMutator.ts`** — base URL, error throwing, 204→null. Exact behavior the facade contract needs:
+```typescript
+export class ApiError extends Error {
+	constructor(public status: number, message: string) {
+		super(message);
+		this.name = 'ApiError';
+	}
+}
+
+// orval's fetch client calls customFetch(url, init) and expects the parsed body.
+export async function customFetch<T>(url: string, init?: RequestInit): Promise<T> {
+	const res = await fetch(url, init);
+	if (res.status === 204) return null as T;
+	const text = await res.text();
+	const data = text ? JSON.parse(text) : null;
+	if (!res.ok) {
+		const msg = data && typeof data === 'object' && 'error' in data ? (data as { error: string }).error : res.statusText;
+		throw new ApiError(res.status, msg);
+	}
+	return data as T;
+}
+```
+> The swagger `@BasePath /api` makes generated paths absolute `/api/...`; with the Vite dev proxy and same-origin prod this needs no base prefix. If orval emits paths WITHOUT the `/api` prefix, prepend it in the mutator (`fetch(\`/api${url}\`, init)`). Verify against the generated output and adjust.
+
+- [ ] **Step 4: Generate**
+
+Run: `cd frontend && npm run api:generate` → creates `src/lib/api/generated/go-stop-api.ts` with one function per `@ID` (`listRides`, `createRide`, `deleteRide`, `getConfig`, …) and model types from the schemas. Inspect the generated function signatures + model names.
+
+- [ ] **Step 5: `frontend/src/lib/types.ts`** — re-export the generated models under the friendly names the components use, and keep the `Flexibility` union. Adjust the right-hand generated names to whatever orval emitted (e.g. `DomainRide`, `HandlerPublicRide`, etc.):
+```typescript
+export type Flexibility = 0 | 30 | 60;
+export type {
+	DomainRide as Ride,
+	HandlerPublicRide as PublicRide,
+	HandlerPublicRequest as PublicRequest,
+	DomainRequest as Request,
+	HandlerInterestListItem as InterestListItem,
+	HandlerMyInterest as MyInterest,
+	HandlerContactInfo as ContactInfo,
+	HandlerExpressInterestResponse as ExpressInterestResponse,
+	HandlerAcceptInterestResponse as AcceptInterestResponse,
+	HandlerNotificationItem as NotificationItem,
+	DomainStats as Stats,
+	HandlerConfigResponse as Config,
+	HandlerVapidKeyResponse as VapidKey
+	// ...map the rest; see Appendix A for the full set of friendly names
+} from './api/generated/go-stop-api';
+```
+Keep request-body types (`PostRideBody`, `PostRequestBody`, `SubscriptionBody`, `RideSearchParams`) as friendly aliases of the generated param/body types, OR hand-define the few that orval inlines. The downstream contract is the Appendix A names.
+
+- [ ] **Step 6: `frontend/src/lib/api.ts`** — the facade. Implement EXACTLY the `api` object surface from **Appendix A** (`api.rides.list/get/post/del/listInterests/listMatchingRequests/feedback`, `api.requests.list/get/post/del/ping`, `api.interests.express/accept/getContact/listMine`, `api.subscriptions.upsert/remove`, `api.notifications.list`, `api.config.get`, `api.stats.get`, `api.vapid.getPublicKey`, `api.destinations.list`), each delegating to the matching generated function. Map the X-Phone header arg and path/body params to the generated signatures. Re-export `ApiError` from the mutator. The point: downstream code keeps calling `api.rides.list(params, phone)` etc. unchanged.
+
+- [ ] **Step 7: Tests** `frontend/src/lib/api.test.ts` — stub global `fetch` and assert the FACADE behavior (intent preserved from the original): `api.config.get()` resolves parsed JSON; a 403 `{error}` rejects with `ApiError` (status+message); 204 → `null`; an owner-scoped read sends the `X-Phone` header with the phone; a mutation sends `phone` in the JSON body; a search omits empty query params. Adapt the exact URL/header assertions to what the generated client + mutator actually produce (inspect a real call), keeping the behavioral intent. At least one test per: error-throwing, 204→null, X-Phone read, body mutation, query building.
+
+- [ ] **Step 8: Run tests + check + build**
+
+Run: `cd frontend && npx vitest run src/lib/api.test.ts` (PASS) and `npm run check` (no errors in api.ts/types.ts/mutator — ignore the known generated `paraglide/server.js` async_hooks error) and `npm run build` (succeeds; confirms `utils.ts`'s `Flexibility` import from `./types` still resolves).
+
+- [ ] **Step 9: Root `Makefile` convenience target + commit**
+
+Append to `/home/zeno/dev/go-stop/Makefile`:
+```makefile
+api-generate: swagger
+	npm run api:generate --prefix frontend
+```
+Confirm the generated client is NOT gitignored (it is committed). Commit:
+```bash
+cd /home/zeno/dev/go-stop
+git add frontend Makefile
+git commit -m "feat(frontend): generate API client+types via orval; facade + tests"
 ```
 
 ---
