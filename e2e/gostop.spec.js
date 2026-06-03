@@ -364,6 +364,29 @@ test('home page has a share button', async ({ page }) => {
   await expect(page.locator('.btn-share')).toBeVisible();
 });
 
+// ── 7d. Dedicated feedback screen (where the reminder notification lands) ──────
+test('feedback screen records the driver answer as the main content', async ({ page }) => {
+  await page.goto(BASE);
+  const o = `FbA${Date.now()}`, d = `FbB${Date.now()}`;
+  const rideId = await seedRide(page, o, d, 0); // owned by DRIVER
+  expect(rideId).toBeTruthy();
+
+  await setProfile(page, DRIVER);
+  await page.goto(`${BASE}/rides/${rideId}/feedback`);
+
+  // The two answer buttons are the page's main content.
+  await expect(page.locator('.feedback-yes')).toBeVisible();
+  await expect(page.locator('.feedback-no')).toBeVisible();
+
+  // Answering "No" posts the feedback and confirms.
+  const [resp] = await Promise.all([
+    page.waitForResponse(r => r.url().includes(`/api/rides/${rideId}/feedback`) && r.request().method() === 'POST'),
+    page.locator('.feedback-no').click(),
+  ]);
+  expect(resp.status()).toBe(204);
+  await expect(page.locator('.feedback-done')).toBeVisible();
+});
+
 // ── 8. Alert creation — all 4 modes ──────────────────────────────────────────
 test('searcher creates alerts in all four modes', async ({ page }) => {
   await setProfile(page, SEARCHER);

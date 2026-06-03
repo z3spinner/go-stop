@@ -31,7 +31,9 @@ func (uc *SendFeedbackReminders) Execute() error {
 		sendToAll(ride.Phone, domain.Message{
 			Title:       "Votre trajet est-il parti avec des passagers ?",
 			Body:        fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
-			URL:         "/my-rides",
+			// Open a dedicated, single-purpose feedback screen rather than burying
+			// the question at the bottom of the My Rides list.
+			URL:         "/rides/" + ride.ID + "/feedback",
 			ContactName: ride.DriverName,
 			Phone:       ride.Phone,
 			Origin:      ride.Origin,

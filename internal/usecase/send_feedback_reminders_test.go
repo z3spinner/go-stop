@@ -59,8 +59,8 @@ func TestSendFeedbackReminders_SendsPushToDriver(t *testing.T) {
 	if !n.called {
 		t.Error("expected push notification to be sent")
 	}
-	if n.lastMsg.URL != "/my-rides" {
-		t.Errorf("expected URL /my-rides, got %s", n.lastMsg.URL)
+	if n.lastMsg.URL != "/rides/ride-1/feedback" {
+		t.Errorf("expected URL /rides/ride-1/feedback, got %s", n.lastMsg.URL)
 	}
 }
 
