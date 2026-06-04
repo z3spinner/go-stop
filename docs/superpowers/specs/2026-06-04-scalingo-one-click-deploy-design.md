@@ -72,8 +72,11 @@ CREATE TABLE app_settings (
 
 `.up.sql` and `.down.sql` (drop table) following the existing
 `internal/infrastructure/postgres/sqlc/migrations/NNN_name.{up,down}.sql`
-convention. Applied by the `postdeploy: migratedb up` step before the web
-formation boots.
+convention. Applied by `migratedb up` in the `web` command (`web: migratedb up
+&& go-stop`) so the table exists before the app reads it at boot. NOTE: on
+Scalingo the `postdeploy` hook runs *after* the web container boots, so a
+migration placed only in `postdeploy` would not exist yet when `vapid.Resolve`
+queries it — the migration must run as part of the web command.
 
 ### 2. Settings repo (`internal/infrastructure/postgres`)
 
