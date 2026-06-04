@@ -23,11 +23,9 @@ This app uses phone number as a lightweight delete credential with **no verifica
 ## Local setup (with Docker — recommended)
 
 ```bash
-# Generate VAPID keys (one-time)
-go run github.com/SherClockHolmes/webpush-go/cmd/vapid-keygen@latest
-
 cp .env.example .env
-# Edit .env — set your VAPID keys and optionally SITE_NAME for your community
+# Optionally edit .env to set SITE_NAME for your community.
+# VAPID keys are generated automatically on first boot if left blank.
 
 docker compose up --build
 ```
@@ -40,9 +38,7 @@ The `app` service uses `reflex` for hot-reload: any change to a `.go` file trigg
 
 ```bash
 export DATABASE_URL="postgres://user:pass@localhost:5432/gostop?sslmode=disable"
-export VAPID_PUBLIC_KEY="your-public-key"
-export VAPID_PRIVATE_KEY="your-private-key"
-export VAPID_EMAIL="mailto:you@example.com"
+# VAPID keys are optional — generated and stored in the DB on first boot if unset.
 export PORT=8080
 
 psql $DATABASE_URL < db/migrations/001_create_tables.sql
