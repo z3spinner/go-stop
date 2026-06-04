@@ -144,12 +144,30 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 /* Prose styling for the {@html} body of the About/Privacy shadcn dialogs. */
 .modal-body {
   overflow-y: auto;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--gray-600);
+}
+.modal-body > :first-child { margin-top: 0; }
+.modal-body h3 {
+  margin: 22px 0 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-500);
+}
+.modal-body p { margin: 0 0 10px; }
+.modal-body strong { color: var(--gray-900); font-weight: 600; }
+.modal-body ul, .modal-body ol { margin: 0 0 10px; padding-left: 18px; }
+.modal-body li { margin: 3px 0; }
+.modal-body code {
+  background: var(--gray-100);
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  font-size: 0.85em;
   color: var(--gray-900);
 }
-.modal-body h3 { margin: 16px 0 4px; font-size: 0.95rem; }
-.modal-body p { margin: 0 0 8px; }
-.modal-body code { background: var(--gray-100); padding: 1px 4px; border-radius: 3px; font-size: 0.85em; }
 
 .notif-prompt {
   text-align: center;
@@ -294,7 +312,8 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-footer-privacy:hover { color: var(--gray-900); }
 
 /* About modal link style */
-.modal-body a { color: var(--blue); }
+.modal-body a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
+.modal-body a:hover { color: var(--blue-dark); }
 
 /* Stats widget on home page */
 .stats-widget {
@@ -598,8 +617,31 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-contact-link { color: var(--blue); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
 .btn-contact-link:hover { text-decoration: underline; }
 .tag-interest-count { background: #fef3c7; color: #92400e; font-weight: 600; }
-.a2hs-steps { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-.a2hs-step { background: var(--gray-100); border-radius: var(--radius); padding: 10px 14px; font-size: 0.95rem; }
+.a2hs-steps { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; counter-reset: a2hs; }
+.a2hs-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--gray-100);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  color: var(--gray-900);
+}
+.a2hs-step::before {
+  counter-increment: a2hs;
+  content: counter(a2hs);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
 .a2hs-icon { font-style: normal; }
 .a2hs-note { font-size: 0.8rem; color: var(--gray-600); margin: 12px 0 0; }
 .poll-toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); max-width: 380px; width: calc(100% - 32px); background: white; border: 1px solid var(--gray-300); border-left: 4px solid var(--blue); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.13); z-index: 200; animation: toast-in 0.2s ease; }

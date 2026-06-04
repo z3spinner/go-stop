@@ -8,10 +8,10 @@
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
-	<Dialog.Content class="max-w-sm max-h-[85vh] overflow-y-auto">
+	<Dialog.Content class="max-w-md sm:max-w-md max-h-[85vh] overflow-y-auto">
 		<Dialog.Header>
 			<Dialog.Title>{m.privacyTitle()}</Dialog.Title>
 		</Dialog.Header>
-		<div class="modal-body text-sm text-gray-600">{@html m.privacyBody()}</div>
+		<div class="modal-body">{@html m.privacyBody()}</div>
 	</Dialog.Content>
 </Dialog.Root>

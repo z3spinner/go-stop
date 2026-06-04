@@ -14,7 +14,7 @@
 			<Dialog.Title>{m.a2hsTitle()}</Dialog.Title>
 		</Dialog.Header>
 		<p class="text-sm text-gray-600">{m.a2hsBody()}</p>
-		<ol class="a2hs-steps list-none space-y-1 text-sm text-gray-600">
+		<ol class="a2hs-steps list-none">
 			<li class="a2hs-step">{m.a2hsStep1()}</li>
 			<li class="a2hs-step">{m.a2hsStep2()}</li>
 			<li class="a2hs-step">{m.a2hsStep3()}</li>
