@@ -52,6 +52,8 @@ type Querier interface {
 	InsertRideEvent(ctx context.Context, arg InsertRideEventParams) error
 	InsertRideStat(ctx context.Context, arg InsertRideStatParams) error
 	InsertSearchEvent(ctx context.Context, arg InsertSearchEventParams) error
+	// Public feed of all non-expired requests (newest first).
+	ListActiveRequests(ctx context.Context) ([]Request, error)
 	// Returns known locations sorted by popularity. Combines active rides/requests
 	// with historical ride_stats so locations persist after rides expire.
 	ListDestinations(ctx context.Context) ([]string, error)

@@ -259,18 +259,7 @@ func (h *RideHandler) ListMatchingRequests(c *gin.Context) {
 	}
 	// Strip phone — searchers who set up alerts have not consented to sharing
 	// their number with every driver. Only the searcher's name and timing are shown.
-	out := make([]PublicRequest, len(requests))
-	for i, r := range requests {
-		out[i] = PublicRequest{
-			ID:           r.ID,
-			SearcherName: r.SearcherName,
-			Origin:       r.Origin,
-			Destination:  r.Destination,
-			DepartureAt:  r.DepartureAt,
-			Flexibility:  int(r.Flexibility),
-		}
-	}
-	c.JSON(http.StatusOK, out)
+	c.JSON(http.StatusOK, toPublicRequests(requests))
 }
 
 type deleteRideRequest struct {

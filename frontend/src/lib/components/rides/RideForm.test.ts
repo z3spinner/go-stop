@@ -14,4 +14,13 @@ describe('RideForm', () => {
 		const ret = container.querySelector('input[name=return_departure_at]') as HTMLInputElement;
 		expect(ret.value).toBe('2030-12-01T11:00');
 	});
+
+	it('prefills origin/destination/departure from props ("I can drive this")', () => {
+		const { container } = render(RideForm, {
+			props: { destinations: [], origin: 'Saillans', destination: 'Crest', departureAt: '2030-06-15T08:30' }
+		});
+		expect((container.querySelector('input[name=origin]') as HTMLInputElement).value).toBe('Saillans');
+		expect((container.querySelector('input[name=destination]') as HTMLInputElement).value).toBe('Crest');
+		expect((container.querySelector('input[name=departure_at]') as HTMLInputElement).value).toBe('2030-06-15T08:30');
+	});
 });

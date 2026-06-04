@@ -327,10 +327,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Searcher phone",
+                        "description": "Searcher phone — when set, returns that searcher's own alerts (with phone); when absent, returns the public feed of active requests (phone stripped)",
                         "name": "X-Phone",
-                        "in": "header",
-                        "required": true
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -339,14 +338,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Request"
+                                "$ref": "#/definitions/handler.PublicRequest"
                             }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
@@ -1495,6 +1488,9 @@ const docTemplate = `{
         "handler.PublicRequest": {
             "type": "object",
             "properties": {
+                "Date": {
+                    "type": "string"
+                },
                 "DepartureAt": {
                     "type": "string"
                 },

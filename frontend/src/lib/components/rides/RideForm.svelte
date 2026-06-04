@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
+	import { untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import { userName, userPhone } from '$lib/stores';
 	import { config } from '$lib/config';
@@ -8,13 +9,28 @@
 	import { m } from '$lib/paraglide/messages';
 	import type { Flexibility } from '$lib/types';
 
-	let { destinations = [], onposted }: { destinations?: string[]; onposted?: (phone: string) => void } = $props();
+	// origin/destination/departureAt seed the form (e.g. "I can drive this" from a
+	// requested ride). departureAt is a datetime-local string; falls back to default.
+	let {
+		destinations = [],
+		onposted,
+		origin: initialOrigin = '',
+		destination: initialDestination = '',
+		departureAt: initialDeparture = ''
+	}: {
+		destinations?: string[];
+		onposted?: (phone: string) => void;
+		origin?: string;
+		destination?: string;
+		departureAt?: string;
+	} = $props();
 
 	let driver_name = $state(get(userName));
 	let phone = $state(get(userPhone));
-	let origin = $state('');
-	let destination = $state('');
-	let departure_at = $state(defaultDeparture());
+	// untrack: seed once from the props (deep-link prefill), then own the state.
+	let origin = $state(untrack(() => initialOrigin));
+	let destination = $state(untrack(() => initialDestination));
+	let departure_at = $state(untrack(() => initialDeparture) || defaultDeparture());
 	let flexibility = $state<Flexibility>(30);
 	let isReturn = $state(false);
 	let return_departure_at = $state('');

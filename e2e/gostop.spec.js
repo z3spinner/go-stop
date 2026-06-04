@@ -38,8 +38,9 @@ test('home page loads with title and buttons', async ({ page }) => {
 
   await expect(page).toHaveTitle('Go Stop Saillans!');
   await expect(page.locator('h1')).toContainText('Go Stop Saillans!');
-  await expect(page.locator('button.btn-primary')).toContainText('Je conduis');
-  await expect(page.locator('button.btn-secondary')).toContainText('Je cherche un stop');
+  // Scope to the hero — the requests feed also uses .btn-secondary ("I can drive this").
+  await expect(page.locator('.hero button.btn-primary')).toContainText('Je conduis');
+  await expect(page.locator('.hero button.btn-secondary')).toContainText('Je cherche un stop');
   await expect(page.locator('button.btn-ghost-inline').first()).toBeVisible();
 });
 
@@ -385,6 +386,38 @@ test('feedback screen records the driver answer as the main content', async ({ p
   ]);
   expect(resp.status()).toBe(204);
   await expect(page.locator('.feedback-done')).toBeVisible();
+});
+
+// ── 7e. Home: swipe to requested rides; "I can drive this" prefills Post a Ride ─
+test('home requested-rides feed is public and "I can drive this" prefills post-ride', async ({ page }) => {
+  await page.goto(BASE);
+  const o = `ReqA${Date.now()}`, d = `ReqB${Date.now()}`;
+  // Seed an active request (anytime mode) as the searcher.
+  await page.evaluate(async ({ s, origin, destination }) => {
+    await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: s.name, phone: s.phone, origin, destination }),
+    });
+  }, { s: SEARCHER, origin: o, destination: d });
+
+  // The public requests feed strips the phone but carries Date (mode-aware).
+  const reqs = await page.evaluate(() => fetch('/api/requests').then(r => r.json()));
+  expect(reqs.length).toBeGreaterThan(0);
+  expect(reqs.some(r => r.Phone)).toBe(false);
+  expect('Date' in reqs[0]).toBe(true);
+
+  await setFr(page);
+  await page.goto(BASE);
+
+  // Swipe/tap to the "Requested" tab (second trigger) and act on our request.
+  await page.locator('[data-slot="tabs-trigger"]').nth(1).click();
+  const drive = page.locator(`.btn-drive-this[data-origin="${o}"]`);
+  await drive.click();
+
+  // Lands on Post a Ride with the route prefilled.
+  await expect(page).toHaveURL(new RegExp(`/post-ride\\?.*origin=${o}`));
+  await expect(page.locator('input[name=origin]')).toHaveValue(o);
+  await expect(page.locator('input[name=destination]')).toHaveValue(d);
 });
 
 // ── 8. Alert creation — all 4 modes ──────────────────────────────────────────

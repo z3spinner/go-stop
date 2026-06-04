@@ -13,4 +13,11 @@ describe('home', () => {
 		// Me · My rides · My searches (share lives in the header/TopBar, not here)
 		expect(container.querySelectorAll('.btn-ghost-inline').length).toBe(3);
 	});
+
+	it('renders the Available / Requested swipe tabs and both panels', () => {
+		vi.stubGlobal('fetch', vi.fn(async () => new Response('[]', { status: 200 })));
+		const { container } = render(Home);
+		expect(container.querySelectorAll('[data-slot="tabs-trigger"]').length).toBe(2);
+		expect(container.querySelectorAll('.feed-panel').length).toBe(2);
+	});
 });

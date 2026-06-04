@@ -154,6 +154,44 @@ func (q *Queries) InsertRequest(ctx context.Context, arg InsertRequestParams) er
 	return err
 }
 
+const listActiveRequests = `-- name: ListActiveRequests :many
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+FROM requests WHERE expires_at > NOW()
+ORDER BY posted_at DESC
+`
+
+// Public feed of all non-expired requests (newest first).
+func (q *Queries) ListActiveRequests(ctx context.Context) ([]Request, error) {
+	rows, err := q.db.Query(ctx, listActiveRequests)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Request{}
+	for rows.Next() {
+		var i Request
+		if err := rows.Scan(
+			&i.ID,
+			&i.SearcherName,
+			&i.Phone,
+			&i.Origin,
+			&i.Destination,
+			&i.Date,
+			&i.DepartureAt,
+			&i.Flexibility,
+			&i.PostedAt,
+			&i.ExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRequestsByPhone = `-- name: ListRequestsByPhone :many
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
 FROM requests WHERE phone = $1 AND expires_at > NOW()

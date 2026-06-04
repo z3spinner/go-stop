@@ -12,27 +12,47 @@ import (
 )
 
 type RequestHandler struct {
-	postRequest    *usecase.PostRequest
-	getMyRequests  *usecase.GetMyRequests
-	deleteRequest  *usecase.DeleteRequest
-	pingSearcher   *usecase.PingSearcher
-	requestRepo    repository.RequestRepository
+	postRequest       *usecase.PostRequest
+	getMyRequests     *usecase.GetMyRequests
+	getActiveRequests *usecase.GetActiveRequests
+	deleteRequest     *usecase.DeleteRequest
+	pingSearcher      *usecase.PingSearcher
+	requestRepo       repository.RequestRepository
 }
 
 func NewRequestHandler(
 	postRequest *usecase.PostRequest,
 	getMyRequests *usecase.GetMyRequests,
+	getActiveRequests *usecase.GetActiveRequests,
 	deleteRequest *usecase.DeleteRequest,
 	pingSearcher *usecase.PingSearcher,
 	requestRepo repository.RequestRepository,
 ) *RequestHandler {
 	return &RequestHandler{
-		postRequest:   postRequest,
-		getMyRequests: getMyRequests,
-		deleteRequest: deleteRequest,
-		pingSearcher:  pingSearcher,
-		requestRepo:   requestRepo,
+		postRequest:       postRequest,
+		getMyRequests:     getMyRequests,
+		getActiveRequests: getActiveRequests,
+		deleteRequest:     deleteRequest,
+		pingSearcher:      pingSearcher,
+		requestRepo:       requestRepo,
 	}
+}
+
+// toPublicRequests strips the searcher's phone for public / driver-facing lists.
+func toPublicRequests(requests []domain.Request) []PublicRequest {
+	out := make([]PublicRequest, len(requests))
+	for i, r := range requests {
+		out[i] = PublicRequest{
+			ID:           r.ID,
+			SearcherName: r.SearcherName,
+			Origin:       r.Origin,
+			Destination:  r.Destination,
+			Date:         r.Date,
+			DepartureAt:  r.DepartureAt,
+			Flexibility:  int(r.Flexibility),
+		}
+	}
+	return out
 }
 
 type pingSearcherBody struct {
@@ -79,24 +99,32 @@ func (h *RequestHandler) Ping(c *gin.Context) {
 // @ID       listRequests
 // @Tags     requests
 // @Produce  json
-// @Param    X-Phone  header  string  true  "Searcher phone"
-// @Success  200  {array}  domain.Request
-// @Failure  400  {object}  handler.ErrorResponse
+// @Param    X-Phone  header  string  false  "Searcher phone — when set, returns that searcher's own alerts (with phone); when absent, returns the public feed of active requests (phone stripped)"
+// @Success  200  {array}  handler.PublicRequest
 // @Failure  500  {object}  handler.ErrorResponse
 // @Router   /requests [get]
 func (h *RequestHandler) List(c *gin.Context) {
-	phone := c.GetHeader("X-Phone")
-	phone = normalizePhone(phone)
-	if phone == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "phone query parameter required"})
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+
+	// With a phone: the searcher's own alerts (full Request, includes phone).
+	if phone != "" {
+		requests, err := h.getMyRequests.Execute(phone)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, requests)
 		return
 	}
-	requests, err := h.getMyRequests.Execute(phone)
+
+	// Without a phone: the public feed of all active requests (phone stripped),
+	// mirroring GET /rides. Lets drivers browse demand on the home page.
+	requests, err := h.getActiveRequests.Execute()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, requests)
+	c.JSON(http.StatusOK, toPublicRequests(requests))
 }
 
 type postRequestBody struct {

@@ -46,6 +46,14 @@ func (r *RequestRepo) FindByPhone(phone string) ([]domain.Request, error) {
 	return requestsFromRows(rows), nil
 }
 
+func (r *RequestRepo) FindAllActive() ([]domain.Request, error) {
+	rows, err := r.q.ListActiveRequests(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return requestsFromRows(rows), nil
+}
+
 func (r *RequestRepo) FindMatching(ride domain.Ride) ([]domain.Request, error) {
 	rows, err := r.q.FindRequestsMatchingRide(context.Background(), queries.FindRequestsMatchingRideParams{
 		Lower:   ride.Origin,

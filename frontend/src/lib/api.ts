@@ -80,6 +80,8 @@ export const api = {
 	},
 	requests: {
 		list: (phone: string) => unwrap<Request[]>(gen.listRequests(phoneHeader(phone))),
+		// Public feed of all active requests (no phone) — for the home "requested" panel.
+		listActive: () => unwrap<PublicRequest[]>(gen.listRequests()),
 		get: (id: string, phone: string) => unwrap<Request>(gen.getRequest(id, phoneHeader(phone))),
 		post: (body: PostRequestBody) => unwrap<Request>(gen.createRequest(body)),
 		del: (id: string, phone: string) => unwrap<null>(gen.deleteRequest(id, { phone })),

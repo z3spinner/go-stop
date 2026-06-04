@@ -61,6 +61,7 @@ func main() {
 	deleteRequest := usecase.NewDeleteRequest(requestRepo)
 	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, interestRepo, subRepo, notifier)
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
+	getActiveRequests := usecase.NewGetActiveRequests(requestRepo)
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, requestRepo)
@@ -86,7 +87,7 @@ func main() {
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
-	requestH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, pingSearcher, requestRepo)
+	requestH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)

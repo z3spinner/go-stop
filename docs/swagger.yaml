@@ -252,6 +252,8 @@ definitions:
     type: object
   handler.PublicRequest:
     properties:
+      Date:
+        type: string
       DepartureAt:
         type: string
       Destination:
@@ -512,10 +514,11 @@ paths:
     get:
       operationId: listRequests
       parameters:
-      - description: Searcher phone
+      - description: Searcher phone — when set, returns that searcher's own alerts
+          (with phone); when absent, returns the public feed of active requests (phone
+          stripped)
         in: header
         name: X-Phone
-        required: true
         type: string
       produces:
       - application/json
@@ -524,12 +527,8 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/domain.Request'
+              $ref: '#/definitions/handler.PublicRequest'
             type: array
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:

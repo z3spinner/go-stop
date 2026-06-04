@@ -95,13 +95,17 @@ type PublicRide struct {
 	InterestCount int       `json:"InterestCount"`
 }
 
-// PublicRequest is a phone-stripped request matched to a driver's ride
-// (GET /rides/{id}/requests). PascalCase to match the wire format.
+// PublicRequest is a phone-stripped request — used both for the requests matched
+// to a driver's ride (GET /rides/{id}/requests) and the public requests feed
+// (GET /requests). PascalCase to match the wire format. Date is carried so the
+// four alert modes stay distinguishable (a date-only "day" alert vs an "anytime"
+// one both have a zero DepartureAt).
 type PublicRequest struct {
 	ID           string    `json:"ID"`
 	SearcherName string    `json:"SearcherName"`
 	Origin       string    `json:"Origin"`
 	Destination  string    `json:"Destination"`
+	Date         time.Time `json:"Date"`
 	DepartureAt  time.Time `json:"DepartureAt"`
 	Flexibility  int       `json:"Flexibility"`
 }

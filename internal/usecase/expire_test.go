@@ -37,6 +37,7 @@ type expiringRequestRepo struct {
 
 func (r *expiringRequestRepo) Save(domain.Request) error                              { return nil }
 func (r *expiringRequestRepo) FindByPhone(string) ([]domain.Request, error) { return nil, nil }
+func (r *expiringRequestRepo) FindAllActive() ([]domain.Request, error)     { return nil, nil }
 func (r *expiringRequestRepo) FindByID(string) (domain.Request, error)               { return domain.Request{}, nil }
 func (r *expiringRequestRepo) FindMatching(domain.Ride) ([]domain.Request, error)    { return nil, nil }
 func (r *expiringRequestRepo) Delete(string) error                                    { return nil }

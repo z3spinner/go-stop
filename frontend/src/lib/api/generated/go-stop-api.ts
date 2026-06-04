@@ -169,6 +169,7 @@ export interface HandlerPostRideBody {
 }
 
 export interface HandlerPublicRequest {
+  Date?: string;
   DepartureAt?: string;
   Destination?: string;
   Flexibility?: number;
@@ -545,13 +546,8 @@ export const listNotifications = async ( options?: RequestInit): Promise<listNot
 
 
 export type listRequestsResponse200 = {
-  data: DomainRequest[]
+  data: HandlerPublicRequest[]
   status: 200
-}
-
-export type listRequestsResponse400 = {
-  data: HandlerErrorResponse
-  status: 400
 }
 
 export type listRequestsResponse500 = {
@@ -562,7 +558,7 @@ export type listRequestsResponse500 = {
 export type listRequestsResponseSuccess = (listRequestsResponse200) & {
   headers: Headers;
 };
-export type listRequestsResponseError = (listRequestsResponse400 | listRequestsResponse500) & {
+export type listRequestsResponseError = (listRequestsResponse500) & {
   headers: Headers;
 };
 

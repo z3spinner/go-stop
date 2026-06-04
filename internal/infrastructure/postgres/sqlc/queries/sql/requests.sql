@@ -11,6 +11,12 @@ SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexib
 FROM requests WHERE phone = $1 AND expires_at > NOW()
 ORDER BY COALESCE(departure_at, date, expires_at) ASC;
 
+-- name: ListActiveRequests :many
+-- Public feed of all non-expired requests (newest first).
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+FROM requests WHERE expires_at > NOW()
+ORDER BY posted_at DESC;
+
 -- name: FindRequestsMatchingRide :many
 -- Matches all alert modes inferred from NULL state of date/departure_at:
 --   anytime: date IS NULL AND departure_at IS NULL

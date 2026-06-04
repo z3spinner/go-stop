@@ -7,18 +7,42 @@
 	import { userPhone } from '$lib/stores';
 	import { loadAcceptedContacts } from '$lib/contacts';
 	import RideCard from '$lib/components/rides/RideCard.svelte';
+	import RequestFeedCard from '$lib/components/requests/RequestFeedCard.svelte';
+	import * as Tabs from '$lib/components/ui/tabs';
 	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide, Stats } from '$lib/types';
+	import type { PublicRide, PublicRequest, Stats } from '$lib/types';
 
 	let rides = $state<PublicRide[]>([]);
+	let requests = $state<PublicRequest[]>([]);
 	let contacts = $state<Map<string, string>>(new Map());
 	let stats = $state<Stats | null>(null);
 	let pendingBadge = $state(0);
+
+	// Swipe ↔ tabs: `tab` is the source of truth. Tapping a tab scrolls the panel
+	// into view (with a short guard so the in-flight smooth-scroll doesn't fight
+	// the scroll listener); swiping updates `tab` from the scroll position.
+	let tab = $state('available');
+	let swipeEl = $state<HTMLDivElement | null>(null);
+	let snapping = false;
+	let snapTimer: ReturnType<typeof setTimeout>;
+
+	function snapTo(value: string) {
+		if (!swipeEl) return;
+		snapping = true;
+		swipeEl.scrollTo({ left: (value === 'requested' ? 1 : 0) * swipeEl.clientWidth, behavior: 'smooth' });
+		clearTimeout(snapTimer);
+		snapTimer = setTimeout(() => (snapping = false), 450);
+	}
+	function onScroll() {
+		if (snapping || !swipeEl) return;
+		tab = Math.round(swipeEl.scrollLeft / swipeEl.clientWidth) === 1 ? 'requested' : 'available';
+	}
 
 	onMount(async () => {
 		const phone = get(userPhone);
 		contacts = await loadAcceptedContacts(phone);
 		try { rides = (await api.rides.list()) as PublicRide[]; } catch { rides = []; }
+		try { requests = await api.requests.listActive(); } catch { requests = []; }
 		try { stats = await api.stats.get(); } catch { stats = null; }
 		// pending-interest badge: count pending interests across my own rides
 		if (phone) {
@@ -54,14 +78,33 @@
 </div>
 
 <section id="home-feed" class="mt-5">
-	<h2 class="home-feed-title mb-2 font-semibold">{m.homeFeedTitle()}</h2>
-	{#if rides.length === 0}
-		<p class="home-feed-empty text-gray-500">{m.noActiveRides()}</p>
-	{:else}
-		<div class="flex flex-col gap-2">
-			{#each rides as r}<RideCard ride={r} contactPhone={contacts.get(r.ID)} />{/each}
+	<Tabs.Root bind:value={tab} onValueChange={snapTo}>
+		<Tabs.List class="grid w-full grid-cols-2">
+			<Tabs.Trigger value="available">{m.tabAvailable()}</Tabs.Trigger>
+			<Tabs.Trigger value="requested">{m.tabRequested()}</Tabs.Trigger>
+		</Tabs.List>
+	</Tabs.Root>
+
+	<div class="feed-swipe mt-2" bind:this={swipeEl} onscroll={onScroll}>
+		<div class="feed-panel" role="tabpanel" aria-label={m.tabAvailable()}>
+			{#if rides.length === 0}
+				<p class="home-feed-empty text-gray-500">{m.noActiveRides()}</p>
+			{:else}
+				<div class="flex flex-col gap-2">
+					{#each rides as r}<RideCard ride={r} contactPhone={contacts.get(r.ID)} />{/each}
+				</div>
+			{/if}
 		</div>
-	{/if}
+		<div class="feed-panel" role="tabpanel" aria-label={m.tabRequested()}>
+			{#if requests.length === 0}
+				<p class="home-feed-empty text-gray-500">{m.noRequests()}</p>
+			{:else}
+				<div class="flex flex-col gap-2">
+					{#each requests as rq (rq.ID)}<RequestFeedCard request={rq} />{/each}
+				</div>
+			{/if}
+		</div>
+	</div>
 </section>
 
 <section id="home-stats" class="mt-5">
@@ -78,3 +121,22 @@
 		</div>
 	{/if}
 </section>
+
+<style>
+	/* Two full-width panels side by side; horizontal swipe snaps between them. */
+	.feed-swipe {
+		display: flex;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none; /* Firefox */
+		-webkit-overflow-scrolling: touch;
+	}
+	.feed-swipe::-webkit-scrollbar {
+		display: none; /* Chrome/Safari */
+	}
+	.feed-panel {
+		flex: 0 0 100%;
+		min-width: 0;
+		scroll-snap-align: start;
+	}
+</style>
