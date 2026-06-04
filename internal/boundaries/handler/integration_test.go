@@ -26,7 +26,9 @@ type noopNotifier struct{}
 
 func (n *noopNotifier) Send(_ domain.Subscription, _ domain.Message) error { return nil }
 
-var _ interface{ Send(domain.Subscription, domain.Message) error } = (*noopNotifier)(nil)
+var _ interface {
+	Send(domain.Subscription, domain.Message) error
+} = (*noopNotifier)(nil)
 
 func TestMain(m *testing.M) {
 	dbURL := os.Getenv("TEST_DATABASE_URL")
@@ -716,7 +718,7 @@ func TestHTTP_Alert_DailyMode_MatchesTimeOnAnyDate(t *testing.T) {
 
 	// Post a daily alert for 09:00 ±30 min, any day
 	w := postJSON(r, "/api/requests", map[string]interface{}{
-		"searcher_name":  "Alice", "phone": "5563001",
+		"searcher_name": "Alice", "phone": "5563001",
 		"origin": "Saillans", "destination": "Crest",
 		"departure_time": "09:00", "flexibility": 30,
 	})
@@ -863,7 +865,7 @@ func TestHTTP_Search_DateTimeFilterExcludesOutsideWindow(t *testing.T) {
 
 	// Two rides on the same date, 6 hours apart
 	nearID := post("5580001", "2031-09-01T09:00:00Z") // 09:00 — within ±60 min of 09:30
-	farID  := post("5580002", "2031-09-01T15:00:00Z") // 15:00 — outside ±60 min of 09:30
+	farID := post("5580002", "2031-09-01T15:00:00Z")  // 15:00 — outside ±60 min of 09:30
 
 	// Search with date + time = 09:30
 	w := httptest.NewRecorder()
@@ -879,11 +881,19 @@ func TestHTTP_Search_DateTimeFilterExcludesOutsideWindow(t *testing.T) {
 	}
 
 	found := func(id string) bool {
-		for _, r := range ids { if r == id { return true } }
+		for _, r := range ids {
+			if r == id {
+				return true
+			}
+		}
 		return false
 	}
-	if !found(nearID) { t.Errorf("09:00 ride should appear in 09:30 ±60min search") }
-	if  found(farID)  { t.Errorf("15:00 ride must NOT appear in 09:30 ±60min search") }
+	if !found(nearID) {
+		t.Errorf("09:00 ride should appear in 09:30 ±60min search")
+	}
+	if found(farID) {
+		t.Errorf("15:00 ride must NOT appear in 09:30 ±60min search")
+	}
 }
 
 func TestHTTP_Search_TimeOnlyFilterExcludesOutsideWindow(t *testing.T) {
@@ -903,7 +913,7 @@ func TestHTTP_Search_TimeOnlyFilterExcludesOutsideWindow(t *testing.T) {
 
 	// Two rides on different dates, one near the search time, one far away
 	nearID := post("5590001", "2031-10-01T09:15:00Z") // 09:15 — within ±60 min of 09:30
-	farID  := post("5590002", "2031-10-02T15:00:00Z") // 15:00 on a different date — outside window
+	farID := post("5590002", "2031-10-02T15:00:00Z")  // 15:00 on a different date — outside window
 
 	// Search with time only (no date) — should match by time across all dates
 	w := httptest.NewRecorder()
@@ -919,11 +929,19 @@ func TestHTTP_Search_TimeOnlyFilterExcludesOutsideWindow(t *testing.T) {
 	}
 
 	found := func(id string) bool {
-		for _, r := range ids { if r == id { return true } }
+		for _, r := range ids {
+			if r == id {
+				return true
+			}
+		}
 		return false
 	}
-	if !found(nearID) { t.Errorf("09:15 ride should appear in time-only 09:30 ±60min search") }
-	if  found(farID)  { t.Errorf("15:00 ride must NOT appear in time-only 09:30 ±60min search") }
+	if !found(nearID) {
+		t.Errorf("09:15 ride should appear in time-only 09:30 ±60min search")
+	}
+	if found(farID) {
+		t.Errorf("15:00 ride must NOT appear in time-only 09:30 ±60min search")
+	}
 }
 
 // ── Notification queue tests ──────────────────────────────────────────────────

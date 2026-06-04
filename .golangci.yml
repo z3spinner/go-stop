@@ -1,0 +1,35 @@
+# golangci-lint configuration for the Go backend.
+# Run with `make lint` (see Makefile). Config format targets golangci-lint v1.64.x.
+#
+# Generated code (sqlc queries, swaggo docs) carries a "Code generated ... DO NOT
+# EDIT" header and is skipped automatically by golangci-lint.
+
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  # Start from a curated set rather than defaults so the list is explicit.
+  disable-all: true
+  enable:
+    # --- default golangci-lint set ---
+    - errcheck      # unchecked errors
+    - govet         # go vet
+    - ineffassign   # ineffectual assignments
+    - staticcheck   # staticcheck + gosimple analyses
+    - unused        # unused code
+    # --- formatting ---
+    - gofmt         # gofmt-clean (run `make fmt` to fix)
+    - goimports     # import grouping/ordering
+    # --- correctness / quality ---
+    - bodyclose     # HTTP response bodies are closed
+    - errorlint     # correct errors.Is/As/%w usage (this code relies on errors.Is)
+    - unconvert     # redundant type conversions
+    # NOTE: `misspell` is intentionally NOT enabled — the codebase contains
+    # deliberate French/Italian/German/Dutch string literals (qotd.go, push
+    # notification copy) that misspell flags as English typos.
+
+issues:
+  # Show all findings, not just new ones, and don't cap per-linter counts.
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -54,6 +54,8 @@ injected server-side for link previews (`og.go`).
 | Run Go + Vite locally (no Docker) | `make dev` |
 | Unit tests (fast, no DB) | `make test-unit` |
 | All tests incl. integration | `make test` (needs Postgres on :5432; runs `-tags integration -p 1`) |
+| Lint Go (golangci-lint) | `make lint` (`make lint-install` once to install the pinned version) |
+| Auto-fix Go formatting | `make fmt` |
 | Regenerate SQL code | `make sqlc` (after editing `*.sql`) |
 | Regenerate OpenAPI spec | `make swagger` (after changing handler annotations) |
 | Regenerate OpenAPI **+ frontend client** | `make api-generate` |

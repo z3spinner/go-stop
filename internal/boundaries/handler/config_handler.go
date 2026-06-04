@@ -7,8 +7,8 @@ import (
 )
 
 type ConfigHandler struct {
-	siteName          string
-	returnDelayHours  int
+	siteName         string
+	returnDelayHours int
 }
 
 func NewConfigHandler(siteName string, returnDelayHours int) *ConfigHandler {

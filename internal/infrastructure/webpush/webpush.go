@@ -64,13 +64,13 @@ func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) erro
 		// How long the push service holds an undelivered message for an offline
 		// device before dropping it. Ride alerts are time-sensitive, so 6h avoids
 		// waking a device hours later for a ride that has already departed.
-		TTL:             6 * 60 * 60, // 6 hours
-		Urgency:         webpushlib.UrgencyHigh,
+		TTL:     6 * 60 * 60, // 6 hours
+		Urgency: webpushlib.UrgencyHigh,
 	})
 	if err != nil {
 		return fmt.Errorf("send push notification: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)

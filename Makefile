@@ -5,6 +5,23 @@ test:
 test-unit:
 	go test ./internal/usecase/...
 
+# Pinned golangci-lint version. Bump here and in .golangci.yml's header together.
+GOLANGCI_LINT_VERSION := v1.64.8
+
+# Install the pinned linter into $(go env GOPATH)/bin.
+lint-install:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+# Lint the Go backend (config in .golangci.yml). Run `make lint-install` first if missing.
+lint:
+	golangci-lint run ./...
+
+# Auto-fix formatting (gofmt + import grouping) for hand-written Go (skips generated
+# sqlc queries and swaggo docs).
+fmt:
+	gofmt -w $(shell git ls-files '*.go' | grep -vE '/sqlc/queries/|^docs/')
+	golangci-lint run --fix --enable-only=goimports ./... || true
+
 sqlc:
 	sqlc generate
 

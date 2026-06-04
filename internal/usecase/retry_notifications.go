@@ -15,11 +15,11 @@ const (
 )
 
 type RetryNotifications struct {
-	queue    repository.NotificationQueueRepository
-	rides    repository.RideRepository
-	subs     repository.SubscriptionRepository
-	notifier notification.Notifier
-	interval time.Duration
+	queue      repository.NotificationQueueRepository
+	rides      repository.RideRepository
+	subs       repository.SubscriptionRepository
+	notifier   notification.Notifier
+	interval   time.Duration
 	maxRetries int
 }
 

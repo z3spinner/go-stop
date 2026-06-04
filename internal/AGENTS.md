@@ -59,3 +59,7 @@ Flexible). Conventions:
   them to HTTP status codes; don't string-match error text.
 - `context.Context` is created inside repository implementations
   (`context.Background()`), not threaded through use case signatures.
+- Code must pass `make lint` (golangci-lint; config in `/.golangci.yml`) and
+  `make fmt` (gofmt + goimports). The lint set is curated and currently clean —
+  keep it that way. `misspell` is deliberately off because of the intentional
+  non-English string literals (`usecase/qotd.go`, French push copy).

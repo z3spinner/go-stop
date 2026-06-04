@@ -49,16 +49,16 @@ func attachInterestCounts(rides []PublicRide, interestRepo repository.InterestRe
 }
 
 type RideHandler struct {
-	postRide             *usecase.PostRide
-	getRides             *usecase.GetRides
-	getMyRides           *usecase.GetMyRides
-	searchRides          *usecase.SearchRides
-	deleteRide           *usecase.DeleteRide
-	getMatchingRequests  *usecase.GetMatchingRequests
-	statRepo             repository.StatRepository
-	interestRepo         repository.InterestRepository
-	rideRepo             repository.RideRepository
-	serviceTZ            *time.Location
+	postRide            *usecase.PostRide
+	getRides            *usecase.GetRides
+	getMyRides          *usecase.GetMyRides
+	searchRides         *usecase.SearchRides
+	deleteRide          *usecase.DeleteRide
+	getMatchingRequests *usecase.GetMatchingRequests
+	statRepo            repository.StatRepository
+	interestRepo        repository.InterestRepository
+	rideRepo            repository.RideRepository
+	serviceTZ           *time.Location
 }
 
 func NewRideHandler(

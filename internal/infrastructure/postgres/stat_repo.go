@@ -79,4 +79,3 @@ func (r *StatRepo) GetStats() (domain.Stats, error) {
 		},
 	}, nil
 }
-

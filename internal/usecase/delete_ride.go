@@ -3,7 +3,7 @@ package usecase
 import "github.com/z3spinner/go-stop/internal/boundaries/repository"
 
 type DeleteRide struct {
-	rides     repository.RideRepository
+	rides      repository.RideRepository
 	notifQueue repository.NotificationQueueRepository
 }
 

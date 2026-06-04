@@ -85,11 +85,6 @@ func (n *goneNotifier) Send(_ domain.Subscription, _ domain.Message) error {
 	return errors.New("push service returned status 410")
 }
 
-// mockSubRepoNotify with delete tracking
-func (m *mockSubRepoNotify) deleted_() {}
-
-var _ = (*mockSubRepoNotify)(nil)
-
 type trackingSubRepo struct {
 	subs    []domain.Subscription
 	deleted bool
