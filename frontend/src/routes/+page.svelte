@@ -78,12 +78,14 @@
 </div>
 
 <section id="home-feed" class="mt-5">
-	<Tabs.Root bind:value={tab} onValueChange={snapTo}>
-		<Tabs.List class="grid w-full grid-cols-2">
-			<Tabs.Trigger value="available">{m.tabAvailable()}</Tabs.Trigger>
-			<Tabs.Trigger value="requested">{m.tabRequested()}</Tabs.Trigger>
-		</Tabs.List>
-	</Tabs.Root>
+	<div class="feed-tabs">
+		<Tabs.Root bind:value={tab} onValueChange={snapTo}>
+			<Tabs.List class="grid w-full grid-cols-2">
+				<Tabs.Trigger value="available">{m.tabAvailable()}</Tabs.Trigger>
+				<Tabs.Trigger value="requested">{m.tabRequested()}</Tabs.Trigger>
+			</Tabs.List>
+		</Tabs.Root>
+	</div>
 
 	<div class="feed-swipe mt-2" bind:this={swipeEl} onscroll={onScroll}>
 		<div class="feed-panel" role="tabpanel" aria-label={m.tabAvailable()}>
@@ -123,6 +125,41 @@
 </section>
 
 <style>
+	/* Restyle the shadcn Tabs to match the app's green segmented control
+	   (.trip-type-toggle): flat, white track, green active with white text.
+	   Scoped via .feed-tabs; :global reaches the shadcn elements, and being
+	   unlayered these rules win over Tailwind's layered utilities. */
+	.feed-tabs :global([data-slot='tabs-list']) {
+		background: #fff;
+		border: 1px solid var(--gray-300, #d1d5db);
+		border-radius: var(--radius, 8px);
+		padding: 0;
+		gap: 0;
+		height: auto;
+	}
+	.feed-tabs :global([data-slot='tabs-trigger']) {
+		border-radius: 0;
+		padding: 9px;
+		font-size: 0.9rem;
+		font-weight: 500;
+		color: var(--gray-600, #4b5563);
+		background: transparent;
+		box-shadow: none;
+		transition: background 0.15s;
+	}
+	.feed-tabs :global([data-slot='tabs-trigger']:last-child) {
+		border-left: 1px solid var(--gray-300, #d1d5db);
+	}
+	.feed-tabs :global([data-slot='tabs-trigger']:hover:not([data-state='active'])) {
+		background: var(--gray-100, #f3f4f6);
+	}
+	.feed-tabs :global([data-slot='tabs-trigger'][data-state='active']) {
+		background: var(--blue, #28a836);
+		color: #fff;
+		font-weight: 600;
+		box-shadow: none;
+	}
+
 	/* Two full-width panels side by side; horizontal swipe snaps between them. */
 	.feed-swipe {
 		display: flex;
