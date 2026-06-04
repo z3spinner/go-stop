@@ -71,5 +71,5 @@
 <A2HSModal />
 <PollToastHost />
 <NotifModal />
-{#if showAbout}<AboutModal onclose={() => (showAbout = false)} />{/if}
-{#if showPrivacy}<PrivacyModal onclose={() => (showPrivacy = false)} />{/if}
+<AboutModal open={showAbout} onclose={() => (showAbout = false)} />
+<PrivacyModal open={showPrivacy} onclose={() => (showPrivacy = false)} />

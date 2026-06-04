@@ -3,10 +3,16 @@ import { render, screen } from '@testing-library/svelte';
 import PrivacyModal from './PrivacyModal.svelte';
 
 describe('PrivacyModal', () => {
-	it('renders the privacy heading and a close button', async () => {
+	it('renders the privacy heading and a close button when open', async () => {
 		const onclose = vi.fn();
-		render(PrivacyModal, { props: { onclose } });
+		render(PrivacyModal, { props: { open: true, onclose } });
 		expect(screen.getByText(/Confidentialité|Privacy/)).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: /Fermer|Close/ })).toBeInTheDocument();
+	});
+
+	it('renders nothing when closed', async () => {
+		const onclose = vi.fn();
+		render(PrivacyModal, { props: { open: false, onclose } });
+		expect(screen.queryByRole('dialog')).toBeNull();
 	});
 });

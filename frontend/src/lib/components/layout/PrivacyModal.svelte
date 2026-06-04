@@ -1,15 +1,17 @@
 <script lang="ts">
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { m } from '$lib/paraglide/messages';
-	let { onclose }: { onclose: () => void } = $props();
+	let { open = false, onclose }: { open?: boolean; onclose: () => void } = $props();
+	function onOpenChange(v: boolean) {
+		if (!v) onclose();
+	}
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape') onclose(); }} />
-<div class="modal-overlay" onclick={onclose} role="presentation">
-	<div class="modal" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex={-1}>
-		<div class="modal-header">
-			<h2>{m.privacyTitle()}</h2>
-			<button type="button" class="btn-modal-close" onclick={onclose}>{m.privacyClose()}</button>
-		</div>
-		<div class="modal-body">{@html m.privacyBody()}</div>
-	</div>
-</div>
+<Dialog.Root {open} {onOpenChange}>
+	<Dialog.Content class="max-w-sm max-h-[85vh] overflow-y-auto">
+		<Dialog.Header>
+			<Dialog.Title>{m.privacyTitle()}</Dialog.Title>
+		</Dialog.Header>
+		<div class="modal-body text-sm text-gray-600">{@html m.privacyBody()}</div>
+	</Dialog.Content>
+</Dialog.Root>
