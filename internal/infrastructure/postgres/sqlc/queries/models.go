@@ -28,30 +28,34 @@ type NotificationQueue struct {
 }
 
 type Request struct {
-	ID           pgtype.UUID        `db:"id"`
-	SearcherName string             `db:"searcher_name"`
-	Phone        string             `db:"phone"`
-	Origin       string             `db:"origin"`
-	Destination  string             `db:"destination"`
-	Date         pgtype.Date        `db:"date"`
-	DepartureAt  pgtype.Timestamptz `db:"departure_at"`
-	Flexibility  int32              `db:"flexibility"`
-	PostedAt     pgtype.Timestamptz `db:"posted_at"`
-	ExpiresAt    pgtype.Timestamptz `db:"expires_at"`
+	ID              pgtype.UUID        `db:"id"`
+	SearcherName    string             `db:"searcher_name"`
+	Phone           string             `db:"phone"`
+	Origin          string             `db:"origin"`
+	Destination     string             `db:"destination"`
+	Date            pgtype.Date        `db:"date"`
+	DepartureAt     pgtype.Timestamptz `db:"departure_at"`
+	Flexibility     int32              `db:"flexibility"`
+	PostedAt        pgtype.Timestamptz `db:"posted_at"`
+	ExpiresAt       pgtype.Timestamptz `db:"expires_at"`
+	OriginNorm      pgtype.Text        `db:"origin_norm"`
+	DestinationNorm pgtype.Text        `db:"destination_norm"`
 }
 
 type Ride struct {
-	ID            pgtype.UUID        `db:"id"`
-	DriverName    string             `db:"driver_name"`
-	Phone         string             `db:"phone"`
-	Origin        string             `db:"origin"`
-	Destination   string             `db:"destination"`
-	Date          pgtype.Date        `db:"date"`
-	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
-	Flexibility   int32              `db:"flexibility"`
-	PostedAt      pgtype.Timestamptz `db:"posted_at"`
-	ExpiresAt     pgtype.Timestamptz `db:"expires_at"`
-	FeedbackGiven bool               `db:"feedback_given"`
+	ID              pgtype.UUID        `db:"id"`
+	DriverName      string             `db:"driver_name"`
+	Phone           string             `db:"phone"`
+	Origin          string             `db:"origin"`
+	Destination     string             `db:"destination"`
+	Date            pgtype.Date        `db:"date"`
+	DepartureAt     pgtype.Timestamptz `db:"departure_at"`
+	Flexibility     int32              `db:"flexibility"`
+	PostedAt        pgtype.Timestamptz `db:"posted_at"`
+	ExpiresAt       pgtype.Timestamptz `db:"expires_at"`
+	FeedbackGiven   bool               `db:"feedback_given"`
+	OriginNorm      pgtype.Text        `db:"origin_norm"`
+	DestinationNorm pgtype.Text        `db:"destination_norm"`
 }
 
 type RideEvent struct {

@@ -30,19 +30,19 @@ func (q *Queries) DeleteRide(ctx context.Context, id pgtype.UUID) error {
 }
 
 const findRidesMatchingAnytimeRequest = `-- name: FindRidesMatchingAnytimeRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
 `
 
 type FindRidesMatchingAnytimeRequestParams struct {
-	Lower   string `db:"lower"`
-	Lower_2 string `db:"lower_2"`
+	Origin      string `db:"origin"`
+	Destination string `db:"destination"`
 }
 
 func (q *Queries) FindRidesMatchingAnytimeRequest(ctx context.Context, arg FindRidesMatchingAnytimeRequestParams) ([]Ride, error) {
-	rows, err := q.db.Query(ctx, findRidesMatchingAnytimeRequest, arg.Lower, arg.Lower_2)
+	rows, err := q.db.Query(ctx, findRidesMatchingAnytimeRequest, arg.Origin, arg.Destination)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +62,8 @@ func (q *Queries) FindRidesMatchingAnytimeRequest(ctx context.Context, arg FindR
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -74,27 +76,27 @@ func (q *Queries) FindRidesMatchingAnytimeRequest(ctx context.Context, arg FindR
 }
 
 const findRidesMatchingDailyRequest = `-- name: FindRidesMatchingDailyRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
   AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + ($4::int * interval '1 minute'))
   AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - ($4::int * interval '1 minute'))
 `
 
 type FindRidesMatchingDailyRequestParams struct {
-	Lower   string             `db:"lower"`
-	Lower_2 string             `db:"lower_2"`
-	Column3 pgtype.Timestamptz `db:"column_3"`
-	Column4 int32              `db:"column_4"`
+	Origin        string             `db:"origin"`
+	Destination   string             `db:"destination"`
+	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
+	WindowMinutes int32              `db:"window_minutes"`
 }
 
 func (q *Queries) FindRidesMatchingDailyRequest(ctx context.Context, arg FindRidesMatchingDailyRequestParams) ([]Ride, error) {
 	rows, err := q.db.Query(ctx, findRidesMatchingDailyRequest,
-		arg.Lower,
-		arg.Lower_2,
-		arg.Column3,
-		arg.Column4,
+		arg.Origin,
+		arg.Destination,
+		arg.DepartureAt,
+		arg.WindowMinutes,
 	)
 	if err != nil {
 		return nil, err
@@ -115,6 +117,8 @@ func (q *Queries) FindRidesMatchingDailyRequest(ctx context.Context, arg FindRid
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -127,21 +131,21 @@ func (q *Queries) FindRidesMatchingDailyRequest(ctx context.Context, arg FindRid
 }
 
 const findRidesMatchingDayRequest = `-- name: FindRidesMatchingDayRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
   AND expires_at > NOW()
 `
 
 type FindRidesMatchingDayRequestParams struct {
-	Lower   string      `db:"lower"`
-	Lower_2 string      `db:"lower_2"`
-	Date    pgtype.Date `db:"date"`
+	Origin      string      `db:"origin"`
+	Destination string      `db:"destination"`
+	Date        pgtype.Date `db:"date"`
 }
 
 func (q *Queries) FindRidesMatchingDayRequest(ctx context.Context, arg FindRidesMatchingDayRequestParams) ([]Ride, error) {
-	rows, err := q.db.Query(ctx, findRidesMatchingDayRequest, arg.Lower, arg.Lower_2, arg.Date)
+	rows, err := q.db.Query(ctx, findRidesMatchingDayRequest, arg.Origin, arg.Destination, arg.Date)
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +165,8 @@ func (q *Queries) FindRidesMatchingDayRequest(ctx context.Context, arg FindRides
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -173,9 +179,9 @@ func (q *Queries) FindRidesMatchingDayRequest(ctx context.Context, arg FindRides
 }
 
 const findRidesMatchingTimeRequest = `-- name: FindRidesMatchingTimeRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
   AND expires_at > NOW()
   AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5::int * interval '1 minute'))
@@ -183,20 +189,20 @@ WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
 `
 
 type FindRidesMatchingTimeRequestParams struct {
-	Lower   string             `db:"lower"`
-	Lower_2 string             `db:"lower_2"`
-	Date    pgtype.Date        `db:"date"`
-	Column4 pgtype.Timestamptz `db:"column_4"`
-	Column5 int32              `db:"column_5"`
+	Origin        string             `db:"origin"`
+	Destination   string             `db:"destination"`
+	Date          pgtype.Date        `db:"date"`
+	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
+	WindowMinutes int32              `db:"window_minutes"`
 }
 
 func (q *Queries) FindRidesMatchingTimeRequest(ctx context.Context, arg FindRidesMatchingTimeRequestParams) ([]Ride, error) {
 	rows, err := q.db.Query(ctx, findRidesMatchingTimeRequest,
-		arg.Lower,
-		arg.Lower_2,
+		arg.Origin,
+		arg.Destination,
 		arg.Date,
-		arg.Column4,
-		arg.Column5,
+		arg.DepartureAt,
+		arg.WindowMinutes,
 	)
 	if err != nil {
 		return nil, err
@@ -217,6 +223,8 @@ func (q *Queries) FindRidesMatchingTimeRequest(ctx context.Context, arg FindRide
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -229,7 +237,7 @@ func (q *Queries) FindRidesMatchingTimeRequest(ctx context.Context, arg FindRide
 }
 
 const getRideByID = `-- name: GetRideByID :one
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides WHERE id = $1
 `
 
@@ -248,6 +256,8 @@ func (q *Queries) GetRideByID(ctx context.Context, id pgtype.UUID) (Ride, error)
 		&i.PostedAt,
 		&i.ExpiresAt,
 		&i.FeedbackGiven,
+		&i.OriginNorm,
+		&i.DestinationNorm,
 	)
 	return i, err
 }
@@ -287,7 +297,7 @@ func (q *Queries) InsertRide(ctx context.Context, arg InsertRideParams) error {
 }
 
 const listRidesActive = `-- name: ListRidesActive :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
 WHERE expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + ($1::int * interval '1 minute') > NOW()
@@ -316,6 +326,8 @@ func (q *Queries) ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ri
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -328,7 +340,7 @@ func (q *Queries) ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ri
 }
 
 const listRidesByPhone = `-- name: ListRidesByPhone :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides WHERE phone = $1 AND expires_at > NOW()
 ORDER BY departure_at ASC
 `
@@ -354,6 +366,8 @@ func (q *Queries) ListRidesByPhone(ctx context.Context, phone string) ([]Ride, e
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -366,7 +380,7 @@ func (q *Queries) ListRidesByPhone(ctx context.Context, phone string) ([]Ride, e
 }
 
 const listRidesPendingFeedback = `-- name: ListRidesPendingFeedback :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
 WHERE departure_at BETWEEN (NOW() - INTERVAL '23 hours') AND (NOW() - INTERVAL '30 minutes')
   AND feedback_given = false
@@ -395,6 +409,8 @@ func (q *Queries) ListRidesPendingFeedback(ctx context.Context) ([]Ride, error) 
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -407,22 +423,22 @@ func (q *Queries) ListRidesPendingFeedback(ctx context.Context) ([]Ride, error) 
 }
 
 const searchRides = `-- name: SearchRides :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + ($3::int * interval '1 minute') > NOW()
 ORDER BY departure_at ASC
 `
 
 type SearchRidesParams struct {
-	Lower        string `db:"lower"`
-	Lower_2      string `db:"lower_2"`
+	Origin       string `db:"origin"`
+	Destination  string `db:"destination"`
 	GraceMinutes int32  `db:"grace_minutes"`
 }
 
 func (q *Queries) SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error) {
-	rows, err := q.db.Query(ctx, searchRides, arg.Lower, arg.Lower_2, arg.GraceMinutes)
+	rows, err := q.db.Query(ctx, searchRides, arg.Origin, arg.Destination, arg.GraceMinutes)
 	if err != nil {
 		return nil, err
 	}
@@ -442,6 +458,8 @@ func (q *Queries) SearchRides(ctx context.Context, arg SearchRidesParams) ([]Rid
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -454,9 +472,9 @@ func (q *Queries) SearchRides(ctx context.Context, arg SearchRidesParams) ([]Rid
 }
 
 const searchRidesByDate = `-- name: SearchRidesByDate :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + ($4::int * interval '1 minute') > NOW()
@@ -464,16 +482,16 @@ ORDER BY departure_at ASC
 `
 
 type SearchRidesByDateParams struct {
-	Lower        string      `db:"lower"`
-	Lower_2      string      `db:"lower_2"`
+	Origin       string      `db:"origin"`
+	Destination  string      `db:"destination"`
 	Date         pgtype.Date `db:"date"`
 	GraceMinutes int32       `db:"grace_minutes"`
 }
 
 func (q *Queries) SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error) {
 	rows, err := q.db.Query(ctx, searchRidesByDate,
-		arg.Lower,
-		arg.Lower_2,
+		arg.Origin,
+		arg.Destination,
 		arg.Date,
 		arg.GraceMinutes,
 	)
@@ -496,6 +514,8 @@ func (q *Queries) SearchRidesByDate(ctx context.Context, arg SearchRidesByDatePa
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -508,23 +528,23 @@ func (q *Queries) SearchRidesByDate(ctx context.Context, arg SearchRidesByDatePa
 }
 
 const searchRidesByDateTime = `-- name: SearchRidesByDateTime :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
   AND expires_at > NOW()
-  AND departure_at + (flexibility * interval '1 minute') + ($5::int * interval '1 minute') > NOW()
-  AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($6::int * interval '1 minute'))
-  AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($6::int * interval '1 minute'))
+  AND departure_at + (flexibility * interval '1 minute') + ($4::int * interval '1 minute') > NOW()
+  AND (departure_at - (flexibility * interval '1 minute')) <= ($5::timestamptz + ($6::int * interval '1 minute'))
+  AND (departure_at + (flexibility * interval '1 minute')) >= ($5::timestamptz - ($6::int * interval '1 minute'))
 ORDER BY departure_at ASC
 `
 
 type SearchRidesByDateTimeParams struct {
-	Lower                  string             `db:"lower"`
-	Lower_2                string             `db:"lower_2"`
+	Origin                 string             `db:"origin"`
+	Destination            string             `db:"destination"`
 	Date                   pgtype.Date        `db:"date"`
-	Column4                pgtype.Timestamptz `db:"column_4"`
 	GraceMinutes           int32              `db:"grace_minutes"`
+	SearchTime             pgtype.Timestamptz `db:"search_time"`
 	SearchToleranceMinutes int32              `db:"search_tolerance_minutes"`
 }
 
@@ -532,11 +552,11 @@ type SearchRidesByDateTimeParams struct {
 // the search time ± search_tolerance_minutes. Hides expired/past-grace rides.
 func (q *Queries) SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDateTimeParams) ([]Ride, error) {
 	rows, err := q.db.Query(ctx, searchRidesByDateTime,
-		arg.Lower,
-		arg.Lower_2,
+		arg.Origin,
+		arg.Destination,
 		arg.Date,
-		arg.Column4,
 		arg.GraceMinutes,
+		arg.SearchTime,
 		arg.SearchToleranceMinutes,
 	)
 	if err != nil {
@@ -558,6 +578,8 @@ func (q *Queries) SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDa
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -570,31 +592,31 @@ func (q *Queries) SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDa
 }
 
 const searchRidesByTime = `-- name: SearchRidesByTime :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
-  AND departure_at + (flexibility * interval '1 minute') + ($4::int * interval '1 minute') > NOW()
-  AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + ($5::int * interval '1 minute'))
-  AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - ($5::int * interval '1 minute'))
+  AND departure_at + (flexibility * interval '1 minute') + ($3::int * interval '1 minute') > NOW()
+  AND (departure_at::time - (flexibility * interval '1 minute')) <= ($4::timestamptz::time + ($5::int * interval '1 minute'))
+  AND (departure_at::time + (flexibility * interval '1 minute')) >= ($4::timestamptz::time - ($5::int * interval '1 minute'))
 ORDER BY departure_at ASC
 `
 
 type SearchRidesByTimeParams struct {
-	Lower                  string             `db:"lower"`
-	Lower_2                string             `db:"lower_2"`
-	Column3                pgtype.Timestamptz `db:"column_3"`
+	Origin                 string             `db:"origin"`
+	Destination            string             `db:"destination"`
 	GraceMinutes           int32              `db:"grace_minutes"`
+	SearchTime             pgtype.Timestamptz `db:"search_time"`
 	SearchToleranceMinutes int32              `db:"search_tolerance_minutes"`
 }
 
 // Time-only search: any date, departure window overlaps search_time ± tolerance.
 func (q *Queries) SearchRidesByTime(ctx context.Context, arg SearchRidesByTimeParams) ([]Ride, error) {
 	rows, err := q.db.Query(ctx, searchRidesByTime,
-		arg.Lower,
-		arg.Lower_2,
-		arg.Column3,
+		arg.Origin,
+		arg.Destination,
 		arg.GraceMinutes,
+		arg.SearchTime,
 		arg.SearchToleranceMinutes,
 	)
 	if err != nil {
@@ -616,6 +638,64 @@ func (q *Queries) SearchRidesByTime(ctx context.Context, arg SearchRidesByTimePa
 			&i.PostedAt,
 			&i.ExpiresAt,
 			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchRidesFuzzy = `-- name: SearchRidesFuzzy :many
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+FROM rides
+WHERE origin_norm % route_norm($1::text)
+  AND destination_norm % route_norm($2::text)
+  AND expires_at > NOW()
+  AND departure_at + (flexibility * interval '1 minute') + ($3::int * interval '1 minute') > NOW()
+ORDER BY similarity(origin_norm, route_norm($1::text))
+       + similarity(destination_norm, route_norm($2::text)) DESC,
+         departure_at ASC
+`
+
+type SearchRidesFuzzyParams struct {
+	Origin       string `db:"origin"`
+	Destination  string `db:"destination"`
+	GraceMinutes int32  `db:"grace_minutes"`
+}
+
+// Trigram fuzzy fallback for typos/spelling variants. The `%` operator uses the
+// GIN indexes and respects pg_trgm.similarity_threshold (default 0.3). Used only
+// as a search fallback when the exact lookup returns nothing — NEVER for the
+// notification matching path, where a loose match would ping the wrong driver.
+func (q *Queries) SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyParams) ([]Ride, error) {
+	rows, err := q.db.Query(ctx, searchRidesFuzzy, arg.Origin, arg.Destination, arg.GraceMinutes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Ride{}
+	for rows.Next() {
+		var i Ride
+		if err := rows.Scan(
+			&i.ID,
+			&i.DriverName,
+			&i.Phone,
+			&i.Origin,
+			&i.Destination,
+			&i.Date,
+			&i.DepartureAt,
+			&i.Flexibility,
+			&i.PostedAt,
+			&i.ExpiresAt,
+			&i.FeedbackGiven,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}

@@ -60,8 +60,20 @@ func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
 
 func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error) {
 	rows, err := r.q.SearchRides(context.Background(), queries.SearchRidesParams{
-		Lower:        origin,
-		Lower_2:      destination,
+		Origin:       origin,
+		Destination:  destination,
+		GraceMinutes: r.graceMins,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ridesFromRows(rows), nil
+}
+
+func (r *RideRepo) FindByOriginAndDestinationFuzzy(origin, destination string) ([]domain.Ride, error) {
+	rows, err := r.q.SearchRidesFuzzy(context.Background(), queries.SearchRidesFuzzyParams{
+		Origin:       origin,
+		Destination:  destination,
 		GraceMinutes: r.graceMins,
 	})
 	if err != nil {
@@ -72,8 +84,8 @@ func (r *RideRepo) FindByOriginAndDestination(origin, destination string) ([]dom
 
 func (r *RideRepo) FindByOriginDestinationAndDate(origin, destination string, date time.Time) ([]domain.Ride, error) {
 	rows, err := r.q.SearchRidesByDate(context.Background(), queries.SearchRidesByDateParams{
-		Lower:        origin,
-		Lower_2:      destination,
+		Origin:       origin,
+		Destination:  destination,
 		Date:         dateFrom(date),
 		GraceMinutes: r.graceMins,
 	})
@@ -85,9 +97,9 @@ func (r *RideRepo) FindByOriginDestinationAndDate(origin, destination string, da
 
 func (r *RideRepo) FindByOriginAndTime(origin, destination string, searchTime time.Time, toleranceMins int) ([]domain.Ride, error) {
 	rows, err := r.q.SearchRidesByTime(context.Background(), queries.SearchRidesByTimeParams{
-		Lower:                  origin,
-		Lower_2:                destination,
-		Column3:                tsFrom(searchTime),
+		Origin:                 origin,
+		Destination:            destination,
+		SearchTime:             tsFrom(searchTime),
 		GraceMinutes:           r.graceMins,
 		SearchToleranceMinutes: int32(toleranceMins),
 	})
@@ -100,10 +112,10 @@ func (r *RideRepo) FindByOriginAndTime(origin, destination string, searchTime ti
 func (r *RideRepo) FindByOriginDestinationDateTime(origin, destination string, departureAt time.Time, toleranceMins int) ([]domain.Ride, error) {
 	date := time.Date(departureAt.Year(), departureAt.Month(), departureAt.Day(), 0, 0, 0, 0, departureAt.Location())
 	rows, err := r.q.SearchRidesByDateTime(context.Background(), queries.SearchRidesByDateTimeParams{
-		Lower:                  origin,
-		Lower_2:                destination,
+		Origin:                 origin,
+		Destination:            destination,
 		Date:                   dateFrom(date),
-		Column4:                tsFrom(departureAt),
+		SearchTime:             tsFrom(departureAt),
 		GraceMinutes:           r.graceMins,
 		SearchToleranceMinutes: int32(toleranceMins),
 	})
@@ -120,28 +132,28 @@ func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
 	case req.Date.IsZero() && req.DepartureAt.IsZero():
 		rows, err = r.q.FindRidesMatchingAnytimeRequest(context.Background(),
 			queries.FindRidesMatchingAnytimeRequestParams{
-				Lower: req.Origin, Lower_2: req.Destination,
+				Origin: req.Origin, Destination: req.Destination,
 			})
 	case req.Date.IsZero() && !req.DepartureAt.IsZero():
 		rows, err = r.q.FindRidesMatchingDailyRequest(context.Background(),
 			queries.FindRidesMatchingDailyRequestParams{
-				Lower: req.Origin, Lower_2: req.Destination,
-				Column3: tsFrom(req.DepartureAt),
-				Column4: int32(req.Flexibility),
+				Origin: req.Origin, Destination: req.Destination,
+				DepartureAt:   tsFrom(req.DepartureAt),
+				WindowMinutes: int32(req.Flexibility),
 			})
 	case req.DepartureAt.IsZero():
 		rows, err = r.q.FindRidesMatchingDayRequest(context.Background(),
 			queries.FindRidesMatchingDayRequestParams{
-				Lower: req.Origin, Lower_2: req.Destination,
+				Origin: req.Origin, Destination: req.Destination,
 				Date: dateFrom(req.Date),
 			})
 	default:
 		rows, err = r.q.FindRidesMatchingTimeRequest(context.Background(),
 			queries.FindRidesMatchingTimeRequestParams{
-				Lower: req.Origin, Lower_2: req.Destination,
-				Date:    dateFrom(req.Date),
-				Column4: tsFrom(req.DepartureAt),
-				Column5: int32(req.Flexibility),
+				Origin: req.Origin, Destination: req.Destination,
+				Date:          dateFrom(req.Date),
+				DepartureAt:   tsFrom(req.DepartureAt),
+				WindowMinutes: int32(req.Flexibility),
 			})
 	}
 	if err != nil {

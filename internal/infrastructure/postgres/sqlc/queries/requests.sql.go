@@ -30,28 +30,28 @@ func (q *Queries) DeleteRequest(ctx context.Context, id pgtype.UUID) error {
 }
 
 const findRequestsMatchingRide = `-- name: FindRequestsMatchingRide :many
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
   AND (
     (date IS NULL AND departure_at IS NULL)
     OR (date IS NULL AND departure_at IS NOT NULL
-        AND (departure_at::time - (flexibility * interval '1 minute')) <= ($4::timestamptz::time + ($5::int * interval '1 minute'))
-        AND (departure_at::time + (flexibility * interval '1 minute')) >= ($4::timestamptz::time - ($5::int * interval '1 minute')))
-    OR (date = $3 AND departure_at IS NULL)
-    OR (date = $3
-        AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5::int * interval '1 minute'))
-        AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5::int * interval '1 minute')))
+        AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + ($4::int * interval '1 minute'))
+        AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - ($4::int * interval '1 minute')))
+    OR (date = $5 AND departure_at IS NULL)
+    OR (date = $5
+        AND (departure_at - (flexibility * interval '1 minute')) <= ($3::timestamptz + ($4::int * interval '1 minute'))
+        AND (departure_at + (flexibility * interval '1 minute')) >= ($3::timestamptz - ($4::int * interval '1 minute')))
   )
 `
 
 type FindRequestsMatchingRideParams struct {
-	Lower   string             `db:"lower"`
-	Lower_2 string             `db:"lower_2"`
-	Date    pgtype.Date        `db:"date"`
-	Column4 pgtype.Timestamptz `db:"column_4"`
-	Column5 int32              `db:"column_5"`
+	Origin        string             `db:"origin"`
+	Destination   string             `db:"destination"`
+	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
+	WindowMinutes int32              `db:"window_minutes"`
+	Date          pgtype.Date        `db:"date"`
 }
 
 // Matches all alert modes inferred from NULL state of date/departure_at:
@@ -62,11 +62,11 @@ type FindRequestsMatchingRideParams struct {
 //	time:    both set (overlapping window)
 func (q *Queries) FindRequestsMatchingRide(ctx context.Context, arg FindRequestsMatchingRideParams) ([]Request, error) {
 	rows, err := q.db.Query(ctx, findRequestsMatchingRide,
-		arg.Lower,
-		arg.Lower_2,
+		arg.Origin,
+		arg.Destination,
+		arg.DepartureAt,
+		arg.WindowMinutes,
 		arg.Date,
-		arg.Column4,
-		arg.Column5,
 	)
 	if err != nil {
 		return nil, err
@@ -86,6 +86,8 @@ func (q *Queries) FindRequestsMatchingRide(ctx context.Context, arg FindRequests
 			&i.Flexibility,
 			&i.PostedAt,
 			&i.ExpiresAt,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -98,7 +100,7 @@ func (q *Queries) FindRequestsMatchingRide(ctx context.Context, arg FindRequests
 }
 
 const getRequestByID = `-- name: GetRequestByID :one
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests WHERE id = $1
 `
 
@@ -116,6 +118,8 @@ func (q *Queries) GetRequestByID(ctx context.Context, id pgtype.UUID) (Request, 
 		&i.Flexibility,
 		&i.PostedAt,
 		&i.ExpiresAt,
+		&i.OriginNorm,
+		&i.DestinationNorm,
 	)
 	return i, err
 }
@@ -155,7 +159,7 @@ func (q *Queries) InsertRequest(ctx context.Context, arg InsertRequestParams) er
 }
 
 const listActiveRequests = `-- name: ListActiveRequests :many
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests
 WHERE expires_at > NOW()
   -- hide a time alert once its flex window ended more than grace_minutes ago
@@ -205,6 +209,8 @@ func (q *Queries) ListActiveRequests(ctx context.Context, graceMinutes int32) ([
 			&i.Flexibility,
 			&i.PostedAt,
 			&i.ExpiresAt,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -217,7 +223,7 @@ func (q *Queries) ListActiveRequests(ctx context.Context, graceMinutes int32) ([
 }
 
 const listRequestsByPhone = `-- name: ListRequestsByPhone :many
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests
 WHERE phone = $1
   AND expires_at > NOW()
@@ -255,6 +261,8 @@ func (q *Queries) ListRequestsByPhone(ctx context.Context, arg ListRequestsByPho
 			&i.Flexibility,
 			&i.PostedAt,
 			&i.ExpiresAt,
+			&i.OriginNorm,
+			&i.DestinationNorm,
 		); err != nil {
 			return nil, err
 		}

@@ -32,7 +32,7 @@ func (m *mockSubRepoNotify) FindByPhone(string) ([]domain.Subscription, error) {
 	}
 	return m.subs, nil
 }
-func (m *mockSubRepoNotify) Delete(string) error          { return nil }
+func (m *mockSubRepoNotify) Delete(string) error           { return nil }
 func (m *mockSubRepoNotify) DeleteByEndpoint(string) error { return nil }
 
 func TestNotifySearcher_SendsToAllDevices(t *testing.T) {

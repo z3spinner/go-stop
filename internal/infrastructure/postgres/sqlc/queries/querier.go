@@ -86,6 +86,11 @@ type Querier interface {
 	SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDateTimeParams) ([]Ride, error)
 	// Time-only search: any date, departure window overlaps search_time ± tolerance.
 	SearchRidesByTime(ctx context.Context, arg SearchRidesByTimeParams) ([]Ride, error)
+	// Trigram fuzzy fallback for typos/spelling variants. The `%` operator uses the
+	// GIN indexes and respects pg_trgm.similarity_threshold (default 0.3). Used only
+	// as a search fallback when the exact lookup returns nothing — NEVER for the
+	// notification matching path, where a loose match would ping the wrong driver.
+	SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyParams) ([]Ride, error)
 	SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error
 	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error

@@ -62,11 +62,11 @@ func (r *RequestRepo) FindAllActive() ([]domain.Request, error) {
 
 func (r *RequestRepo) FindMatching(ride domain.Ride) ([]domain.Request, error) {
 	rows, err := r.q.FindRequestsMatchingRide(context.Background(), queries.FindRequestsMatchingRideParams{
-		Lower:   ride.Origin,
-		Lower_2: ride.Destination,
-		Date:    dateFrom(ride.Date),
-		Column4: tsFrom(ride.DepartureAt),
-		Column5: int32(ride.Flexibility),
+		Origin:        ride.Origin,
+		Destination:   ride.Destination,
+		Date:          dateFrom(ride.Date),
+		DepartureAt:   tsFrom(ride.DepartureAt),
+		WindowMinutes: int32(ride.Flexibility),
 	})
 	if err != nil {
 		return nil, err

@@ -13,19 +13,34 @@ type mockRideRepoWithMatch struct {
 	matchResult []domain.Ride
 }
 
-func (m *mockRideRepoWithMatch) Save(domain.Ride) error                              { return nil }
-func (m *mockRideRepoWithMatch) FindByID(string) (domain.Ride, error)               { return domain.Ride{}, errors.New("not found") }
-func (m *mockRideRepoWithMatch) FindAll() ([]domain.Ride, error)                     { return nil, nil }
+func (m *mockRideRepoWithMatch) Save(domain.Ride) error { return nil }
+func (m *mockRideRepoWithMatch) FindByID(string) (domain.Ride, error) {
+	return domain.Ride{}, errors.New("not found")
+}
+func (m *mockRideRepoWithMatch) FindAll() ([]domain.Ride, error)           { return nil, nil }
 func (m *mockRideRepoWithMatch) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoWithMatch) FindByOriginAndDestination(string, string) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoWithMatch) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoWithMatch) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoWithMatch) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoWithMatch) FindMatching(domain.Request) ([]domain.Ride, error) { return m.matchResult, nil }
-func (m *mockRideRepoWithMatch) Delete(string) error                                 { return nil }
-func (m *mockRideRepoWithMatch) DeleteExpired() error                                { return nil }
-func (m *mockRideRepoWithMatch) FindPendingFeedback() ([]domain.Ride, error)        { return nil, nil }
-func (m *mockRideRepoWithMatch) SetFeedbackGiven(string) error                      { return nil }
+func (m *mockRideRepoWithMatch) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoWithMatch) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoWithMatch) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoWithMatch) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoWithMatch) FindByOriginAndDestinationFuzzy(string, string) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoWithMatch) FindMatching(domain.Request) ([]domain.Ride, error) {
+	return m.matchResult, nil
+}
+func (m *mockRideRepoWithMatch) Delete(string) error                         { return nil }
+func (m *mockRideRepoWithMatch) DeleteExpired() error                        { return nil }
+func (m *mockRideRepoWithMatch) FindPendingFeedback() ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepoWithMatch) SetFeedbackGiven(string) error               { return nil }
 
 func TestPostRequest_SavesRequest(t *testing.T) {
 	reqs := &mockRequestRepo{}

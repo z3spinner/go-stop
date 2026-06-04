@@ -3,11 +3,11 @@ INSERT INTO requests (id, searcher_name, phone, origin, destination, date, depar
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
 -- name: GetRequestByID :one
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests WHERE id = $1;
 
 -- name: ListRequestsByPhone :many
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests
 WHERE phone = sqlc.arg(phone)
   AND expires_at > NOW()
@@ -29,7 +29,7 @@ ORDER BY COALESCE(departure_at, date, expires_at) ASC;
 -- key), so it sits below same-day date+time entries yet above any later day.
 -- A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
 -- marks a concrete one-off. Newest breaks ties.
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests
 WHERE expires_at > NOW()
   -- hide a time alert once its flex window ended more than grace_minutes ago
@@ -53,19 +53,19 @@ ORDER BY
 --   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match)
 --   day:     date set, departure_at IS NULL
 --   time:    both set (overlapping window)
-SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
+SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
   AND expires_at > NOW()
   AND (
     (date IS NULL AND departure_at IS NULL)
     OR (date IS NULL AND departure_at IS NOT NULL
-        AND (departure_at::time - (flexibility * interval '1 minute')) <= ($4::timestamptz::time + ($5::int * interval '1 minute'))
-        AND (departure_at::time + (flexibility * interval '1 minute')) >= ($4::timestamptz::time - ($5::int * interval '1 minute')))
-    OR (date = $3 AND departure_at IS NULL)
-    OR (date = $3
-        AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5::int * interval '1 minute'))
-        AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5::int * interval '1 minute')))
+        AND (departure_at::time - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz::time + (sqlc.arg(window_minutes)::int * interval '1 minute'))
+        AND (departure_at::time + (flexibility * interval '1 minute')) >= (sqlc.arg(departure_at)::timestamptz::time - (sqlc.arg(window_minutes)::int * interval '1 minute')))
+    OR (date = sqlc.arg(date) AND departure_at IS NULL)
+    OR (date = sqlc.arg(date)
+        AND (departure_at - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz + (sqlc.arg(window_minutes)::int * interval '1 minute'))
+        AND (departure_at + (flexibility * interval '1 minute')) >= (sqlc.arg(departure_at)::timestamptz - (sqlc.arg(window_minutes)::int * interval '1 minute')))
   );
 
 -- name: DeleteRequest :exec

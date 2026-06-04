@@ -3,92 +3,107 @@ INSERT INTO rides (id, driver_name, phone, origin, destination, date, departure_
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
 
 -- name: GetRideByID :one
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides WHERE id = $1;
 
 -- name: ListRidesActive :many
 -- grace_minutes: hides rides whose flex window ended more than N minutes ago
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
 WHERE expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
 ORDER BY departure_at ASC;
 
 -- name: ListRidesByPhone :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides WHERE phone = $1 AND expires_at > NOW()
 ORDER BY departure_at ASC;
 
 -- name: SearchRidesByDate :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
-  AND date = $3
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
+  AND date = sqlc.arg(date)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
 ORDER BY departure_at ASC;
 
 -- name: SearchRidesByTime :many
 -- Time-only search: any date, departure window overlaps search_time ± tolerance.
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
-  AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
-  AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+  AND (departure_at::time - (flexibility * interval '1 minute')) <= (sqlc.arg(search_time)::timestamptz::time + (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+  AND (departure_at::time + (flexibility * interval '1 minute')) >= (sqlc.arg(search_time)::timestamptz::time - (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
 ORDER BY departure_at ASC;
 
 -- name: SearchRidesByDateTime :many
 -- Returns rides on the given date whose departure window (±flexibility) overlaps
 -- the search time ± search_tolerance_minutes. Hides expired/past-grace rides.
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
-  AND date = $3
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
+  AND date = sqlc.arg(date)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
-  AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
-  AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+  AND (departure_at - (flexibility * interval '1 minute')) <= (sqlc.arg(search_time)::timestamptz + (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+  AND (departure_at + (flexibility * interval '1 minute')) >= (sqlc.arg(search_time)::timestamptz - (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
 ORDER BY departure_at ASC;
 
 -- name: SearchRides :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
 ORDER BY departure_at ASC;
 
--- name: FindRidesMatchingAnytimeRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+-- name: SearchRidesFuzzy :many
+-- Trigram fuzzy fallback for typos/spelling variants. The `%` operator uses the
+-- GIN indexes and respects pg_trgm.similarity_threshold (default 0.3). Used only
+-- as a search fallback when the exact lookup returns nothing — NEVER for the
+-- notification matching path, where a loose match would ping the wrong driver.
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm % route_norm(sqlc.arg(origin)::text)
+  AND destination_norm % route_norm(sqlc.arg(destination)::text)
+  AND expires_at > NOW()
+  AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
+ORDER BY similarity(origin_norm, route_norm(sqlc.arg(origin)::text))
+       + similarity(destination_norm, route_norm(sqlc.arg(destination)::text)) DESC,
+         departure_at ASC;
+
+-- name: FindRidesMatchingAnytimeRequest :many
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+FROM rides
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
   AND expires_at > NOW();
 
 -- name: FindRidesMatchingDailyRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
   AND expires_at > NOW()
-  AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + ($4::int * interval '1 minute'))
-  AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - ($4::int * interval '1 minute'));
+  AND (departure_at::time - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz::time + (sqlc.arg(window_minutes)::int * interval '1 minute'))
+  AND (departure_at::time + (flexibility * interval '1 minute')) >= (sqlc.arg(departure_at)::timestamptz::time - (sqlc.arg(window_minutes)::int * interval '1 minute'));
 
 -- name: FindRidesMatchingDayRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
-  AND date = $3
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
+  AND date = sqlc.arg(date)
   AND expires_at > NOW();
 
 -- name: FindRidesMatchingTimeRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
-WHERE LOWER(origin) = LOWER($1) AND LOWER(destination) = LOWER($2)
-  AND date = $3
+WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
+  AND date = sqlc.arg(date)
   AND expires_at > NOW()
-  AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5::int * interval '1 minute'))
-  AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5::int * interval '1 minute'));
+  AND (departure_at - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz + (sqlc.arg(window_minutes)::int * interval '1 minute'))
+  AND (departure_at + (flexibility * interval '1 minute')) >= (sqlc.arg(departure_at)::timestamptz - (sqlc.arg(window_minutes)::int * interval '1 minute'));
 
 -- name: DeleteRide :exec
 DELETE FROM rides WHERE id = $1;
@@ -97,7 +112,7 @@ DELETE FROM rides WHERE id = $1;
 DELETE FROM rides WHERE expires_at < NOW();
 
 -- name: ListRidesPendingFeedback :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
 WHERE departure_at BETWEEN (NOW() - INTERVAL '23 hours') AND (NOW() - INTERVAL '30 minutes')
   AND feedback_given = false

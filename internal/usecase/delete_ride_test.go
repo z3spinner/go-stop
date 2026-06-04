@@ -1,9 +1,9 @@
 package usecase_test
 
 import (
-	"time"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/usecase"
@@ -22,27 +22,38 @@ func (m *mockRideRepoDelete) FindByID(id string) (domain.Ride, error) {
 	}
 	return r, nil
 }
-func (m *mockRideRepoDelete) FindAll() ([]domain.Ride, error)                                     { return nil, nil }
+func (m *mockRideRepoDelete) FindAll() ([]domain.Ride, error)           { return nil, nil }
 func (m *mockRideRepoDelete) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoDelete) FindByOriginAndDestination(string, string) ([]domain.Ride, error)    { return nil, nil }
-func (m *mockRideRepoDelete) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoDelete) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoDelete) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoDelete) FindMatching(domain.Request) ([]domain.Ride, error)                  { return nil, nil }
+func (m *mockRideRepoDelete) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoDelete) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoDelete) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoDelete) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoDelete) FindByOriginAndDestinationFuzzy(string, string) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoDelete) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoDelete) Delete(id string) error {
 	m.deleted = append(m.deleted, id)
 	return nil
 }
-func (m *mockRideRepoDelete) DeleteExpired() error                           { return nil }
-func (m *mockRideRepoDelete) FindPendingFeedback() ([]domain.Ride, error)   { return nil, nil }
-func (m *mockRideRepoDelete) SetFeedbackGiven(string) error                  { return nil }
+func (m *mockRideRepoDelete) DeleteExpired() error                        { return nil }
+func (m *mockRideRepoDelete) FindPendingFeedback() ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepoDelete) SetFeedbackGiven(string) error               { return nil }
 
 type mockRequestRepoDelete struct {
 	requests map[string]domain.Request
 	deleted  []string
 }
 
-func (m *mockRequestRepoDelete) Save(domain.Request) error { return nil }
+func (m *mockRequestRepoDelete) Save(domain.Request) error                    { return nil }
 func (m *mockRequestRepoDelete) FindByPhone(string) ([]domain.Request, error) { return nil, nil }
 func (m *mockRequestRepoDelete) FindAllActive() ([]domain.Request, error)     { return nil, nil }
 func (m *mockRequestRepoDelete) FindByID(id string) (domain.Request, error) {
@@ -59,15 +70,19 @@ func (m *mockRequestRepoDelete) Delete(id string) error {
 }
 func (m *mockRequestRepoDelete) DeleteExpired() error { return nil }
 
-
 type noopNotifQueue struct{}
+
 func (n *noopNotifQueue) Enqueue(string, string, string) error { return nil }
-func (n *noopNotifQueue) FindPending(time.Time, int) ([]domain.NotificationQueueEntry, error) { return nil, nil }
-func (n *noopNotifQueue) MarkSent(string) error { return nil }
+func (n *noopNotifQueue) FindPending(time.Time, int) ([]domain.NotificationQueueEntry, error) {
+	return nil, nil
+}
+func (n *noopNotifQueue) MarkSent(string) error                         { return nil }
 func (n *noopNotifQueue) MarkSentByRideAndRequest(string, string) error { return nil }
-func (n *noopNotifQueue) DeleteForRide(string) error { return nil }
-func (n *noopNotifQueue) DeleteExpired() error { return nil }
-func (n *noopNotifQueue) ListForSearcher(string) ([]domain.NotificationQueueEntry, error) { return nil, nil }
+func (n *noopNotifQueue) DeleteForRide(string) error                    { return nil }
+func (n *noopNotifQueue) DeleteExpired() error                          { return nil }
+func (n *noopNotifQueue) ListForSearcher(string) ([]domain.NotificationQueueEntry, error) {
+	return nil, nil
+}
 func TestDeleteRide_DeletesWhenPhoneMatches(t *testing.T) {
 	rides := &mockRideRepoDelete{
 		rides: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-0001"}},

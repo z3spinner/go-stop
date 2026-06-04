@@ -12,6 +12,9 @@ type RideRepository interface {
 	FindAll() ([]domain.Ride, error)
 	FindByPhone(phone string) ([]domain.Ride, error)
 	FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error)
+	// FindByOriginAndDestinationFuzzy is a trigram-based fallback for typos and
+	// spelling variants; used only when an exact route search returns nothing.
+	FindByOriginAndDestinationFuzzy(origin, destination string) ([]domain.Ride, error)
 	FindByOriginDestinationAndDate(origin, destination string, date time.Time) ([]domain.Ride, error)
 	FindByOriginDestinationDateTime(origin, destination string, departureAt time.Time, toleranceMins int) ([]domain.Ride, error)
 	FindByOriginAndTime(origin, destination string, searchTime time.Time, toleranceMins int) ([]domain.Ride, error)

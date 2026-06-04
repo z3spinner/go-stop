@@ -36,6 +36,11 @@ func (uc *SearchRides) Execute(origin, destination string, searchDate, departure
 		result, err = uc.rides.FindByOriginAndTime(origin, destination, searchTime, searchToleranceMins)
 	default:
 		result, err = uc.rides.FindByOriginAndDestination(origin, destination)
+		// Fall back to trigram fuzzy matching when an exact route search finds
+		// nothing, so typos/spelling variants ("Saillan" → "Saillans") still hit.
+		if err == nil && len(result) == 0 {
+			result, err = uc.rides.FindByOriginAndDestinationFuzzy(origin, destination)
+		}
 	}
 	if err != nil {
 		return nil, err

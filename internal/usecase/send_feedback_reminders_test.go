@@ -13,7 +13,7 @@ type mockRideRepoPendingFeedback struct {
 	pending []domain.Ride
 }
 
-func (m *mockRideRepoPendingFeedback) Save(domain.Ride) error              { return nil }
+func (m *mockRideRepoPendingFeedback) Save(domain.Ride) error { return nil }
 func (m *mockRideRepoPendingFeedback) FindByID(string) (domain.Ride, error) {
 	return domain.Ride{}, nil
 }
@@ -22,9 +22,18 @@ func (m *mockRideRepoPendingFeedback) FindByPhone(string) ([]domain.Ride, error)
 func (m *mockRideRepoPendingFeedback) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil
 }
-func (m *mockRideRepoPendingFeedback) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoPendingFeedback) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoPendingFeedback) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepoPendingFeedback) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoPendingFeedback) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoPendingFeedback) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepoPendingFeedback) FindByOriginAndDestinationFuzzy(string, string) ([]domain.Ride, error) {
+	return nil, nil
+}
 func (m *mockRideRepoPendingFeedback) FindMatching(domain.Request) ([]domain.Ride, error) {
 	return nil, nil
 }

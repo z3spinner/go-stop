@@ -12,9 +12,9 @@ import (
 // ── Shared mocks (used across test files in this package) ────────────────────
 
 type mockRideRepo struct {
-	saved    []domain.Ride
-	byID     map[string]domain.Ride
-	saveErr  error
+	saved   []domain.Ride
+	byID    map[string]domain.Ride
+	saveErr error
 }
 
 func (m *mockRideRepo) Save(r domain.Ride) error {
@@ -31,17 +31,26 @@ func (m *mockRideRepo) FindByID(id string) (domain.Ride, error) {
 	}
 	return r, nil
 }
-func (m *mockRideRepo) FindAll() ([]domain.Ride, error)  { return m.saved, nil }
+func (m *mockRideRepo) FindAll() ([]domain.Ride, error)           { return m.saved, nil }
 func (m *mockRideRepo) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return nil, nil
 }
-func (m *mockRideRepo) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepo) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepo) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepo) FindByOriginDestinationAndDate(string, string, time.Time) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepo) FindByOriginDestinationDateTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepo) FindByOriginAndTime(string, string, time.Time, int) ([]domain.Ride, error) {
+	return nil, nil
+}
+func (m *mockRideRepo) FindByOriginAndDestinationFuzzy(string, string) ([]domain.Ride, error) {
+	return nil, nil
+}
 func (m *mockRideRepo) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepo) Delete(string) error                                 { return nil }
-func (m *mockRideRepo) DeleteExpired() error                                { return nil }
+func (m *mockRideRepo) Delete(string) error                                { return nil }
+func (m *mockRideRepo) DeleteExpired() error                               { return nil }
 func (m *mockRideRepo) FindPendingFeedback() ([]domain.Ride, error)        { return nil, nil }
 func (m *mockRideRepo) SetFeedbackGiven(string) error                      { return nil }
 
@@ -58,8 +67,8 @@ func (m *mockRequestRepo) Save(r domain.Request) error {
 	m.saved = append(m.saved, r)
 	return nil
 }
-func (m *mockRequestRepo) FindByPhone(string) ([]domain.Request, error)  { return nil, nil }
-func (m *mockRequestRepo) FindAllActive() ([]domain.Request, error)      { return m.matching, nil }
+func (m *mockRequestRepo) FindByPhone(string) ([]domain.Request, error) { return nil, nil }
+func (m *mockRequestRepo) FindAllActive() ([]domain.Request, error)     { return m.matching, nil }
 func (m *mockRequestRepo) FindByID(string) (domain.Request, error) {
 	return domain.Request{}, errors.New("not found")
 }
@@ -87,11 +96,13 @@ func (m *mockSubRepo) Save(s domain.Subscription) error {
 	return nil
 }
 func (m *mockSubRepo) FindByPhone(phone string) ([]domain.Subscription, error) {
-	if s, ok := m.subs[phone]; ok { return []domain.Subscription{s}, nil }
+	if s, ok := m.subs[phone]; ok {
+		return []domain.Subscription{s}, nil
+	}
 	return nil, errors.New("not found")
 }
 func (m *mockSubRepo) DeleteByEndpoint(string) error { return nil }
-func (m *mockSubRepo) Delete(phone string) error { delete(m.subs, phone); return nil }
+func (m *mockSubRepo) Delete(phone string) error     { delete(m.subs, phone); return nil }
 
 // ── PostRide tests ────────────────────────────────────────────────────────────
 
