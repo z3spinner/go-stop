@@ -1,2 +1,1 @@
-web: go-stop
-postdeploy: migratedb up
+web: migratedb up && go-stop
