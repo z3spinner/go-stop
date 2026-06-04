@@ -20,10 +20,15 @@ jobs:
           cache: true
       # Runs golangci-lint using the committed .golangci.yml. Keep the version in
       # sync with the Makefile's GOLANGCI_LINT_VERSION.
+      # install-mode: goinstall builds the linter from source with the Go toolchain
+      # above (1.25). The prebuilt v1.64.8 binary is built with Go 1.24 and refuses
+      # to lint a module that targets go 1.25 ("language version ... is lower than
+      # the targeted Go version"); building from source avoids that mismatch.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.8
+          install-mode: goinstall
 
   test:
     name: Go tests (unit + integration)
