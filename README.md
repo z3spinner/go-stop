@@ -17,7 +17,8 @@ This app uses phone number as a lightweight delete credential with **no verifica
 
 ## Requirements
 
-- Go 1.22+
+- Go 1.25+
+- Node 22+ (for the SvelteKit frontend)
 - PostgreSQL 14+
 
 ## Local setup (with Docker — recommended)
@@ -30,19 +31,41 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Open [http://localhost:8080](http://localhost:8080). The database is created and migrated automatically.
+Open **[http://localhost:5173](http://localhost:5173)** — the SvelteKit/Vite dev
+server, which proxies `/api` to the Go server on :8080. The database is created
+and migrated automatically.
 
-The `app` service uses `reflex` for hot-reload: any change to a `.go` file triggers an automatic rebuild and restart. Changes to `web/` (HTML, CSS, JS) are served live from the host volume with no restart needed — just refresh your browser.
+The devstack runs four services with hot-reload on both sides:
+
+- **`frontend`** — Vite dev server on :5173; edits under `frontend/` reload live.
+- **`app`** — the Go API on :8080, using `reflex`: any `.go` change triggers a
+  rebuild and restart.
+- **`db`** + **`migrations`** — Postgres (migrated on startup). The dev database
+  is **tmpfs (in-memory): data is discarded when the stack stops.**
+
+After changing frontend dependencies, re-run `docker compose up --build` (or
+`docker compose down -v` to reset the cached `node_modules` volume).
 
 ## Local setup (manual)
+
+Run the Go API and the Vite dev server together with hot-reload:
 
 ```bash
 export DATABASE_URL="postgres://user:pass@localhost:5432/gostop?sslmode=disable"
 # VAPID keys are optional — generated and stored in the DB on first boot if unset.
-export PORT=8080
 
+npm ci --prefix frontend    # install frontend deps (first run only)
 go run ./cmd/migratedb up   # apply database migrations
-go run .
+make dev                    # Go on :8080 + Vite on :5173 (proxying /api) — open :5173
+```
+
+To instead run a single Go server that serves the built SPA (as in production),
+build the frontend first so `web/build` exists:
+
+```bash
+make build-web   # npm ci + vite build → web/build
+go run ./cmd/migratedb up
+go run .          # serves the SPA + API on :8080
 ```
 
 ## Deployment (Scalingo)
@@ -74,18 +97,32 @@ domain ← usecase ← boundaries ← infrastructure
 | `internal/infrastructure` | PostgreSQL (pgx) + Web Push (VAPID) |
 | `web/` | Static SPA served by Go |
 
-## Integration tests
+## Tests
 
-Requires a running PostgreSQL database:
+Unit tests (no database):
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.test.yml up db -d
-TEST_DATABASE_URL="postgres://gostop:gostop@localhost:5432/gostop?sslmode=disable" \
-  go test -tags integration ./...
-docker compose -f docker-compose.yml -f docker-compose.test.yml down
+make test-unit   # go test ./internal/usecase/...
 ```
 
-The test override (`docker-compose.test.yml`) replaces the persistent volume with `tmpfs` so data lives only in RAM and is discarded when the container stops. The plain `docker compose up` devstack keeps its data across restarts.
+Integration tests need a running PostgreSQL. Start just the `db` and `migrations`
+services, then run the suite:
+
+```bash
+docker compose up -d db migrations
+make test   # go test -tags integration -count=1 -p 1 ./... against localhost:5432
+docker compose down
+```
+
+`make test` points `TEST_DATABASE_URL` at the compose database. That database is
+tmpfs-backed, so its contents live only in RAM and are discarded when the stack
+stops — no separate test override is needed.
+
+End-to-end (Playwright) tests build the SPA and run it against the Go server:
+
+```bash
+make test-e2e
+```
 
 ## License
 

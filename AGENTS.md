@@ -107,8 +107,7 @@ depend on this ordering). `.buildpacks` chains the Node then Go buildpacks;
   harmless — just **do not reuse 007**. _(Fixed: the unimplemented
   `PHONE_ENCRYPTION_KEY` env var that had been advertised in `scalingo.json` is now
   removed, since no Go code on `main` reads it.)_
-- **`README.md` has stale dev/test instructions**: it describes `reflex` serving
-  `web/` HTML/CSS/JS live and opening the app on :8080, which predates the
-  SvelteKit frontend (the devstack now runs Vite on :5173 with a separate
-  `frontend` service). It also references a `docker-compose.test.yml` override that
-  no longer exists (the base `docker-compose.yml` already uses tmpfs for Postgres).
+_(All earlier README/config call-outs have been fixed: the committed binary, the
+dead `PHONE_ENCRYPTION_KEY` env var, and the stale `README.md` dev/test
+instructions — which now point at :5173/Vite, `make dev`, and the real `make test`
+flow instead of the removed `docker-compose.test.yml`.)_
