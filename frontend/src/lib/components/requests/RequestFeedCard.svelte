@@ -38,5 +38,25 @@
 			<span class="tag">{flexLabel(request.Flexibility)}</span>
 		{/if}
 	</div>
-	<button type="button" class="btn-drive-this btn btn-secondary" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
+	<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
 </div>
+
+<style>
+	/* Compact outline-green button matching the rides panel's "Demander le
+	   contact" (.btn-interest), so both feeds read at the same weight. */
+	.btn-drive-this {
+		margin-top: 6px;
+		width: 100%;
+		padding: 5px 10px;
+		font-size: 0.85rem;
+		border: 1px solid var(--blue, #28a836);
+		border-radius: var(--radius, 8px);
+		background: none;
+		color: var(--blue, #28a836);
+		cursor: pointer;
+	}
+	.btn-drive-this:hover {
+		background: var(--blue, #28a836);
+		color: #fff;
+	}
+</style>

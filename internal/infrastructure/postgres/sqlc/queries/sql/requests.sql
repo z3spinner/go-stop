@@ -12,10 +12,25 @@ FROM requests WHERE phone = $1 AND expires_at > NOW()
 ORDER BY COALESCE(departure_at, date, expires_at) ASC;
 
 -- name: ListActiveRequests :many
--- Public feed of all non-expired requests (newest first).
+-- Public feed of all non-expired requests, ordered so concrete demand comes
+-- first and the vaguest alerts sink to the bottom:
+--   0 dated (a one-off date+time, OR a date-only "any time that day")
+--   1 a daily recurring time   2 anytime
+-- Within the dated group, sort chronologically by the effective moment — a
+-- date-only alert sorts at the END of its day (a one-second-before-midnight
+-- key), so it sits below same-day date+time entries yet above any later day.
+-- A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
+-- marks a concrete one-off. Newest breaks ties.
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
 FROM requests WHERE expires_at > NOW()
-ORDER BY posted_at DESC;
+ORDER BY
+  CASE
+    WHEN date IS NOT NULL OR (departure_at IS NOT NULL AND EXTRACT(YEAR FROM departure_at) > 1970) THEN 0
+    WHEN departure_at IS NOT NULL THEN 1
+    ELSE 2
+  END,
+  COALESCE(departure_at, date::timestamptz + interval '1 day' - interval '1 second') ASC NULLS LAST,
+  posted_at DESC;
 
 -- name: FindRequestsMatchingRide :many
 -- Matches all alert modes inferred from NULL state of date/departure_at:
