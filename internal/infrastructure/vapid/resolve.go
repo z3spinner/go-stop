@@ -62,11 +62,11 @@ func Resolve(ctx context.Context, store Store, getenv func(string) string) (Keys
 	if ep, epriv := getenv("VAPID_PUBLIC_KEY"), getenv("VAPID_PRIVATE_KEY"); ep != "" && epriv != "" {
 		newPub, newPriv, source = ep, epriv, "env"
 	} else {
-		gp, gpub, gerr := generateKeys()
+		gpriv, gpub, gerr := generateKeys()
 		if gerr != nil {
 			return Keys{}, "", fmt.Errorf("generate vapid keys: %w", gerr)
 		}
-		newPub, newPriv, source = gpub, gp, "generated"
+		newPub, newPriv, source = gpub, gpriv, "generated"
 	}
 
 	email := getenv("VAPID_EMAIL")
@@ -97,6 +97,10 @@ func Resolve(ctx context.Context, store Store, getenv func(string) string) (Keys
 	return Keys{Public: finalPub, Private: finalPriv, Email: emailOrDefault(ctx, store)}, source, nil
 }
 
+// emailOrDefault returns the stored vapid_email, or defaultEmail when it is
+// absent. The email is non-critical metadata, so a read error here degrades to
+// the default rather than failing key resolution — by this point the key reads
+// above have already succeeded against the same store.
 func emailOrDefault(ctx context.Context, store Store) string {
 	email, ok, err := store.Get(ctx, keyEmail)
 	if err != nil || !ok || email == "" {
