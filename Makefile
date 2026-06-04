@@ -8,6 +8,12 @@ test-unit:
 sqlc:
 	sqlc generate
 
+# Seed the dev DB with realistic rides + alerts via the running app's API.
+# Useful after `make test`, which truncates the dev database.
+# Override the target with BASE_URL=... (default http://localhost:8080).
+seed:
+	./scripts/seed.sh
+
 build-web:
 	npm ci --prefix frontend && npm run build --prefix frontend
 
