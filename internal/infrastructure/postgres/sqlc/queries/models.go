@@ -8,6 +8,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AppSetting struct {
+	Key       string             `db:"key"`
+	Value     string             `db:"value"`
+	CreatedAt pgtype.Timestamptz `db:"created_at"`
+}
+
 type Interest struct {
 	ID            pgtype.UUID        `db:"id"`
 	RideID        pgtype.UUID        `db:"ride_id"`
