@@ -78,6 +78,18 @@ type SubscriptionBody struct {
 	Auth     string `json:"auth"`
 }
 
+type TestPushBody struct {
+	Phone string `json:"phone"`
+	// Lang selects the language of the server-chosen quote of the day (e.g. "fr").
+	// The notification text itself is never client-supplied.
+	Lang string `json:"lang"`
+}
+
+type TestPushResponse struct {
+	// Sent is the number of devices the test push reached (0 = none registered).
+	Sent int `json:"sent"`
+}
+
 // --- Response shapes ---
 
 // PublicRide is returned for public search/feed requests. Phone is absent; DriverName is visible.

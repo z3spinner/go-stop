@@ -13,12 +13,42 @@ import (
 )
 
 type SubscriptionHandler struct {
-	subscribe   *usecase.Subscribe
-	unsubscribe *usecase.Unsubscribe
+	subscribe    *usecase.Subscribe
+	unsubscribe  *usecase.Unsubscribe
+	sendTestPush *usecase.SendTestPush
 }
 
-func NewSubscriptionHandler(subscribe *usecase.Subscribe, unsubscribe *usecase.Unsubscribe) *SubscriptionHandler {
-	return &SubscriptionHandler{subscribe: subscribe, unsubscribe: unsubscribe}
+func NewSubscriptionHandler(subscribe *usecase.Subscribe, unsubscribe *usecase.Unsubscribe, sendTestPush *usecase.SendTestPush) *SubscriptionHandler {
+	return &SubscriptionHandler{subscribe: subscribe, unsubscribe: unsubscribe, sendTestPush: sendTestPush}
+}
+
+type testPushRequest struct {
+	Phone string `json:"phone" binding:"required"`
+	Lang  string `json:"lang"`
+}
+
+// TestPush sends a test notification to all of the caller's registered devices.
+// @ID       testSubscription
+// @Tags     subscriptions
+// @Accept   json
+// @Produce  json
+// @Param    body  body  handler.TestPushBody  true  "Phone to test"
+// @Success  200  {object}  handler.TestPushResponse
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /subscriptions/test [post]
+func (h *SubscriptionHandler) TestPush(c *gin.Context) {
+	var req testPushRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	n, err := h.sendTestPush.Execute(normalizePhone(req.Phone), req.Lang)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, TestPushResponse{Sent: n})
 }
 
 type subscribeRequest struct {

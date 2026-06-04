@@ -57,6 +57,7 @@ func main() {
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
+	sendTestPush := usecase.NewSendTestPush(subRepo, notifier)
 	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo)
 	deleteRequest := usecase.NewDeleteRequest(requestRepo)
 	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, interestRepo, subRepo, notifier)
@@ -89,7 +90,7 @@ func main() {
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, requestRepo)
 	destH := handler.NewDestinationHandler(getDests)
-	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
+	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
 	vapidH := handler.NewVapidHandler(os.Getenv("VAPID_PUBLIC_KEY"))
 
@@ -166,6 +167,7 @@ func main() {
 		api.GET("/destinations", destH.List)
 
 		api.POST("/subscriptions", subH.Subscribe)
+		api.POST("/subscriptions/test", subH.TestPush)
 		api.DELETE("/subscriptions/:phone", subH.Unsubscribe)
 
 		api.GET("/notifications", notifQueueH.List)

@@ -97,7 +97,7 @@ func setupRouter() *gin.Engine {
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
 	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo)
 	destH := handler.NewDestinationHandler(getDests)
-	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
+	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
 
 	r := gin.New()
 	r.POST("/api/rides", rideH.Post)

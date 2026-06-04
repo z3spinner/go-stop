@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 import { api } from './api';
+import { getLocale } from './locale';
 import type { NotificationItem } from './types';
 
 // True in a real browser and in the jsdom test environment, false during SSR /
@@ -99,6 +100,39 @@ export async function updateBellState(phone?: string): Promise<void> {
 	}
 	if (phone && (await trySubscribePush(phone))) return pushState.set('subscribed');
 	pushState.set('granted');
+}
+
+/**
+ * Send a test push (the day's localized quote) to the user's devices.
+ * Returns how many devices it reached (0 = none registered → suggest reconfigure).
+ */
+export async function sendTestPush(phone: string): Promise<number> {
+	if (!phone) return 0;
+	try {
+		const res = await api.subscriptions.test(phone, getLocale());
+		return res?.sent ?? 0;
+	} catch {
+		return 0;
+	}
+}
+
+/**
+ * Re-subscribe from scratch: drop the browser's current push subscription and
+ * register a fresh one, then refresh the bell. For users who suspect their
+ * notifications are broken (e.g. after a push-service rotation).
+ */
+export async function reconfigurePush(phone: string): Promise<boolean> {
+	if (!browser || !('serviceWorker' in navigator)) return false;
+	try {
+		const reg = await navigator.serviceWorker.ready;
+		const existing = await reg.pushManager.getSubscription();
+		if (existing) await existing.unsubscribe();
+	} catch {
+		/* ignore — a fresh subscribe below still recovers most cases */
+	}
+	const ok = await trySubscribePush(phone);
+	await updateBellState(phone);
+	return ok;
 }
 
 const SEEN_KEY = 'poll_seen';

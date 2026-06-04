@@ -281,12 +281,12 @@ test('searcher cancels a pending contact request', async ({ page }) => {
   const interestId = await page.evaluate(id => localStorage.getItem('interest_' + id), rideId);
   expect(interestId).toBeTruthy();
 
-  // Expressing interest pops the "enable notifications" modal; dismiss it so its
+  // Expressing interest pops the "enable notifications" dialog; dismiss it so its
   // overlay doesn't intercept the cancel click.
-  const overlay = page.locator('.modal-overlay');
-  await overlay.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  const dialog = page.locator('[data-slot="dialog-content"]');
+  await dialog.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
   await page.keyboard.press('Escape');
-  await expect(overlay).toHaveCount(0, { timeout: 5000 });
+  await expect(dialog).toHaveCount(0, { timeout: 5000 });
 
   // Cancel it.
   await card.locator('.btn-interest-cancel').click();

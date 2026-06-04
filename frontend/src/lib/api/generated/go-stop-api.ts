@@ -199,6 +199,20 @@ export interface HandlerSubscriptionBody {
   phone?: string;
 }
 
+export interface HandlerTestPushBody {
+  /**
+     * Lang selects the language of the server-chosen quote of the day (e.g. "fr").
+     * The notification text itself is never client-supplied.
+     */
+  lang?: string;
+  phone?: string;
+}
+
+export interface HandlerTestPushResponse {
+  /** Sent is the number of devices the test push reached (0 = none registered). */
+  sent?: number;
+}
+
 export interface HandlerVapidKeyResponse {
   publicKey?: string;
 }
@@ -1262,6 +1276,51 @@ export const upsertSubscription = async (handlerSubscriptionBody: HandlerSubscri
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(handlerSubscriptionBody)
+  }
+);}
+
+
+
+export type testSubscriptionResponse200 = {
+  data: HandlerTestPushResponse
+  status: 200
+}
+
+export type testSubscriptionResponse400 = {
+  data: HandlerErrorResponse
+  status: 400
+}
+
+export type testSubscriptionResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type testSubscriptionResponseSuccess = (testSubscriptionResponse200) & {
+  headers: Headers;
+};
+export type testSubscriptionResponseError = (testSubscriptionResponse400 | testSubscriptionResponse500) & {
+  headers: Headers;
+};
+
+export type testSubscriptionResponse = (testSubscriptionResponseSuccess | testSubscriptionResponseError)
+
+export const getTestSubscriptionUrl = () => {
+
+
+
+
+  return `/subscriptions/test`
+}
+
+export const testSubscription = async (handlerTestPushBody: HandlerTestPushBody, options?: RequestInit): Promise<testSubscriptionResponse> => {
+
+  return customFetch<testSubscriptionResponse>(getTestSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(handlerTestPushBody)
   }
 );}
 

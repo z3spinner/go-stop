@@ -1046,6 +1046,51 @@
                 }
             }
         },
+        "/subscriptions/test": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "operationId": "testSubscription",
+                "parameters": [
+                    {
+                        "description": "Phone to test",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.TestPushBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.TestPushResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/subscriptions/{phone}": {
             "delete": {
                 "tags": [
@@ -1556,6 +1601,27 @@
                 },
                 "phone": {
                     "type": "string"
+                }
+            }
+        },
+        "handler.TestPushBody": {
+            "type": "object",
+            "properties": {
+                "lang": {
+                    "description": "Lang selects the language of the server-chosen quote of the day (e.g. \"fr\").\nThe notification text itself is never client-supplied.",
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.TestPushResponse": {
+            "type": "object",
+            "properties": {
+                "sent": {
+                    "description": "Sent is the number of devices the test push reached (0 = none registered).",
+                    "type": "integer"
                 }
             }
         },

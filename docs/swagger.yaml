@@ -303,6 +303,23 @@ definitions:
       phone:
         type: string
     type: object
+  handler.TestPushBody:
+    properties:
+      lang:
+        description: |-
+          Lang selects the language of the server-chosen quote of the day (e.g. "fr").
+          The notification text itself is never client-supplied.
+        type: string
+      phone:
+        type: string
+    type: object
+  handler.TestPushResponse:
+    properties:
+      sent:
+        description: Sent is the number of devices the test push reached (0 = none
+          registered).
+        type: integer
+    type: object
   handler.VapidKeyResponse:
     properties:
       publicKey:
@@ -1007,6 +1024,35 @@ paths:
       responses:
         "204":
           description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - subscriptions
+  /subscriptions/test:
+    post:
+      consumes:
+      - application/json
+      operationId: testSubscription
+      parameters:
+      - description: Phone to test
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TestPushBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.TestPushResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:

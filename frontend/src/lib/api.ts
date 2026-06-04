@@ -101,7 +101,10 @@ export const api = {
 	},
 	subscriptions: {
 		upsert: (body: SubscriptionBody) => unwrap<null>(gen.upsertSubscription(body)),
-		remove: (phone: string) => unwrap<null>(gen.removeSubscription(encodeURIComponent(phone)))
+		remove: (phone: string) => unwrap<null>(gen.removeSubscription(encodeURIComponent(phone))),
+		/** Push the server-chosen quote of the day (in lang); resolves to the device count. */
+		test: (phone: string, lang: string) =>
+			unwrap<{ sent: number }>(gen.testSubscription({ phone, lang }))
 	},
 	notifications: {
 		list: (phone: string) => unwrap<NotificationItem[]>(gen.listNotifications(phoneHeader(phone)))
