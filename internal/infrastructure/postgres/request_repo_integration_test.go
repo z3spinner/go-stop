@@ -45,6 +45,55 @@ func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 	}
 }
 
+func TestRequestRepo_FindAllActive_Ordering(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewRequestRepo(testPool)
+
+	zero := time.Time{}
+	expires := time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC)
+	save := func(name string, date, dep time.Time) {
+		if err := repo.Save(domain.Request{
+			ID: uuid.New().String(), SearcherName: name, Phone: "1",
+			Origin: "A", Destination: "B",
+			Date: date, DepartureAt: dep,
+			PostedAt: time.Now().UTC(), ExpiresAt: expires,
+		}); err != nil {
+			t.Fatalf("save %s: %v", name, err)
+		}
+	}
+
+	// The Date/DepartureAt zero-ness mirrors how the handler stores each mode
+	// (zero → NULL). Inserted scrambled to prove it's the query that orders.
+	save("anytime", zero, zero)                                        // both NULL
+	save("daily", zero, time.Date(1970, 1, 1, 17, 0, 0, 0, time.UTC))  // 1970 sentinel
+	save("day9", time.Date(2030, 6, 9, 0, 0, 0, 0, time.UTC), zero)    // date only, later
+	save("time6", zero, time.Date(2030, 6, 6, 7, 0, 0, 0, time.UTC))   // one-off, mid
+	save("day5", time.Date(2030, 6, 5, 0, 0, 0, 0, time.UTC), zero)    // date only, earlier
+	save("time5am", zero, time.Date(2030, 6, 5, 4, 5, 0, 0, time.UTC)) // one-off, soonest
+
+	got, err := repo.FindAllActive()
+	if err != nil {
+		t.Fatalf("FindAllActive: %v", err)
+	}
+	order := make([]string, len(got))
+	for i, r := range got {
+		order[i] = r.SearcherName
+	}
+
+	// Dated entries are interleaved chronologically; a date-only alert sorts at
+	// the END of its day (below a same-day date+time, above any later day). Then
+	// daily recurring, then anytime last.
+	want := []string{"time5am", "day5", "time6", "day9", "daily", "anytime"}
+	if len(order) != len(want) {
+		t.Fatalf("got %d requests, want %d: %v", len(order), len(want), order)
+	}
+	for i := range want {
+		if order[i] != want[i] {
+			t.Fatalf("ordering mismatch:\n got  %v\n want %v", order, want)
+		}
+	}
+}
+
 func TestRequestRepo_FindMatching_WindowOverlap(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewRequestRepo(testPool)

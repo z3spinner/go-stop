@@ -52,7 +52,15 @@ type Querier interface {
 	InsertRideEvent(ctx context.Context, arg InsertRideEventParams) error
 	InsertRideStat(ctx context.Context, arg InsertRideStatParams) error
 	InsertSearchEvent(ctx context.Context, arg InsertSearchEventParams) error
-	// Public feed of all non-expired requests (newest first).
+	// Public feed of all non-expired requests, ordered so concrete demand comes
+	// first and the vaguest alerts sink to the bottom:
+	//   0 dated (a one-off date+time, OR a date-only "any time that day")
+	//   1 a daily recurring time   2 anytime
+	// Within the dated group, sort chronologically by the effective moment — a
+	// date-only alert sorts at the END of its day (a one-second-before-midnight
+	// key), so it sits below same-day date+time entries yet above any later day.
+	// A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
+	// marks a concrete one-off. Newest breaks ties.
 	ListActiveRequests(ctx context.Context) ([]Request, error)
 	// Returns known locations sorted by popularity. Combines active rides/requests
 	// with historical ride_stats so locations persist after rides expire.

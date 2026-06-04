@@ -88,12 +88,14 @@ func setupRouter() *gin.Engine {
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, n)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, n)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
+	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, n)
+	getActiveRequests := usecase.NewGetActiveRequests(reqRepo)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, interestRepo)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe)
 
