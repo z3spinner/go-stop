@@ -35,7 +35,7 @@ func main() {
 		}
 	}
 	rideRepo := postgres.NewRideRepo(pool, graceMins)
-	requestRepo := postgres.NewRequestRepo(pool)
+	requestRepo := postgres.NewRequestRepo(pool, graceMins)
 	destRepo := postgres.NewDestinationRepo(pool)
 	subRepo := postgres.NewSubscriptionRepo(pool)
 	statRepo := postgres.NewStatRepo(pool)

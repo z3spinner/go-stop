@@ -156,7 +156,14 @@ func (q *Queries) InsertRequest(ctx context.Context, arg InsertRequestParams) er
 
 const listActiveRequests = `-- name: ListActiveRequests :many
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
-FROM requests WHERE expires_at > NOW()
+FROM requests
+WHERE expires_at > NOW()
+  -- hide a time alert once its flex window ended more than grace_minutes ago
+  AND NOT (departure_at IS NOT NULL AND EXTRACT(YEAR FROM departure_at) > 1970
+           AND departure_at + ((flexibility + $1::int) * interval '1 minute') <= NOW())
+  -- hide a date-only alert once its day (+ grace) has fully passed
+  AND NOT (date IS NOT NULL AND departure_at IS NULL
+           AND date::timestamptz + interval '1 day' + ($1::int * interval '1 minute') <= NOW())
 ORDER BY
   CASE
     WHEN date IS NOT NULL OR (departure_at IS NOT NULL AND EXTRACT(YEAR FROM departure_at) > 1970) THEN 0
@@ -178,8 +185,8 @@ ORDER BY
 // key), so it sits below same-day date+time entries yet above any later day.
 // A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
 // marks a concrete one-off. Newest breaks ties.
-func (q *Queries) ListActiveRequests(ctx context.Context) ([]Request, error) {
-	rows, err := q.db.Query(ctx, listActiveRequests)
+func (q *Queries) ListActiveRequests(ctx context.Context, graceMinutes int32) ([]Request, error) {
+	rows, err := q.db.Query(ctx, listActiveRequests, graceMinutes)
 	if err != nil {
 		return nil, err
 	}
@@ -211,12 +218,25 @@ func (q *Queries) ListActiveRequests(ctx context.Context) ([]Request, error) {
 
 const listRequestsByPhone = `-- name: ListRequestsByPhone :many
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
-FROM requests WHERE phone = $1 AND expires_at > NOW()
+FROM requests
+WHERE phone = $1
+  AND expires_at > NOW()
+  -- hide a time alert once its flex window ended more than grace_minutes ago
+  AND NOT (departure_at IS NOT NULL AND EXTRACT(YEAR FROM departure_at) > 1970
+           AND departure_at + ((flexibility + $2::int) * interval '1 minute') <= NOW())
+  -- hide a date-only alert once its day (+ grace) has fully passed
+  AND NOT (date IS NOT NULL AND departure_at IS NULL
+           AND date::timestamptz + interval '1 day' + ($2::int * interval '1 minute') <= NOW())
 ORDER BY COALESCE(departure_at, date, expires_at) ASC
 `
 
-func (q *Queries) ListRequestsByPhone(ctx context.Context, phone string) ([]Request, error) {
-	rows, err := q.db.Query(ctx, listRequestsByPhone, phone)
+type ListRequestsByPhoneParams struct {
+	Phone        string `db:"phone"`
+	GraceMinutes int32  `db:"grace_minutes"`
+}
+
+func (q *Queries) ListRequestsByPhone(ctx context.Context, arg ListRequestsByPhoneParams) ([]Request, error) {
+	rows, err := q.db.Query(ctx, listRequestsByPhone, arg.Phone, arg.GraceMinutes)
 	if err != nil {
 		return nil, err
 	}

@@ -13,7 +13,7 @@ import (
 
 func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool)
+	repo := postgres.NewRequestRepo(testPool, 60)
 
 	testID := uuid.New().String()
 	req := domain.Request{
@@ -47,7 +47,7 @@ func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 
 func TestRequestRepo_FindAllActive_Ordering(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool)
+	repo := postgres.NewRequestRepo(testPool, 60)
 
 	zero := time.Time{}
 	expires := time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -96,7 +96,7 @@ func TestRequestRepo_FindAllActive_Ordering(t *testing.T) {
 
 func TestRequestRepo_FindMatching_WindowOverlap(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool)
+	repo := postgres.NewRequestRepo(testPool, 60)
 
 	// Request: 09:15 ±30 min → window 08:45–09:45
 	_ = repo.Save(domain.Request{
@@ -124,5 +124,57 @@ func TestRequestRepo_FindMatching_WindowOverlap(t *testing.T) {
 	}
 	if len(reqs) != 1 {
 		t.Errorf("expected 1 matching request, got %d", len(reqs))
+	}
+}
+
+func TestRequestRepo_FindAllActive_HidesPastGraceWindow(t *testing.T) {
+	truncate(t)
+	const grace = 30
+	repo := postgres.NewRequestRepo(testPool, grace)
+
+	now := time.Now().UTC()
+	zero := time.Time{}
+	farExp := now.AddDate(0, 1, 0)
+	save := func(name string, date, dep time.Time, flex domain.Flexibility) {
+		if err := repo.Save(domain.Request{
+			ID: uuid.New().String(), SearcherName: name, Phone: "1",
+			Origin: "A", Destination: "B", Date: date, DepartureAt: dep, Flexibility: flex,
+			PostedAt: now, ExpiresAt: farExp,
+		}); err != nil {
+			t.Fatalf("save %s: %v", name, err)
+		}
+	}
+	dayOf := func(ts time.Time) time.Time {
+		return time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC)
+	}
+
+	// time alerts (Exact, so window = the instant itself):
+	pastDep := now.Add(-40 * time.Minute)   // ended 40m ago > 30 grace → hidden
+	recentDep := now.Add(-10 * time.Minute) // ended 10m ago < 30 grace → shown
+	futureDep := now.Add(2 * time.Hour)     // not yet → shown
+	save("timePast", dayOf(pastDep), pastDep, domain.Exact)
+	save("timeRecent", dayOf(recentDep), recentDep, domain.Exact)
+	save("timeFuture", dayOf(futureDep), futureDep, domain.Exact)
+	// date-only alerts:
+	save("dayPast", dayOf(now.AddDate(0, 0, -2)), zero, domain.Exact) // 2 days ago → hidden
+	save("dayToday", dayOf(now), zero, domain.Exact)                  // today → shown
+	// no-moment alerts always shown:
+	save("anytime", zero, zero, domain.Exact)
+
+	got, err := repo.FindAllActive()
+	if err != nil {
+		t.Fatalf("FindAllActive: %v", err)
+	}
+	shown := map[string]bool{}
+	for _, r := range got {
+		shown[r.SearcherName] = true
+	}
+	for name, want := range map[string]bool{
+		"timePast": false, "timeRecent": true, "timeFuture": true,
+		"dayPast": false, "dayToday": true, "anytime": true,
+	} {
+		if shown[name] != want {
+			t.Errorf("%s: shown=%v, want %v", name, shown[name], want)
+		}
 	}
 }

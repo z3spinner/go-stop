@@ -14,7 +14,7 @@ import (
 func TestDestinationRepo_GetAll_DeduplicatesAndSorts(t *testing.T) {
 	truncate(t)
 	rideRepo := postgres.NewRideRepo(testPool, 60)
-	reqRepo := postgres.NewRequestRepo(testPool)
+	reqRepo := postgres.NewRequestRepo(testPool, 60)
 	destRepo := postgres.NewDestinationRepo(testPool)
 
 	_ = rideRepo.Save(domain.Ride{

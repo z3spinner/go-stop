@@ -61,7 +61,7 @@ type Querier interface {
 	// key), so it sits below same-day date+time entries yet above any later day.
 	// A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
 	// marks a concrete one-off. Newest breaks ties.
-	ListActiveRequests(ctx context.Context) ([]Request, error)
+	ListActiveRequests(ctx context.Context, graceMinutes int32) ([]Request, error)
 	// Returns known locations sorted by popularity. Combines active rides/requests
 	// with historical ride_stats so locations persist after rides expire.
 	ListDestinations(ctx context.Context) ([]string, error)
@@ -71,7 +71,7 @@ type Querier interface {
 	ListInterestsBySearcher(ctx context.Context, searcherPhone string) ([]ListInterestsBySearcherRow, error)
 	// Returns pending notifications for a searcher (for UI display).
 	ListNotificationsForSearcher(ctx context.Context, searcherPhone string) ([]NotificationQueue, error)
-	ListRequestsByPhone(ctx context.Context, phone string) ([]Request, error)
+	ListRequestsByPhone(ctx context.Context, arg ListRequestsByPhoneParams) ([]Request, error)
 	// grace_minutes: hides rides whose flex window ended more than N minutes ago
 	ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ride, error)
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)

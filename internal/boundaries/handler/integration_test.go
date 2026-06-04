@@ -64,7 +64,7 @@ func setupRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 
 	rideRepo := postgres.NewRideRepo(handlerPool, 60)
-	reqRepo := postgres.NewRequestRepo(handlerPool)
+	reqRepo := postgres.NewRequestRepo(handlerPool, 60)
 	subRepo := postgres.NewSubscriptionRepo(handlerPool)
 	destRepo := postgres.NewDestinationRepo(handlerPool)
 	n := &noopNotifier{}

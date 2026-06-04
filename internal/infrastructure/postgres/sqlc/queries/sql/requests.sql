@@ -8,7 +8,15 @@ FROM requests WHERE id = $1;
 
 -- name: ListRequestsByPhone :many
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
-FROM requests WHERE phone = $1 AND expires_at > NOW()
+FROM requests
+WHERE phone = sqlc.arg(phone)
+  AND expires_at > NOW()
+  -- hide a time alert once its flex window ended more than grace_minutes ago
+  AND NOT (departure_at IS NOT NULL AND EXTRACT(YEAR FROM departure_at) > 1970
+           AND departure_at + ((flexibility + sqlc.arg(grace_minutes)::int) * interval '1 minute') <= NOW())
+  -- hide a date-only alert once its day (+ grace) has fully passed
+  AND NOT (date IS NOT NULL AND departure_at IS NULL
+           AND date::timestamptz + interval '1 day' + (sqlc.arg(grace_minutes)::int * interval '1 minute') <= NOW())
 ORDER BY COALESCE(departure_at, date, expires_at) ASC;
 
 -- name: ListActiveRequests :many
@@ -22,7 +30,14 @@ ORDER BY COALESCE(departure_at, date, expires_at) ASC;
 -- A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
 -- marks a concrete one-off. Newest breaks ties.
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at
-FROM requests WHERE expires_at > NOW()
+FROM requests
+WHERE expires_at > NOW()
+  -- hide a time alert once its flex window ended more than grace_minutes ago
+  AND NOT (departure_at IS NOT NULL AND EXTRACT(YEAR FROM departure_at) > 1970
+           AND departure_at + ((flexibility + sqlc.arg(grace_minutes)::int) * interval '1 minute') <= NOW())
+  -- hide a date-only alert once its day (+ grace) has fully passed
+  AND NOT (date IS NOT NULL AND departure_at IS NULL
+           AND date::timestamptz + interval '1 day' + (sqlc.arg(grace_minutes)::int * interval '1 minute') <= NOW())
 ORDER BY
   CASE
     WHEN date IS NOT NULL OR (departure_at IS NOT NULL AND EXTRACT(YEAR FROM departure_at) > 1970) THEN 0

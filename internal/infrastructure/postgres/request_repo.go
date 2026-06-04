@@ -9,10 +9,13 @@ import (
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres/sqlc/queries"
 )
 
-type RequestRepo struct{ q *queries.Queries }
+type RequestRepo struct {
+	q         *queries.Queries
+	graceMins int32
+}
 
-func NewRequestRepo(pool *pgxpool.Pool) *RequestRepo {
-	return &RequestRepo{q: queries.New(pool)}
+func NewRequestRepo(pool *pgxpool.Pool, graceMins int) *RequestRepo {
+	return &RequestRepo{q: queries.New(pool), graceMins: int32(graceMins)}
 }
 
 func (r *RequestRepo) Save(req domain.Request) error {
@@ -39,7 +42,10 @@ func (r *RequestRepo) FindByID(id string) (domain.Request, error) {
 }
 
 func (r *RequestRepo) FindByPhone(phone string) ([]domain.Request, error) {
-	rows, err := r.q.ListRequestsByPhone(context.Background(), phone)
+	rows, err := r.q.ListRequestsByPhone(context.Background(), queries.ListRequestsByPhoneParams{
+		Phone:        phone,
+		GraceMinutes: r.graceMins,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +53,7 @@ func (r *RequestRepo) FindByPhone(phone string) ([]domain.Request, error) {
 }
 
 func (r *RequestRepo) FindAllActive() ([]domain.Request, error) {
-	rows, err := r.q.ListActiveRequests(context.Background())
+	rows, err := r.q.ListActiveRequests(context.Background(), r.graceMins)
 	if err != nil {
 		return nil, err
 	}

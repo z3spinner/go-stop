@@ -98,3 +98,48 @@ func TestPostRequest_SkipsNotificationIfNoSubscription(t *testing.T) {
 		t.Error("should not send notification when driver has no subscription")
 	}
 }
+
+func TestPostRequest_TimeAlertExpiresDayAfterNotAYear(t *testing.T) {
+	reqs := &mockRequestRepo{}
+	uc := usecase.NewPostRequest(reqs, &mockRideRepoWithMatch{}, &mockSubRepo{}, &mockNotifier{})
+
+	// A one-off time alert (date NULL from the handler, a real future departure).
+	_, err := uc.Execute(domain.Request{
+		Origin: "A", Destination: "B",
+		DepartureAt: time.Date(2030, 6, 5, 8, 0, 0, 0, time.UTC),
+		Flexibility: domain.Approximate,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	saved := reqs.saved[0]
+	// Date is derived from the departure day, and it expires the day after (like a
+	// ride) — not a year out from being mistaken for a daily alert.
+	if want := time.Date(2030, 6, 5, 0, 0, 0, 0, time.UTC); !saved.Date.Equal(want) {
+		t.Errorf("Date = %v, want %v", saved.Date, want)
+	}
+	if want := time.Date(2030, 6, 6, 0, 0, 0, 0, time.UTC); !saved.ExpiresAt.Equal(want) {
+		t.Errorf("ExpiresAt = %v, want %v", saved.ExpiresAt, want)
+	}
+}
+
+func TestPostRequest_DailyAlertExpiresInAYear(t *testing.T) {
+	reqs := &mockRequestRepo{}
+	uc := usecase.NewPostRequest(reqs, &mockRideRepoWithMatch{}, &mockSubRepo{}, &mockNotifier{})
+
+	// Daily alert: the 1970-01-01 sentinel time, no date.
+	_, err := uc.Execute(domain.Request{
+		Origin: "A", Destination: "B",
+		DepartureAt: time.Date(1970, 1, 1, 17, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	saved := reqs.saved[0]
+	if !saved.Date.IsZero() {
+		t.Errorf("daily Date should stay zero (NULL), got %v", saved.Date)
+	}
+	if saved.ExpiresAt.Before(time.Now().AddDate(0, 11, 0)) {
+		t.Errorf("daily alert should expire ~1 year out, got %v", saved.ExpiresAt)
+	}
+}
