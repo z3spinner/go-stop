@@ -75,10 +75,10 @@ func main() {
 	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
 	getStats := usecase.NewGetStats(statRepo)
 	sendFeedbackReminders := usecase.NewSendFeedbackReminders(rideRepo, subRepo, notifier)
-	expressInterest    := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
-	acceptInterest     := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
+	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
+	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
-	cancelInterest     := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, notifier)
+	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, notifier)
 
 	serviceTZ := time.UTC
 	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
@@ -155,8 +155,8 @@ func main() {
 		api.DELETE("/rides/:id", rideH.Delete)
 		api.GET("/rides/:id/requests", rideH.ListMatchingRequests)
 		api.POST("/rides/:id/feedback", feedbackH.Post)
-		api.GET("/rides/:id/interests",   rideH.ListInterests)
-		api.POST("/rides/:id/interest",   interestH.Express)
+		api.GET("/rides/:id/interests", rideH.ListInterests)
+		api.POST("/rides/:id/interest", interestH.Express)
 		api.POST("/interests/:id/accept", interestH.Accept)
 		api.DELETE("/interests/:id", interestH.Cancel)
 		api.GET("/interests", interestH.ListMyRequests)

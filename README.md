@@ -41,7 +41,7 @@ export DATABASE_URL="postgres://user:pass@localhost:5432/gostop?sslmode=disable"
 # VAPID keys are optional — generated and stored in the DB on first boot if unset.
 export PORT=8080
 
-psql $DATABASE_URL < db/migrations/001_create_tables.sql
+go run ./cmd/migratedb up   # apply database migrations
 go run .
 ```
 
