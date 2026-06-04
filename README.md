@@ -47,20 +47,16 @@ go run .
 
 ## Deployment (Scalingo)
 
-Click the button above. You will be prompted for:
+Click the button above — it's genuinely one click. No fields are required: the
+app generates its own Web Push (VAPID) keypair on first boot and stores it in the
+database, so there's nothing to paste in.
+
+You can optionally customise these from the Scalingo deploy form (all have sensible defaults):
 
 | Variable | Description |
 |---|---|
-| `VAPID_PUBLIC_KEY` | Web Push public key (generate below) |
-| `VAPID_PRIVATE_KEY` | Web Push private key |
-| `VAPID_EMAIL` | Contact email for Web Push (e.g. `mailto:you@example.com`) |
 | `SITE_NAME` | **Your community's name** shown as the site heading (e.g. `Stop Nyons`, `Covoiturage Drôme`) |
-
-Generate VAPID keys before deploying:
-
-```bash
-go run github.com/SherClockHolmes/webpush-go/cmd/vapid-keygen@latest
-```
+| `SERVICE_TZ` | Community timezone, used to interpret time-only searches (e.g. `Europe/Paris`) |
 
 ## Architecture
 
