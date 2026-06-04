@@ -1,4 +1,8 @@
 .env
+# Compiled Go binaries (built by `go build`, Docker, or Scalingo — never committed)
+/go-stop
+/migratedb
+/backfill-matches
 .playwright-mcp/
 *.png
 .idea/

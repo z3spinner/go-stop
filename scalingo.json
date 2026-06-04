@@ -20,10 +20,6 @@
       "description": "Default hours after outbound departure to pre-fill the return trip time (default: 2)",
       "value": "2"
     },
-    "PHONE_ENCRYPTION_KEY": {
-      "description": "Base64-encoded 32-byte AES-256 key for encrypting phone numbers at rest. Generate with: openssl rand -base64 32. Optional — phones stored in plaintext if unset.",
-      "required": false
-    },
     "GIN_MODE": {
       "description": "Set to 'release' for production",
       "value": "release"

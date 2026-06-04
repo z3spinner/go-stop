@@ -1,0 +1,114 @@
+# AGENTS.md — Go-Stop (repository root)
+
+Lightweight local ride-sharing notice board. A Go (Gin) API + PostgreSQL backend
+serving a compiled SvelteKit SPA. No accounts; phone number is the only identity
+and the (unverified) delete credential. AGPL-3.0.
+
+> Nested `AGENTS.md` files give detailed, location-specific conventions. Read the
+> one closest to the code you're touching:
+> - `internal/AGENTS.md` — clean-architecture rules & layer wiring
+> - `internal/usecase/AGENTS.md` — use-case pattern & unit tests
+> - `internal/boundaries/AGENTS.md` — Gin handlers, OpenAPI annotations, ports
+> - `internal/infrastructure/postgres/AGENTS.md` — sqlc, migrations, repos
+> - `frontend/AGENTS.md` — SvelteKit, shadcn-svelte, generated API client, i18n
+> - `e2e/AGENTS.md` — Playwright end-to-end tests
+
+## Architecture (Clean Architecture — dependencies point inward only)
+
+```
+domain ← usecase ← boundaries ← infrastructure          (Go: ./internal)
+                        ▲
+                  main.go (composition root: builds repos → use cases → handlers → routes)
+
+web/build  ← frontend/  (SvelteKit SPA, built and served as static files by the Go server)
+```
+
+The Go module is `github.com/z3spinner/go-stop`. `main.go` is the only wiring
+point: it constructs concrete infrastructure, injects it into use cases, hands
+those to handlers, and registers routes under `/api`. Any non-`/api` path falls
+back to `web/build/index.html` (SPA routing), with per-ride Open Graph tags
+injected server-side for link previews (`og.go`).
+
+## Repo map
+
+| Path | What |
+|---|---|
+| `main.go`, `og.go`, `main_serve_test.go` | Composition root, SPA+OG handler, serve tests |
+| `internal/domain` | Pure entities/value objects (no deps, no tags) |
+| `internal/usecase` | Business logic; one `NewXxx`/`Execute` struct per file |
+| `internal/boundaries` | Gin handlers + repository/notifier **interfaces** (ports) |
+| `internal/infrastructure` | postgres (pgx + sqlc), vapid, webpush — the adapters |
+| `internal/version` | Build SHA, injected at build time (do not commit `build.go`) |
+| `cmd/migratedb` | golang-migrate CLI (`up`/`down`/`force`/`drop`/`version`) |
+| `frontend/` | SvelteKit + TypeScript + shadcn-svelte; builds to `../web/build` |
+| `e2e/` | Playwright specs (run against the built app on :8080) |
+| `docs/` | **Generated** OpenAPI (`docs.go`, `swagger.json/yaml`) + design notes |
+| `scripts/seed.sh` | Seeds the dev DB through the running app's API |
+| `web/build` | Build artifact (gitignored) |
+
+## Commands (see `Makefile`)
+
+| Task | Command |
+|---|---|
+| Run dev stack (DB + API + Vite) | `docker compose up --build` → app on :5173 (proxies `/api`→:8080) |
+| Run Go + Vite locally (no Docker) | `make dev` |
+| Unit tests (fast, no DB) | `make test-unit` |
+| All tests incl. integration | `make test` (needs Postgres on :5432; runs `-tags integration -p 1`) |
+| Regenerate SQL code | `make sqlc` (after editing `*.sql`) |
+| Regenerate OpenAPI spec | `make swagger` (after changing handler annotations) |
+| Regenerate OpenAPI **+ frontend client** | `make api-generate` |
+| Build frontend | `make build-web` |
+| E2E | `make test-e2e` |
+| Seed dev DB | `make seed` |
+
+## Code generation pipeline — keep these in sync
+
+Three generated artifacts are committed and must be regenerated (never
+hand-edited) when their source changes:
+
+1. **sqlc** — edit `internal/infrastructure/postgres/sqlc/queries/sql/*.sql`, then
+   `make sqlc`. Regenerates `.../queries/*.sql.go`.
+2. **OpenAPI** — change swaggo annotations on handlers, then `make swagger`.
+   Regenerates `docs/docs.go`, `docs/swagger.json`, `docs/swagger.yaml`.
+3. **Frontend API client** — `make api-generate` runs swagger then orval, which
+   regenerates `frontend/src/lib/api/generated/go-stop-api.ts` from the spec.
+
+A handler/endpoint change typically touches all three: update SQL/use case →
+`make sqlc`, update annotations → `make api-generate`, commit the generated files.
+
+## Configuration (env vars)
+
+`DATABASE_URL` (required), `PORT` (default 8080), `SITE_NAME` (heading; default
+`Go-Stop`), `SERVICE_TZ` (IANA tz used to interpret time-only searches; default
+UTC, `Europe/Paris` in compose), `RIDE_GRACE_MINUTES` (default 60),
+`RETURN_DELAY_HOURS` (default 2), `GIN_MODE` (`release` in prod), and the
+`VAPID_*` Web Push keys (auto-generated and persisted to the DB on first boot if
+unset — see `internal/infrastructure/vapid`). Copy `.env.example` → `.env` for
+local work.
+
+## Deployment (Scalingo)
+
+`Procfile`: `web: migratedb up && go-stop` — migrations run at boot, before the
+server starts (postdeploy is **not** used for migrations; boot-time DB reads
+depend on this ordering). `.buildpacks` chains the Node then Go buildpacks;
+`bin/go-pre-compile` injects the git SHA into `internal/version/build.go`.
+`scalingo.json` defines the one-click deploy form. The production image
+(`Dockerfile`) is a 3-stage build: Vite build → Go build → alpine runtime.
+
+## ⚠️ Known issues to fix (these are NOT conventions — do not imitate)
+
+- The many loose `*.png` screenshots at the repo root are clutter (already
+  gitignored via `*.png`, but messy to have on disk). _(Fixed: a 35 MB compiled
+  `go-stop` binary that had been committed is now removed and `/go-stop`,
+  `/migratedb`, `/backfill-matches` are gitignored.)_
+- The migration numbering on `main` jumps 006 → 008: phone-at-rest encryption and
+  its migration `007_widen_phone_columns` live only on the `feature/phone-encryption`
+  branch. golang-migrate tolerates the gap (it tracks versions by name), so this is
+  harmless — just **do not reuse 007**. _(Fixed: the unimplemented
+  `PHONE_ENCRYPTION_KEY` env var that had been advertised in `scalingo.json` is now
+  removed, since no Go code on `main` reads it.)_
+- **`README.md` has stale dev/test instructions**: it describes `reflex` serving
+  `web/` HTML/CSS/JS live and opening the app on :8080, which predates the
+  SvelteKit frontend (the devstack now runs Vite on :5173 with a separate
+  `frontend` service). It also references a `docker-compose.test.yml` override that
+  no longer exists (the base `docker-compose.yml` already uses tmpfs for Postgres).
