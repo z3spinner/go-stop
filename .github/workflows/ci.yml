@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Go lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      # Runs golangci-lint using the committed .golangci.yml. Keep the version in
+      # sync with the Makefile's GOLANGCI_LINT_VERSION.
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+
+  test:
+    name: Go tests (unit + integration)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gostop
+          POSTGRES_PASSWORD: gostop
+          POSTGRES_DB: gostop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gostop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://gostop:gostop@localhost:5432/gostop?sslmode=disable
+      TEST_DATABASE_URL: postgres://gostop:gostop@localhost:5432/gostop?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Apply migrations
+        run: go run ./cmd/migratedb up
+      # The integration tag also builds and runs the plain unit tests, so this one
+      # command covers both. -p 1 keeps DB-backed tests from racing on shared tables.
+      - name: Test
+        run: go test -tags integration -count=1 -p 1 ./...
