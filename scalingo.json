@@ -4,18 +4,6 @@
   "website": "https://github.com/z3spinner/go-stop",
   "addons": ["postgresql:postgresql-sandbox"],
   "env": {
-    "VAPID_PUBLIC_KEY": {
-      "description": "VAPID public key for Web Push notifications (generate with: go run ./cmd/genvapid)",
-      "required": true
-    },
-    "VAPID_PRIVATE_KEY": {
-      "description": "VAPID private key for Web Push notifications",
-      "required": true
-    },
-    "VAPID_EMAIL": {
-      "description": "Contact email for Web Push — prefix with mailto: (e.g. mailto:you@example.com)",
-      "required": true
-    },
     "SITE_NAME": {
       "description": "Display name for this community's instance (e.g. 'Go Stop Saillans!')",
       "value": "Go-Stop"

@@ -45,6 +45,7 @@ type Querier interface {
 	GetRideEventCounts(ctx context.Context) (GetRideEventCountsRow, error)
 	GetRideStatsTotals(ctx context.Context) (GetRideStatsTotalsRow, error)
 	GetSearchEventCounts(ctx context.Context) (GetSearchEventCountsRow, error)
+	GetSetting(ctx context.Context, key string) (string, error)
 	GetTopRoutes(ctx context.Context) ([]GetTopRoutesRow, error)
 	InsertInterest(ctx context.Context, arg InsertInterestParams) error
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
@@ -52,6 +53,7 @@ type Querier interface {
 	InsertRideEvent(ctx context.Context, arg InsertRideEventParams) error
 	InsertRideStat(ctx context.Context, arg InsertRideStatParams) error
 	InsertSearchEvent(ctx context.Context, arg InsertSearchEventParams) error
+	InsertSettingIfAbsent(ctx context.Context, arg InsertSettingIfAbsentParams) error
 	// Public feed of all non-expired requests, ordered so concrete demand comes
 	// first and the vaguest alerts sink to the bottom:
 	//   0 dated (a one-off date+time, OR a date-only "any time that day")

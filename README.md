@@ -23,11 +23,9 @@ This app uses phone number as a lightweight delete credential with **no verifica
 ## Local setup (with Docker — recommended)
 
 ```bash
-# Generate VAPID keys (one-time)
-go run github.com/SherClockHolmes/webpush-go/cmd/vapid-keygen@latest
-
 cp .env.example .env
-# Edit .env — set your VAPID keys and optionally SITE_NAME for your community
+# Optionally edit .env to set SITE_NAME for your community.
+# VAPID keys are generated automatically on first boot if left blank.
 
 docker compose up --build
 ```
@@ -40,31 +38,25 @@ The `app` service uses `reflex` for hot-reload: any change to a `.go` file trigg
 
 ```bash
 export DATABASE_URL="postgres://user:pass@localhost:5432/gostop?sslmode=disable"
-export VAPID_PUBLIC_KEY="your-public-key"
-export VAPID_PRIVATE_KEY="your-private-key"
-export VAPID_EMAIL="mailto:you@example.com"
+# VAPID keys are optional — generated and stored in the DB on first boot if unset.
 export PORT=8080
 
-psql $DATABASE_URL < db/migrations/001_create_tables.sql
+go run ./cmd/migratedb up   # apply database migrations
 go run .
 ```
 
 ## Deployment (Scalingo)
 
-Click the button above. You will be prompted for:
+Click the button above — it's genuinely one click. No fields are required: the
+app generates its own Web Push (VAPID) keypair on first boot and stores it in the
+database, so there's nothing to paste in.
+
+You can optionally customise these from the Scalingo deploy form (all have sensible defaults):
 
 | Variable | Description |
 |---|---|
-| `VAPID_PUBLIC_KEY` | Web Push public key (generate below) |
-| `VAPID_PRIVATE_KEY` | Web Push private key |
-| `VAPID_EMAIL` | Contact email for Web Push (e.g. `mailto:you@example.com`) |
 | `SITE_NAME` | **Your community's name** shown as the site heading (e.g. `Stop Nyons`, `Covoiturage Drôme`) |
-
-Generate VAPID keys before deploying:
-
-```bash
-go run github.com/SherClockHolmes/webpush-go/cmd/vapid-keygen@latest
-```
+| `SERVICE_TZ` | Community timezone, used to interpret time-only searches (e.g. `Europe/Paris`) |
 
 ## Architecture
 
