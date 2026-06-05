@@ -13,6 +13,9 @@
 	import { formatTime } from '$lib/utils';
 	import { m } from '$lib/paraglide/messages';
 	import type { ContactInfo } from '$lib/types';
+	import * as Card from '$lib/components/ui/card';
+	import { Button } from '$lib/components/ui/button';
+	import CheckIcon from '@lucide/svelte/icons/check';
 
 	let contact = $state<ContactInfo | null>(null);
 	let err = $state('');
@@ -24,22 +27,29 @@
 	});
 </script>
 
-<h2 class="mb-3 text-xl font-semibold">{m.contactRevealed()}</h2>
 <div id="contact-result">
 	{#if err}
 		<p class="error text-red-600">{err}</p>
 	{:else if contact}
-		<div class="card contact-card rounded border p-3">
-			<div class="card-route font-medium" translate="no">{contact.origin} <span class="route-arrow">→</span> {contact.destination}</div>
-			<div class="card-meta text-sm text-gray-600">{formatTime(contact.departure_at)}</div>
-			<div class="detail-table mt-2">
-				<div>{contact.role === 'driver' ? m.labelDriver() : m.labelSearcher()}: {contact.name}</div>
-				<div>{m.theirNumber()} <a href="tel:{contact.phone}">{contact.phone}</a></div>
-			</div>
-			<a class="btn btn-primary" href="tel:{contact.phone}">{m.btnCallNow()}</a>
-			<button type="button" class="btn btn-secondary" id="btn-search-route" data-origin={contact.origin} data-dest={contact.destination}
-				onclick={() => contact && goto(`/search?origin=${encodeURIComponent(contact.origin)}&destination=${encodeURIComponent(contact.destination)}`)}>{m.btnSearchRoute()}</button>
-		</div>
+		<Card.Root class="mx-auto max-w-sm">
+			<Card.Header>
+				<h2 class="flex items-center gap-1.5 text-sm font-semibold text-primary">
+					<CheckIcon class="size-4" strokeWidth={2.5} />
+					{m.contactRevealed()}
+				</h2>
+				<Card.Title class="text-lg" translate="no">{contact.origin} <span class="route-arrow">→</span> {contact.destination}</Card.Title>
+				<Card.Description>{formatTime(contact.departure_at)}</Card.Description>
+			</Card.Header>
+			<Card.Content class="space-y-1.5 text-sm">
+				<div>{contact.role === 'driver' ? m.labelDriver() : m.labelSearcher()}: <span class="font-medium">{contact.name}</span></div>
+				<div>{m.theirNumber()} <a class="font-medium underline underline-offset-2" href="tel:{contact.phone}">{contact.phone}</a></div>
+			</Card.Content>
+			<Card.Footer class="flex-col items-stretch gap-2">
+				<Button size="lg" class="w-full" href="tel:{contact.phone}">{m.btnCallNow()}</Button>
+				<Button size="lg" variant="outline" class="w-full" id="btn-search-route" data-origin={contact.origin} data-dest={contact.destination}
+					onclick={() => contact && goto(`/search?origin=${encodeURIComponent(contact.origin)}&destination=${encodeURIComponent(contact.destination)}`)}>{m.btnSearchRoute()}</Button>
+			</Card.Footer>
+		</Card.Root>
 	{:else}
 		<p>…</p>
 	{/if}
