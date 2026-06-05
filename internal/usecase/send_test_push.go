@@ -4,6 +4,7 @@
 package usecase
 
 import (
+	"log"
 	"time"
 
 	"github.com/z3spinner/go-stop/internal/boundaries/notification"
@@ -34,6 +35,7 @@ func (uc *SendTestPush) Execute(phone, lang string) (int, error) {
 		return 0, nil
 	}
 	title, body := quoteOfTheDay(lang, time.Now())
+	log.Printf("sending test push phone=***%s devices=%d", lastN(phone, 3), len(subList))
 	sendToAll(phone, domain.Message{Title: title, Body: body, URL: "/"}, uc.subs, uc.notifier)
 	return len(subList), nil
 }
