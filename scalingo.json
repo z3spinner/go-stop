@@ -3,6 +3,12 @@
   "description": "Lightweight local ride-sharing notice board",
   "website": "https://github.com/z3spinner/go-stop",
   "addons": ["postgresql:postgresql-sandbox"],
+  "formation": {
+    "web": {
+      "amount": 1,
+      "size": "S"
+    }
+  },
   "env": {
     "SITE_NAME": {
       "description": "Display name for this community's instance (e.g. 'Go Stop Saillans!')",
