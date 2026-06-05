@@ -2,7 +2,7 @@
 
 A lightweight local ride-sharing notice board. Drivers post one-time trips; searchers browse or post waiting requests. Matches trigger instant push notifications. Direct contact via phone number — no accounts, no in-app messaging.
 
-[![Deploy to Scalingo](https://cdn.scalingo.com/deploy/button.svg)](https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop)
+[![Deploy to Scalingo](https://cdn.scalingo.com/deploy/button.svg)](https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop#main)
 
 ## How it works
 
