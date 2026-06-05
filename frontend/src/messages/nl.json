@@ -109,7 +109,7 @@
 	"notifDeniedTip": "Meldingen geblokkeerd. Schakel ze in via de browserinstellingen.",
 	"footerPrivacy": "Privacy",
 	"aboutTitle": "Over Go Stop",
-	"aboutBody": "<p><strong>Go Stop</strong> is een lokaal ritdeelplatform, tussen liften en formeel carpoolen. Het verbindt bestuurders die een eenmalige rit aanbieden met mensen die een rit zoeken. Direct contact per telefoon — geen accounts vereist.</p><h3>Jouw gemeenschap</h3><p>Deze instantie is uitgerold voor <strong>{siteName}</strong>.</p><h3>Uitrollen voor jouw gemeenschap</h3><p><a href=\"https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop\" target=\"_blank\" rel=\"noopener\">▶ Uitrollen op Scalingo</a></p><p style=\"font-size:0.8rem;color:var(--gray-600)\"><a href=\"https://github.com/z3spinner/go-stop\" target=\"_blank\" rel=\"noopener\">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>",
+	"aboutBody": "<p><strong>Go Stop</strong> is een lokaal ritdeelplatform, tussen liften en formeel carpoolen. Het verbindt bestuurders die een eenmalige rit aanbieden met mensen die een rit zoeken. Direct contact per telefoon — geen accounts vereist.</p><h3>Jouw gemeenschap</h3><p>Deze instantie is uitgerold voor <strong>{siteName}</strong>.</p><h3>Uitrollen voor jouw gemeenschap</h3><p><a href=\"https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop#main\" target=\"_blank\" rel=\"noopener\">▶ Uitrollen op Scalingo</a></p><p style=\"font-size:0.8rem;color:var(--gray-600)\"><a href=\"https://github.com/z3spinner/go-stop\" target=\"_blank\" rel=\"noopener\">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>",
 	"feedbackTitle": "Heeft iemand meegereden?",
 	"feedbackYes": "Ja, iemand reed mee",
 	"feedbackNo": "Nee, ik reed alleen",

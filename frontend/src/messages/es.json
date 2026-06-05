@@ -109,7 +109,7 @@
 	"notifDeniedTip": "Notificaciones bloqueadas. Actívalas en la configuración del navegador.",
 	"footerPrivacy": "Privacidad",
 	"aboutTitle": "Acerca de Go Stop",
-	"aboutBody": "<p><strong>Go Stop</strong> es una plataforma local de viajes compartidos, entre el autostop y el carpooling. Conecta a conductores que ofrecen un viaje puntual con personas que buscan transporte. Contacto directo por teléfono — sin cuentas.</p><h3>Tu comunidad</h3><p>Esta instancia está desplegada para <strong>{siteName}</strong>.</p><h3>Desplegar para tu comunidad</h3><p><a href=\"https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop\" target=\"_blank\" rel=\"noopener\">▶ Desplegar en Scalingo</a></p><p style=\"font-size:0.8rem;color:var(--gray-600)\"><a href=\"https://github.com/z3spinner/go-stop\" target=\"_blank\" rel=\"noopener\">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>",
+	"aboutBody": "<p><strong>Go Stop</strong> es una plataforma local de viajes compartidos, entre el autostop y el carpooling. Conecta a conductores que ofrecen un viaje puntual con personas que buscan transporte. Contacto directo por teléfono — sin cuentas.</p><h3>Tu comunidad</h3><p>Esta instancia está desplegada para <strong>{siteName}</strong>.</p><h3>Desplegar para tu comunidad</h3><p><a href=\"https://my.scalingo.com/deploy?source=https://github.com/z3spinner/go-stop#main\" target=\"_blank\" rel=\"noopener\">▶ Desplegar en Scalingo</a></p><p style=\"font-size:0.8rem;color:var(--gray-600)\"><a href=\"https://github.com/z3spinner/go-stop\" target=\"_blank\" rel=\"noopener\">github.com/z3spinner/go-stop</a> · AGPL-3.0</p>",
 	"feedbackTitle": "¿Alguien se unió a tu viaje?",
 	"feedbackYes": "Sí, alguien vino",
 	"feedbackNo": "No, fui solo/a",
