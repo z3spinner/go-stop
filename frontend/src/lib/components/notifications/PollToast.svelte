@@ -1,3 +1,8 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Zeno Kerr
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { pollToasts } from '$lib/pwa';

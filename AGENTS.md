@@ -97,6 +97,36 @@ depend on this ordering). `.buildpacks` chains the Node then Go buildpacks;
 `scalingo.json` defines the one-click deploy form. The production image
 (`Dockerfile`) is a 3-stage build: Vite build → Go build → alpine runtime.
 
+## Licensing & file headers
+
+The project is **AGPL-3.0-or-later** (`LICENSE`, `NOTICE`). **Every new
+hand-written source file must start with an SPDX header.**
+
+Go / TypeScript / JavaScript (`.go`, `.ts`, `.js`):
+
+```go
+// SPDX-FileCopyrightText: 2026 Zeno Kerr
+// SPDX-License-Identifier: AGPL-3.0-or-later
+```
+
+Svelte (`.svelte`) — leading HTML comment:
+
+```svelte
+<!--
+  SPDX-FileCopyrightText: 2026 Zeno Kerr
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+```
+
+In Go, the header goes above everything; for build-tagged files keep the order
+`SPDX → blank line → //go:build → blank line → package`.
+
+**Do NOT** add headers to generated or vendored code — it isn't ours to mark:
+sqlc queries, `docs/docs.go`, `internal/version/build.go`,
+`frontend/src/lib/api/generated/`, the shadcn-svelte `frontend/src/lib/components/ui/`
+primitives, and Paraglide output. (Update the copyright holder for genuinely new
+contributors as appropriate.)
+
 ## ⚠️ Known issues to fix (these are NOT conventions — do not imitate)
 
 - The many loose `*.png` screenshots at the repo root are clutter (already

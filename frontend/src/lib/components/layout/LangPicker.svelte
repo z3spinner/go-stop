@@ -1,3 +1,8 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Zeno Kerr
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 <script lang="ts">
 	import { getLocale, setLocale, locales } from '$lib/locale';
 

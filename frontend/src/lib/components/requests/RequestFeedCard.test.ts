@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Zeno Kerr
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import { goto } from '$app/navigation';

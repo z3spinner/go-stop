@@ -80,3 +80,11 @@ SPA fallback is `index.html`; prefer `goto('/')` over `history.back()`.
 Vitest + jsdom + `@testing-library/svelte`; setup in `vitest-setup.js`. Tests are
 co-located `*.test.ts`. Globals are enabled (no need to import `describe/it/expect`).
 Clear `localStorage` in `beforeEach` when a test touches stores.
+
+## Licensing headers
+
+New `.ts`/`.js` files start with the two-line `//` SPDX header; new `.svelte`
+files start with the `<!-- -->` SPDX comment block (see root `AGENTS.md` →
+"Licensing & file headers"). Do **not** add headers to generated/vendored code:
+`src/lib/api/generated/`, the shadcn `src/lib/components/ui/` primitives, or
+`src/lib/paraglide/`.

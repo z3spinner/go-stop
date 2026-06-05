@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Zeno Kerr
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { persisted } from 'svelte-persisted-store';
 
 // These hold plain strings and must be stored RAW (not JSON-encoded). The legacy

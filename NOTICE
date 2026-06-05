@@ -1,0 +1,27 @@
+Go-Stop
+Copyright (C) 2026 Zeno Kerr
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+The full license text is in the LICENSE file. Source code:
+https://github.com/z3spinner/go-stop
+
+---
+
+Third-party components are distributed under their own licenses and retain
+their original copyright. These include the bundled shadcn-svelte UI
+primitives (frontend/src/lib/components/ui/, MIT) and the dependencies listed
+in go.mod and frontend/package.json. Generated code (sqlc queries, swaggo docs,
+the orval API client, Paraglide messages) is excluded from the per-file SPDX
+headers above.

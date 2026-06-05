@@ -63,3 +63,5 @@ Flexible). Conventions:
   `make fmt` (gofmt + goimports). The lint set is curated and currently clean —
   keep it that way. `misspell` is deliberately off because of the intentional
   non-English string literals (`usecase/qotd.go`, French push copy).
+- Every new `.go` file starts with the two-line SPDX header (above `//go:build`
+  if present) — see root `AGENTS.md` → "Licensing & file headers".

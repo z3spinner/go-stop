@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Zeno Kerr
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {

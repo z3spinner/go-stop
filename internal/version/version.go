@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Zeno Kerr
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 package version
 
 // Get returns the build version for cache-busting static assets.
