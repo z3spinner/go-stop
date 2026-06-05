@@ -224,9 +224,6 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .ghost-sep { display: none; }
 
 .detail-card { margin-top: 8px; }
-.detail-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.95rem; }
-.detail-table td { padding: 6px 4px; vertical-align: top; }
-.detail-table td:first-child { color: var(--gray-600); width: 40%; }
 
 .trip-type-group { margin-bottom: 8px; }
 .trip-type-toggle { display: flex; gap: 0; margin-top: 6px; }
