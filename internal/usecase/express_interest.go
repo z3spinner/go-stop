@@ -14,8 +14,6 @@ import (
 	"github.com/z3spinner/go-stop/internal/domain"
 )
 
-var ErrNameRequired = errors.New("name is required")
-
 type ExpressInterest struct {
 	rides     repository.RideRepository
 	interests repository.InterestRepository
