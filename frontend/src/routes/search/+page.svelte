@@ -11,6 +11,7 @@
 	import { api } from '$lib/api';
 	import { lastOrigin, lastDestination, userPhone } from '$lib/stores';
 	import { loadAcceptedContacts } from '$lib/contacts';
+	import { loadMyRideIds } from '$lib/myRides';
 	import RideCard from '$lib/components/rides/RideCard.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { PublicRide, RideSearchParams } from '$lib/types';
@@ -24,6 +25,7 @@
 	let fwd = $state<PublicRide[]>([]);
 	let rev = $state<PublicRide[]>([]);
 	let contacts = $state<Map<string, string>>(new Map());
+	let myIds = $state<Set<string>>(new Set());
 
 	function fromUrl() {
 		const sp = page.url.searchParams;
@@ -67,6 +69,7 @@
 		fwd = a as PublicRide[];
 		rev = b as PublicRide[];
 		contacts = await loadAcceptedContacts(get(userPhone));
+		myIds = await loadMyRideIds(get(userPhone));
 	}
 
 	function submit(e: SubmitEvent) { e.preventDefault(); run(); }
@@ -109,7 +112,7 @@
 					</div>
 				{:else}
 					<div class="flex flex-col gap-2">
-						{#each col.list as r}<RideCard ride={r} contactPhone={contacts.get(r.ID)} />{/each}
+						{#each col.list as r}<RideCard ride={r} contactPhone={contacts.get(r.ID)} isOwn={myIds.has(r.ID)} />{/each}
 						<button type="button" class="btn-notify-route col-notify underline" data-from={col.o} data-to={col.d} onclick={() => notify(col.o, col.d)}>{m.btnNotifyRoute()}</button>
 					</div>
 				{/if}
