@@ -42,4 +42,17 @@ describe('ProfileModal', () => {
 		const btn = (await screen.findByRole('button', { name: /continue|continuer/i })) as HTMLButtonElement;
 		expect(btn.disabled).toBe(true);
 	});
+
+	it('does not run the continuation when dismissed without saving', async () => {
+		const onComplete = vi.fn();
+		render(ProfileModal);
+		openProfileModal(onComplete);
+		await screen.findByRole('button', { name: /continue|continuer/i });
+
+		// dismiss without saving
+		profileModalState.set(null);
+
+		await vi.waitFor(() => expect(get(profileModalState)).toBeNull());
+		expect(onComplete).not.toHaveBeenCalled();
+	});
 });

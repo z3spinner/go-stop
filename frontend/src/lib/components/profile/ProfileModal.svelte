@@ -19,6 +19,13 @@
 
 	const complete = $derived(name.trim().length > 0 && phone.trim().length > 0);
 
+	$effect(() => {
+		if (open) {
+			name = get(userName);
+			phone = get(userPhone);
+		}
+	});
+
 	function close() {
 		profileModalState.set(null);
 	}
