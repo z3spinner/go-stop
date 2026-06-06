@@ -6,8 +6,8 @@
 <script lang="ts">
 	import { getLocale, setLocale, locales } from '$lib/locale';
 
-	const FLAGS: Record<string, string> = { fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸', it: '🇮🇹', de: '🇩🇪', nl: '🇳🇱' };
-	const ORDER = ['fr', 'en', 'es', 'it', 'de', 'nl'] as const;
+	const FLAGS: Record<string, string> = { fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸', it: '🇮🇹', de: '🇩🇪', nl: '🇳🇱', el: '🇬🇷' };
+	const ORDER = ['fr', 'en', 'es', 'it', 'de', 'nl', 'el'] as const;
 	let open = $state(false);
 	let current = $derived(getLocale());
 
