@@ -144,6 +144,23 @@ func postJSON(r *gin.Engine, path string, body interface{}) *httptest.ResponseRe
 	return w
 }
 
+func getReq(r *gin.Engine, path string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, path, nil)
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func searchEventCount(t *testing.T) int {
+	t.Helper()
+	var n int
+	if err := handlerPool.QueryRow(context.Background(),
+		`SELECT count(*) FROM search_events`).Scan(&n); err != nil {
+		t.Fatalf("count search_events: %v", err)
+	}
+	return n
+}
+
 func TestHTTP_PostAndGetRides(t *testing.T) {
 	truncateAll(t)
 	r := setupRouter()
@@ -1090,5 +1107,35 @@ func TestHTTP_NotificationQueue_NotRetriedAfterInterest(t *testing.T) {
 	}
 	if len(pending) != 0 {
 		t.Errorf("expected 0 pending after interest expressed, got %d", len(pending))
+	}
+}
+
+// A single user search on the find page fires two /api/rides calls: the forward
+// lookup (A→B) and a reverse-direction lookup (B→A) to surface return rides. Only
+// the forward call should be counted as a search; the reverse passes count=false.
+// Without the opt-out the search statistics double-count every search.
+func TestHTTP_Search_CountFalseSuppressesRecording(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Forward lookup — must record exactly one search event.
+	if w := getReq(r, "/api/rides?origin=A&destination=B"); w.Code != http.StatusOK {
+		t.Fatalf("forward search: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	// Reverse-direction lookup with the opt-out — must NOT record.
+	if w := getReq(r, "/api/rides?origin=B&destination=A&count=false"); w.Code != http.StatusOK {
+		t.Fatalf("reverse search: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// RecordSearch runs in a background goroutine; wait for the forward insert to
+	// land, then give any erroneous reverse insert a window to show up too.
+	deadline := time.Now().Add(2 * time.Second)
+	for searchEventCount(t) < 1 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	time.Sleep(200 * time.Millisecond)
+
+	if got := searchEventCount(t); got != 1 {
+		t.Errorf("expected exactly 1 recorded search event (count=false must suppress the reverse lookup), got %d", got)
 	}
 }
