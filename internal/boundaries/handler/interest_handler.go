@@ -76,6 +76,10 @@ func (h *InterestHandler) Express(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "ride not found"})
 			return
 		}
+		if errors.Is(err, usecase.ErrNameRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
