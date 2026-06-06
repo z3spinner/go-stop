@@ -22,6 +22,7 @@
 	let contacts = $state<Map<string, string>>(new Map());
 	let stats = $state<Stats | null>(null);
 	let pendingBadge = $state(0);
+	let myIds = $state<Set<string>>(new Set());
 
 	// Swipe ↔ tabs: `tab` is the source of truth. Tapping a tab scrolls the panel
 	// into view (with a short guard so the in-flight smooth-scroll doesn't fight
@@ -53,6 +54,7 @@
 		if (phone) {
 			try {
 				const mine = (await api.rides.list({}, phone)) as { ID: string }[];
+				myIds = new Set(mine.map((r) => r.ID));
 				let n = 0;
 				for (const r of mine) {
 					const ints = await api.rides.listInterests(r.ID, phone);
@@ -98,7 +100,7 @@
 				<p class="home-feed-empty text-gray-500">{m.noActiveRides()}</p>
 			{:else}
 				<div class="flex flex-col gap-2">
-					{#each rides as r}<RideCard ride={r} contactPhone={contacts.get(r.ID)} />{/each}
+					{#each rides as r}<RideCard ride={r} contactPhone={contacts.get(r.ID)} isOwn={myIds.has(r.ID)} />{/each}
 				</div>
 			{/if}
 		</div>
