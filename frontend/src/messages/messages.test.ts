@@ -8,8 +8,9 @@ import es from './es.json';
 import itMessages from './it.json';
 import de from './de.json';
 import nl from './nl.json';
+import el from './el.json';
 
-const files = { en, fr, es, it: itMessages, de, nl };
+const files = { en, fr, es, it: itMessages, de, nl, el };
 const keys = (o: Record<string, unknown>) => Object.keys(o).filter((k) => k !== '$schema').sort();
 
 describe('message files', () => {
