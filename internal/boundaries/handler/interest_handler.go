@@ -61,7 +61,12 @@ func (h *InterestHandler) Express(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	interest, err := h.expressInterest.Execute(c.Param("id"), normalizePhone(req.Phone), strings.TrimSpace(req.Name))
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	interest, err := h.expressInterest.Execute(c.Param("id"), normalizePhone(req.Phone), name)
 	if err != nil {
 		if err.Error() == "searcher cannot be the driver" {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
