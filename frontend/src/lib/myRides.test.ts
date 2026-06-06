@@ -25,8 +25,11 @@ describe('loadMyRideIds', () => {
 	});
 
 	it('returns an empty set on error', async () => {
-		// Return a non-iterable value so the internal map() call throws, exercising
-		// the catch branch without creating a Vitest-tracked unhandled rejection.
+		// Vitest 4 tracks unhandled rejections at the mock level: even though
+		// loadMyRideIds swallows the rejection in its own try/catch, Vitest still
+		// fails the test when the mock itself was set up with mockRejectedValue.
+		// Using mockResolvedValue(null) instead causes a TypeError inside the SUT
+		// (null is not iterable), which the catch branch handles cleanly.
 		list.mockResolvedValue(null);
 		const ids = await loadMyRideIds('0612345678');
 		expect(ids.size).toBe(0);
