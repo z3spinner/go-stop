@@ -22,6 +22,7 @@
 	import A2HSModal from '$lib/components/notifications/A2HSModal.svelte';
 	import PollToastHost from '$lib/components/notifications/PollToast.svelte';
 	import NotifModal from '$lib/components/notifications/NotifModal.svelte';
+	import ProfileModal from '$lib/components/profile/ProfileModal.svelte';
 	import { m } from '$lib/paraglide/messages';
 
 	let { children } = $props();
@@ -76,4 +77,5 @@
 <A2HSModal />
 <PollToastHost />
 <NotifModal />
+<ProfileModal />
 <PrivacyModal open={showPrivacy} onclose={() => (showPrivacy = false)} />

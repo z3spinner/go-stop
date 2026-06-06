@@ -40,6 +40,7 @@
 		catch { delMsg = m.deleteErr(); }
 	}
 	const pendingCount = $derived(interests.filter((i) => i.status === 'pending').length);
+	const displayName = (it: InterestListItem) => it.searcher_name?.trim() || m.anonymousSearcher();
 </script>
 
 <div class="card rounded border p-3" id="card-{ride.ID}" style:opacity={deleted ? 0.4 : 1}>
@@ -63,12 +64,12 @@
 		{#each interests as it}
 			<div class="interest-row" id="irow-{it.id}">
 				{#if it.status === 'pending'}
-					<span class="interest-pending-info">{it.searcher_name ?? ''}</span>
+					<span class="interest-pending-info">{m.interestPendingName({ name: displayName(it) })}</span>
 					<button type="button" class="btn-accept-interest" data-id={it.id} data-phone={phone} onclick={() => accept(it)}>{m.btnAccept()}</button>
 				{:else if it.status === 'driver_shared'}
 					<span class="interest-accepted">{m.notifSentShort()}</span>
 				{:else}
-					<span class="interest-accepted">{m.contactRevealed()}{#if it.searcher_phone}: <a href="tel:{it.searcher_phone}">{it.searcher_phone}</a>{/if}</span>
+					<span class="interest-accepted">{displayName(it)}{#if it.searcher_phone} — <a href="tel:{it.searcher_phone}">{it.searcher_phone}</a>{/if}</span>
 				{/if}
 			</div>
 		{/each}

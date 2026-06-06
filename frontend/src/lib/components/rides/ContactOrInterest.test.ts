@@ -4,9 +4,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import ContactOrInterest from './ContactOrInterest.svelte';
+import { get } from 'svelte/store';
 import { userName, userPhone } from '$lib/stores';
+import { profileModalState } from '$lib/profileModal';
 
-beforeEach(() => { localStorage.clear(); userName.set('Bob'); userPhone.set('0622000002'); });
+beforeEach(() => { localStorage.clear(); userName.set('Bob'); userPhone.set('0622000002'); profileModalState.set(null); });
 afterEach(() => vi.unstubAllGlobals());
 
 const ride = { ID: '42', DriverName: 'Alice', Origin: 'Saillans', Destination: 'Crest', Flexibility: 0 } as any;
@@ -51,5 +53,34 @@ describe('ContactOrInterest', () => {
 		const [url, init] = fetchMock.mock.calls[0];
 		expect(String(url)).toContain('/api/interests/int1');
 		expect(init?.method).toBe('DELETE');
+	});
+
+	it('opens the profile modal instead of sending when the profile is incomplete', async () => {
+		userName.set(''); // incomplete: no name
+		userPhone.set('0622000002');
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'int1', status: 'pending' }), { status: 201 }));
+		vi.stubGlobal('fetch', fetchMock);
+
+		const { container } = render(ContactOrInterest, { props: { ride } });
+		await fireEvent.click(container.querySelector('.btn-interest')!);
+
+		expect(get(profileModalState)).toBeTypeOf('function'); // modal opened
+		expect(fetchMock).not.toHaveBeenCalled(); // nothing sent yet
+	});
+
+	it('resend also opens the profile modal when the profile is incomplete', async () => {
+		localStorage.setItem('interest_42', 'int1'); // start in pending state
+		userName.set('');
+		userPhone.set('0622000002');
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'int1', status: 'pending' }), { status: 201 }));
+		vi.stubGlobal('fetch', fetchMock);
+
+		const { container } = render(ContactOrInterest, { props: { ride } });
+		const resend = container.querySelector('.btn-interest-resend') as HTMLElement;
+		expect(resend).toBeTruthy();
+		await fireEvent.click(resend);
+
+		expect(get(profileModalState)).toBeTypeOf('function');
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

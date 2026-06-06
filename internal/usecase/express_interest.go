@@ -6,6 +6,7 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/z3spinner/go-stop/internal/boundaries/notification"
@@ -36,6 +37,9 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone, searcherName string) (
 	}
 	if ride.Phone == searcherPhone {
 		return domain.Interest{}, errors.New("searcher cannot be the driver")
+	}
+	if strings.TrimSpace(searcherName) == "" {
+		return domain.Interest{}, ErrNameRequired
 	}
 
 	interest := domain.Interest{

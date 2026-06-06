@@ -401,7 +401,7 @@ func TestHTTP_Interest_ExpressCreatesRecord(t *testing.T) {
 	rideID := ride["ID"].(string)
 
 	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
-		"phone": "5550002",
+		"phone": "5550002", "name": "Bob",
 	})
 	if w2.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d: %s", w2.Code, w2.Body.String())
@@ -433,7 +433,7 @@ func TestHTTP_Interest_DriverCannotBeSearcher(t *testing.T) {
 	rideID := ride["ID"].(string)
 
 	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
-		"phone": "5550001",
+		"phone": "5550001", "name": "Alice",
 	})
 	if w2.Code != http.StatusForbidden {
 		t.Errorf("expected 403, got %d", w2.Code)
@@ -456,7 +456,7 @@ func TestHTTP_Interest_AcceptRevealsPhonesCorrectly(t *testing.T) {
 
 	// Searcher expresses interest
 	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
-		"phone": "5550002",
+		"phone": "5550002", "name": "Bob",
 	})
 	var interest map[string]interface{}
 	json.Unmarshal(w2.Body.Bytes(), &interest)
@@ -561,7 +561,7 @@ func TestHTTP_Interest_WrongDriverPhoneReturns403(t *testing.T) {
 
 	// Searcher expresses interest
 	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
-		"phone": "5550002",
+		"phone": "5550002", "name": "Bob",
 	})
 	var interest map[string]interface{}
 	json.Unmarshal(w2.Body.Bytes(), &interest)
@@ -573,6 +573,28 @@ func TestHTTP_Interest_WrongDriverPhoneReturns403(t *testing.T) {
 	})
 	if w3.Code != http.StatusForbidden {
 		t.Errorf("expected 403 for wrong driver, got %d", w3.Code)
+	}
+}
+
+func TestHTTP_Interest_RequiresName(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	// whitespace-only name is rejected
+	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5550002", "name": "   ",
+	})
+	if w2.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for empty name, got %d: %s", w2.Code, w2.Body.String())
 	}
 }
 
