@@ -24,4 +24,22 @@ describe('RideCard', () => {
 		expect(link).toBeTruthy();
 		expect(link.getAttribute('href')).toBe('/rides/42');
 	});
+
+	it('marks an own ride with a badge and a manage link, and hides the contact button', () => {
+		const { container } = render(RideCard, { props: { ride, isOwn: true } });
+		const badge = container.querySelector('.tag-your-ride') as HTMLElement;
+		expect(badge).toBeTruthy();
+		expect(badge.textContent).toMatch(/Your ride|Votre trajet/);
+		const manage = container.querySelector('a.ride-manage-link') as HTMLAnchorElement;
+		expect(manage).toBeTruthy();
+		expect(manage.getAttribute('href')).toBe('/my-rides#card-42');
+		expect(container.querySelector('.btn-interest')).toBeNull();
+	});
+
+	it('renders the contact action and no own-ride badge by default', () => {
+		const { container } = render(RideCard, { props: { ride } });
+		expect(container.querySelector('.tag-your-ride')).toBeNull();
+		expect(container.querySelector('.ride-manage-link')).toBeNull();
+		expect(container.querySelector('.btn-interest')).toBeTruthy();
+	});
 });
