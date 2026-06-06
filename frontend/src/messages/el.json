@@ -184,5 +184,7 @@
 	"flexLabel30": "±30 λεπτά",
 	"flexLabel60": "±60 λεπτά",
 	"at": "στις",
-	"notifSentShort": "Η ειδοποίηση στάλθηκε ✓"
+	"notifSentShort": "Η ειδοποίηση στάλθηκε ✓",
+	"yourRide": "Η διαδρομή σας",
+	"manageInMyRides": "Διαχείριση στις διαδρομές μου"
 }
