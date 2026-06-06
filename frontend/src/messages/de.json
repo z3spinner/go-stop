@@ -174,5 +174,7 @@
 	"flexLabel30": "±30 Min",
 	"flexLabel60": "±60 Min",
 	"at": "um",
-	"notifSentShort": "Benachrichtigung gesendet ✓"
+	"notifSentShort": "Benachrichtigung gesendet ✓",
+	"yourRide": "Deine Fahrt",
+	"manageInMyRides": "In Meine Fahrten verwalten"
 }

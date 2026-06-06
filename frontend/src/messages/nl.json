@@ -174,5 +174,7 @@
 	"flexLabel30": "±30 min",
 	"flexLabel60": "±60 min",
 	"at": "om",
-	"notifSentShort": "Melding verzonden ✓"
+	"notifSentShort": "Melding verzonden ✓",
+	"yourRide": "Jouw rit",
+	"manageInMyRides": "Beheren in Mijn ritten"
 }
