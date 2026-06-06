@@ -150,6 +150,11 @@ func main() {
 	}
 	r.NoRoute(spaHandler(buildDir, siteName, rideOG, serviceTZ))
 
+	// SEO endpoints with absolute, host-derived URLs (see og.go). Explicit routes
+	// take precedence over the static-file fallback, replacing static robots.txt.
+	r.GET("/sitemap.xml", sitemapHandler)
+	r.GET("/robots.txt", robotsHandler)
+
 	api := r.Group("/api")
 	{
 		api.POST("/rides", rideH.Post)
@@ -209,6 +214,12 @@ func spaHandler(buildDir, siteName string, lookup rideLookupFunc, tz *time.Locat
 		if strings.HasPrefix(file, filepath.Clean(buildDir)+string(os.PathSeparator)) {
 			if fi, err := os.Stat(file); err == nil && !fi.IsDir() {
 				c.File(file)
+				return
+			}
+			// Prerendered routes (e.g. /about → about.html) are served directly,
+			// keeping their own <title>/meta from <svelte:head> (no OG injection).
+			if fi, err := os.Stat(file + ".html"); err == nil && !fi.IsDir() {
+				c.File(file + ".html")
 				return
 			}
 		}

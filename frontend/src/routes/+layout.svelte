@@ -17,7 +17,6 @@
 	import { updateBellState, pollForNotifications, isStandalone, maybeMarkStandalonePrompted } from '$lib/pwa';
 	import { openNotifModal } from '$lib/notifModal';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
-	import AboutModal from '$lib/components/layout/AboutModal.svelte';
 	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
 	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
 	import A2HSModal from '$lib/components/notifications/A2HSModal.svelte';
@@ -26,7 +25,6 @@
 	import { m } from '$lib/paraglide/messages';
 
 	let { children } = $props();
-	let showAbout = $state(false);
 	let showPrivacy = $state(false);
 	let isHome = $derived(page.url.pathname === '/');
 
@@ -59,7 +57,7 @@
 	{#if !isHome}
 		<button id="back" type="button" class="btn-back" onclick={back}>{m.btnBack()}</button>
 	{/if}
-	<TopBar onabout={() => (showAbout = true)} onprivacy={() => (showPrivacy = true)} />
+	<TopBar onprivacy={() => (showPrivacy = true)} />
 </header>
 
 <div id="app" class="mx-auto max-w-xl p-3">
@@ -69,6 +67,8 @@
 <footer id="app-footer" class="mx-auto max-w-xl p-3 text-center text-sm text-gray-500">
 	<button type="button" class="btn-footer-privacy underline" onclick={() => (showPrivacy = true)}>{m.footerPrivacy()}</button>
 	<span> · </span>
+	<a class="btn-footer-about underline" href="/about">{m.aboutTitle()}</a>
+	<span> · </span>
 	<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
 </footer>
 
@@ -76,5 +76,4 @@
 <A2HSModal />
 <PollToastHost />
 <NotifModal />
-<AboutModal open={showAbout} onclose={() => (showAbout = false)} />
 <PrivacyModal open={showPrivacy} onclose={() => (showPrivacy = false)} />

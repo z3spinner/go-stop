@@ -72,6 +72,68 @@ func TestSPAFallbackServesIndex(t *testing.T) {
 	}
 }
 
+func TestServesPrerenderedHTML(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("<!doctype html>INDEX"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "about.html"), []byte("<!doctype html>ABOUT-PRERENDERED"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := buildSPARouter(dir)
+
+	// /about is served from the prerendered about.html (not the SPA shell), and
+	// without OG injection (the page carries its own head).
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("GET", "/about", nil))
+	if b := w.Body.String(); w.Code != 200 || !strings.Contains(b, "ABOUT-PRERENDERED") || strings.Contains(b, "INDEX") {
+		t.Fatalf("/about should serve about.html: got %d %q", w.Code, b)
+	}
+
+	// A route with neither an exact file nor a .html sibling still falls back to index.html.
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("GET", "/my-rides", nil))
+	if b := w.Body.String(); w.Code != 200 || !strings.Contains(b, "INDEX") {
+		t.Fatalf("unknown route should fall back to index: got %d %q", w.Code, b)
+	}
+}
+
+func TestSitemapAndRobots(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/sitemap.xml", sitemapHandler)
+	r.GET("/robots.txt", robotsHandler)
+
+	// sitemap.xml lists the public URLs as absolute <loc>s derived from the host.
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/sitemap.xml", nil)
+	req.Host = "go-stop.example"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	r.ServeHTTP(w, req)
+	body := w.Body.String()
+	for _, want := range []string{
+		"<urlset",
+		"<loc>https://go-stop.example/</loc>",
+		"<loc>https://go-stop.example/about</loc>",
+		"<loc>https://go-stop.example/stats</loc>",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("sitemap missing %q in:\n%s", want, body)
+		}
+	}
+
+	// robots.txt allows all and points to the absolute sitemap URL.
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest("GET", "/robots.txt", nil)
+	req.Host = "go-stop.example"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	r.ServeHTTP(w, req)
+	body = w.Body.String()
+	if !strings.Contains(body, "User-agent: *") || !strings.Contains(body, "Sitemap: https://go-stop.example/sitemap.xml") {
+		t.Errorf("robots.txt missing directives:\n%s", body)
+	}
+}
+
 const shellWithHead = "<!doctype html><html><head><meta charset=\"utf-8\"></head><body>APP</body></html>"
 
 func TestOGInjection_RideRouteAndDefault(t *testing.T) {

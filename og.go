@@ -6,11 +6,40 @@ package main
 import (
 	"fmt"
 	"html"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+// crawlablePaths are the public, indexable URLs listed in the sitemap.
+var crawlablePaths = []string{"/", "/about", "/stats"}
+
+// sitemapHandler serves a minimal sitemap.xml. URLs are absolute and derived from
+// the request scheme + host because this is a deploy-your-own app: each instance
+// has its own domain, unknown at build time, so a static file can't be correct.
+func sitemapHandler(c *gin.Context) {
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
+	for _, p := range crawlablePaths {
+		b.WriteString("  <url><loc>" + html.EscapeString(ogAbsURL(c, p)) + "</loc></url>\n")
+	}
+	b.WriteString("</urlset>\n")
+	c.Data(http.StatusOK, "application/xml; charset=utf-8", []byte(b.String()))
+}
+
+// robotsHandler serves robots.txt with an absolute Sitemap directive. The robots
+// spec requires an absolute URL, which (per sitemapHandler) can only be known at
+// request time — hence a handler rather than a static file.
+func robotsHandler(c *gin.Context) {
+	body := "# allow crawling everything by default\n" +
+		"User-agent: *\n" +
+		"Disallow:\n" +
+		"Sitemap: " + ogAbsURL(c, "/sitemap.xml") + "\n"
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte(body))
+}
 
 // ogRide is the minimal ride data needed to render a link preview.
 type ogRide struct {
