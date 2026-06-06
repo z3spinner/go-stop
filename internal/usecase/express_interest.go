@@ -6,12 +6,15 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/z3spinner/go-stop/internal/boundaries/notification"
 	"github.com/z3spinner/go-stop/internal/boundaries/repository"
 	"github.com/z3spinner/go-stop/internal/domain"
 )
+
+var ErrNameRequired = errors.New("name is required")
 
 type ExpressInterest struct {
 	rides     repository.RideRepository
@@ -36,6 +39,9 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone, searcherName string) (
 	}
 	if ride.Phone == searcherPhone {
 		return domain.Interest{}, errors.New("searcher cannot be the driver")
+	}
+	if strings.TrimSpace(searcherName) == "" {
+		return domain.Interest{}, ErrNameRequired
 	}
 
 	interest := domain.Interest{

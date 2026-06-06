@@ -167,3 +167,24 @@ func TestExpressInterest_ReturnsErrorIfRideNotFound(t *testing.T) {
 		t.Error("expected error for missing ride")
 	}
 }
+
+func TestExpressInterest_RejectsEmptyName(t *testing.T) {
+	rides := &mockRideRepo{
+		byID: map[string]domain.Ride{
+			"ride-1": {ID: "ride-1", Phone: "555-driver"},
+		},
+	}
+	interests := &mockInterestRepo{}
+	subs := &mockSubRepo{subs: map[string]domain.Subscription{}}
+	n := &mockNotifier{}
+
+	uc := usecase.NewExpressInterest(rides, interests, subs, n)
+	_, err := uc.Execute("ride-1", "555-searcher", "")
+
+	if !errors.Is(err, usecase.ErrNameRequired) {
+		t.Errorf("expected ErrNameRequired, got %v", err)
+	}
+	if len(interests.saved) != 0 {
+		t.Error("no interest should be saved when name is empty")
+	}
+}
