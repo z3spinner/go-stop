@@ -52,4 +52,19 @@ describe('ContactOrInterest', () => {
 		expect(String(url)).toContain('/api/interests/int1');
 		expect(init?.method).toBe('DELETE');
 	});
+
+	it('opens the profile modal instead of sending when the profile is incomplete', async () => {
+		userName.set(''); // incomplete: no name
+		userPhone.set('0622000002');
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify({ id: 'int1', status: 'pending' }), { status: 201 }));
+		vi.stubGlobal('fetch', fetchMock);
+
+		const { container } = render(ContactOrInterest, { props: { ride } });
+		await fireEvent.click(container.querySelector('.btn-interest')!);
+
+		const { get } = await import('svelte/store');
+		const { profileModalState } = await import('$lib/profileModal');
+		expect(get(profileModalState)).toBeTypeOf('function'); // modal opened
+		expect(fetchMock).not.toHaveBeenCalled(); // nothing sent yet
+	});
 });

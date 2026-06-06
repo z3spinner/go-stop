@@ -10,6 +10,8 @@
 	import { userName, userPhone } from '$lib/stores';
 	import { pushState, updateBellState } from '$lib/pwa';
 	import { openNotifModal } from '$lib/notifModal';
+	import { openProfileModal } from '$lib/profileModal';
+	import { normalizePhone } from '$lib/utils';
 	import { m } from '$lib/paraglide/messages';
 	import type { PublicRide, Ride } from '$lib/types';
 
@@ -22,13 +24,16 @@
 
 	async function express() {
 		if (busy) return;
+		const name = get(userName).trim();
+		const phone = get(userPhone).trim();
+		if (!name || !phone) {
+			openProfileModal(() => express()); // resume once the profile is complete
+			return;
+		}
 		busy = true;
 		stateMsg = '';
-		let phone = get(userPhone);
-		if (!phone && browser) phone = window.prompt(m.labelPhone()) ?? '';
-		if (!phone) { busy = false; return; }
 		try {
-			const res = await api.interests.express(ride.ID, phone, get(userName) || undefined);
+			const res = await api.interests.express(ride.ID, normalizePhone(phone), name);
 			if (browser) localStorage.setItem(`interest_${ride.ID}`, res.id);
 			pending = true;
 			stateMsg = m.interestSent();
