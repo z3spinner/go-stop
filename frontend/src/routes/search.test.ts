@@ -6,7 +6,7 @@ import { render } from '@testing-library/svelte';
 import Search from './search/+page.svelte';
 import { userPhone } from '$lib/stores';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); userPhone.set(''); localStorage.clear(); });
 
 vi.mock('$app/state', () => ({
 	page: { url: new URL('http://localhost/search?origin=Saillans&destination=Crest') }
@@ -36,6 +36,5 @@ describe('search', () => {
 			expect(container.querySelector('.tag-your-ride')).toBeTruthy();
 			expect(container.querySelector('a.ride-manage-link')!.getAttribute('href')).toBe('/my-rides#card-42');
 		});
-		userPhone.set('');
 	});
 });

@@ -68,8 +68,11 @@
 		]);
 		fwd = a as PublicRide[];
 		rev = b as PublicRide[];
-		contacts = await loadAcceptedContacts(get(userPhone));
-		myIds = await loadMyRideIds(get(userPhone));
+		const phone = get(userPhone);
+		[contacts, myIds] = await Promise.all([
+			loadAcceptedContacts(phone),
+			loadMyRideIds(phone)
+		]);
 	}
 
 	function submit(e: SubmitEvent) { e.preventDefault(); run(); }
