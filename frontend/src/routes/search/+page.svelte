@@ -61,7 +61,9 @@
 		}
 		goto(`/search?${url.toString()}`, { replaceState: true, keepFocus: true, noScroll: true });
 
-		const revParams: RideSearchParams = { ...params, origin: destination, destination: origin };
+		// Reverse-direction lookup (return rides). count=false so a single user search
+		// records one search event rather than double-counting in the statistics.
+		const revParams: RideSearchParams = { ...params, origin: destination, destination: origin, count: false };
 		const [a, b] = await Promise.all([
 			api.rides.list(params).catch(() => []),
 			api.rides.list(revParams).catch(() => [])

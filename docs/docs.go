@@ -597,6 +597,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Set false to skip recording this search in statistics (used by the reverse-direction lookup)",
+                        "name": "count",
+                        "in": "query"
+                    },
+                    {
                         "type": "string",
                         "description": "Caller phone for my-rides mode",
                         "name": "X-Phone",

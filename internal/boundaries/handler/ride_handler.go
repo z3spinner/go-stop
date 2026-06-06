@@ -150,6 +150,7 @@ func (h *RideHandler) Post(c *gin.Context) {
 // @Param    departure_at query   string  false  "Departure time (RFC3339)"
 // @Param    search_date  query   string  false  "Search date (YYYY-MM-DD)"
 // @Param    search_time  query   string  false  "Search time (HH:MM, local)"
+// @Param    count        query   boolean false  "Set false to skip recording this search in statistics (used by the reverse-direction lookup)"
 // @Param    X-Phone      header  string  false  "Caller phone for my-rides mode"
 // @Success  200  {array}  handler.PublicRide
 // @Failure  500  {object}  handler.ErrorResponse
@@ -187,8 +188,11 @@ func (h *RideHandler) List(c *gin.Context) {
 			}
 		}
 		rides, err = h.searchRides.Execute(origin, destination, searchDate, deptAt, searchTime)
-		// Record search event asynchronously (best-effort, never blocks the response)
-		if h.statRepo != nil {
+		// Record search event asynchronously (best-effort, never blocks the response).
+		// The find page issues a second, reverse-direction lookup (B→A) to surface
+		// return rides; it passes count=false so a single user search is counted once
+		// rather than double-counted in the statistics.
+		if h.statRepo != nil && c.Query("count") != "false" {
 			go func() { _ = h.statRepo.RecordSearch(origin, destination) }()
 		}
 	default:

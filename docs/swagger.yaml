@@ -711,6 +711,11 @@ paths:
         in: query
         name: search_time
         type: string
+      - description: Set false to skip recording this search in statistics (used by
+          the reverse-direction lookup)
+        in: query
+        name: count
+        type: boolean
       - description: Caller phone for my-rides mode
         in: header
         name: X-Phone

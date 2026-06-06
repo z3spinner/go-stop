@@ -238,6 +238,10 @@ search_date?: string;
  * Search time (HH:MM, local)
  */
 search_time?: string;
+/**
+ * Set false to skip recording this search in statistics (used by the reverse-direction lookup)
+ */
+count?: boolean;
 };
 
 export type getConfigResponse200 = {
