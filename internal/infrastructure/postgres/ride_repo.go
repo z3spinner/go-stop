@@ -173,14 +173,6 @@ func (r *RideRepo) DeleteExpired() error {
 	return r.q.DeleteExpiredRides(context.Background())
 }
 
-func (r *RideRepo) FindPendingFeedback() ([]domain.Ride, error) {
-	rows, err := r.q.ListRidesPendingFeedback(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	return ridesFromRows(rows), nil
-}
-
 func (r *RideRepo) ClaimFeedback(id string) (bool, error) {
 	n, err := r.q.ClaimRideFeedback(context.Background(), uuidFrom(id))
 	return n == 1, err

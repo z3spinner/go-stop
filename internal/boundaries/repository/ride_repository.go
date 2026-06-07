@@ -22,7 +22,6 @@ type RideRepository interface {
 	FindByOriginDestinationDateTime(origin, destination string, departureAt time.Time, toleranceMins int) ([]domain.Ride, error)
 	FindByOriginAndTime(origin, destination string, searchTime time.Time, toleranceMins int) ([]domain.Ride, error)
 	FindMatching(request domain.Request) ([]domain.Ride, error)
-	FindPendingFeedback() ([]domain.Ride, error)
 	Delete(id string) error
 	DeleteExpired() error
 	// ClaimFeedback flips feedback_given false→true and reports whether this call

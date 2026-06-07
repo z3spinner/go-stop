@@ -111,13 +111,5 @@ DELETE FROM rides WHERE id = $1;
 -- name: DeleteExpiredRides :exec
 DELETE FROM rides WHERE expires_at < NOW();
 
--- name: ListRidesPendingFeedback :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
-FROM rides
-WHERE departure_at BETWEEN (NOW() - INTERVAL '23 hours') AND (NOW() - INTERVAL '30 minutes')
-  AND feedback_given = false
-  AND expires_at > NOW()
-ORDER BY departure_at ASC;
-
 -- name: ClaimRideFeedback :execrows
 UPDATE rides SET feedback_given = true WHERE id = $1 AND feedback_given = false;
