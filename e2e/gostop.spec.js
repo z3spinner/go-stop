@@ -6,7 +6,9 @@ const { test, expect } = require('@playwright/test');
 
 const DRIVER   = { name: 'Alice', phone: '0611000001' };
 const SEARCHER = { name: 'Bob',   phone: '0622000002' };
-const BASE = 'http://localhost:8080';
+// Honor E2E_BASE_URL (the containerized stack points this at the in-network app,
+// e.g. http://app:8080); falls back to localhost for a bare local run.
+const BASE = process.env.E2E_BASE_URL || 'http://localhost:8080';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
