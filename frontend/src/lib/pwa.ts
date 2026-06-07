@@ -173,11 +173,3 @@ export async function pollForNotifications(phone: string): Promise<void> {
 		/* network errors are non-fatal for polling */
 	}
 }
-
-/** Returns true the first time only (sets standalone_notif_prompted). */
-export function maybeMarkStandalonePrompted(): boolean {
-	if (!hasStorage()) return false;
-	if (localStorage.getItem('standalone_notif_prompted')) return false;
-	localStorage.setItem('standalone_notif_prompted', '1');
-	return true;
-}
