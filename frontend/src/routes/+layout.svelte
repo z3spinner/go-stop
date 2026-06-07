@@ -8,7 +8,7 @@
 	import '../legacy.css'; // ported live-site styles; targets the preserved semantic class names
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { registerLangStrategy } from '$lib/locale';
 	import { loadConfig } from '$lib/config';
@@ -23,11 +23,19 @@
 	import PollToastHost from '$lib/components/notifications/PollToast.svelte';
 	import NotifModal from '$lib/components/notifications/NotifModal.svelte';
 	import ProfileModal from '$lib/components/profile/ProfileModal.svelte';
+	import PullToRefresh from '$lib/components/layout/PullToRefresh.svelte';
 	import { m } from '$lib/paraglide/messages';
 
 	let { children } = $props();
 	let showPrivacy = $state(false);
 	let isHome = $derived(page.url.pathname === '/');
+
+	// Bumping this remounts the page subtree, re-running each page's onMount fetch.
+	let refreshNonce = $state(0);
+	async function refresh() {
+		await invalidateAll(); // re-run load() for the pages that use it
+		refreshNonce++; // remount to re-run onMount-based fetches
+	}
 
 	function back() {
 		// Always return to the home hub. history.back() is unreliable here because
@@ -61,8 +69,12 @@
 	<TopBar onprivacy={() => (showPrivacy = true)} />
 </header>
 
+<PullToRefresh onrefresh={refresh} />
+
 <div id="app" class="mx-auto max-w-xl p-3">
-	{@render children()}
+	{#key refreshNonce}
+		{@render children()}
+	{/key}
 </div>
 
 <footer id="app-footer" class="mx-auto max-w-xl p-3 text-center text-sm text-gray-500">
