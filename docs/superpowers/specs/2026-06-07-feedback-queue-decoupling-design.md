@@ -113,30 +113,30 @@ type FeedbackQueueRepository interface {
     // EnqueueStartedRides inserts a task for every ride whose window has started
     // (within the bound), is not yet answered, and is not already queued.
     // Idempotent via ride_id UNIQUE.
-    EnqueueStartedRides(bound time.Duration, sendDelay time.Duration) error
+    EnqueueStartedRides(windowStartAfter time.Time) error
     // FindDue returns tasks where send_after <= now, retry-eligible (sent_count <
     // max AND (last_sent_at IS NULL OR last_sent_at < now-interval)).
     FindDue(retryAfter time.Time, maxRetries int) ([]domain.FeedbackTask, error)
-    FindByRideID(rideID string) (domain.FeedbackTask, error) // ErrNotFound if absent
+    FindByRideID(rideID string) (domain.FeedbackTask, error) // non-nil error if absent
     MarkSent(id string) error
-    DeleteByRideID(rideID string) error
+    DeleteByRideID(rideID string) (bool, error) // bool = a row was deleted (the claim)
     DeleteExhausted(maxRetries int, ttl time.Duration) error
 }
 ```
 
 > Implementation note: `EnqueueStartedRides` is a single `INSERT ... SELECT ...
-> FROM rides r WHERE r.departure_at <= NOW() AND r.departure_at > NOW() - bound
+> FROM rides r WHERE r.departure_at <= NOW() AND r.departure_at > windowStartAfter
 > AND r.feedback_given = false AND NOT EXISTS (SELECT 1 FROM feedback_queue fq
 > WHERE fq.ride_id = r.id) ON CONFLICT (ride_id) DO NOTHING`, computing
-> `send_after` from `departure_at + flexibility (minutes) + sendDelay`. Flexibility
-> is stored on `rides` as an int (minutes), so the SQL is
-> `r.departure_at + (r.flexibility * INTERVAL '1 minute') + INTERVAL '1 hour'`.
+> `send_after` in SQL. Flexibility is stored on `rides` as an int (minutes), so the
+> send time is `r.departure_at + (r.flexibility * INTERVAL '1 minute') + INTERVAL '1 hour'`.
+> The +1h send delay lives in SQL; only `windowStartAfter` is passed in.
 
-`bound` = 24h (don't back-fill old rides on first deploy). `sendDelay` = 1h.
+`windowStartAfter` = `NOW() - 24h` (don't back-fill old rides on first deploy).
 
 ### Use cases
 
-**`EnqueueFeedback`** (new) — calls `EnqueueStartedRides(24h, 1h)`. Runs **first**
+**`EnqueueFeedback`** (new) — calls `EnqueueStartedRides(time.Now().Add(-24h))`. Runs **first**
 in the cron, *before* `ExpireRides`, so a ride about to be expired/deleted is
 still captured.
 
@@ -153,25 +153,38 @@ Uses the same `interval` / `maxRetries` config and `sendToAll` helper as
 `RetryNotifications` (mirrored pattern, not the `notification_queue` table).
 `ttl` = a safety net (e.g. 7 days) so abandoned tasks are eventually removed.
 
-**`RecordFeedback`** (rewritten — idempotent, decoupled):
+**`RecordFeedback`** (rewritten — idempotent, decoupled, claim-guarded):
 ```
-task, taskErr := queue.FindByRideID(rideID)      // may be ErrNotFound
-ride, rideErr := rides.FindByID(rideID)          // may be ErrNotFound
-
-// Ownership: prefer the live ride, else the queue task.
-ownerPhone := ride.Phone (if rideErr == nil) else task.Phone (if taskErr == nil)
-if ownerPhone == "" -> ErrNotFound            // neither exists → nothing to record
-if ownerPhone != phone -> ErrUnauthorized
-
-// Stat data: prefer the live ride, else the queue task.
-origin, destination, date := (ride or task)
-stats.Save(origin, destination, date, taken)
-
-queue.DeleteByRideID(rideID)                   // cancel any pending reminder (no-op if none)
-if rideErr == nil { rides.SetFeedbackGiven(rideID) }
+if ride exists:                                  // live ride path
+    if ride.Phone != phone -> ErrUnauthorized
+    claimed := rides.ClaimFeedback(rideID)       // UPDATE … SET feedback_given=true
+                                                 //   WHERE feedback_given=false → won?
+    queue.DeleteByRideID(rideID)                 // cancel pending push (idempotent)
+    if !claimed -> return nil                     // already answered — no-op
+    stats.Save(ride.Origin, ride.Destination, ride.Date, taken)
+else:                                             // ride gone (deleted/expired)
+    task := queue.FindByRideID(rideID); if absent -> ErrNotFound
+    if task.Phone != phone -> ErrUnauthorized
+    claimed := queue.DeleteByRideID(rideID)      // DELETE … RETURNING rows → won?
+    if !claimed -> return nil                     // already answered — no-op
+    stats.Save(task.Origin, task.Destination, task.RideDate, taken)
 ```
 This makes every answer path converge: in-app prompt (ride alive), push reminder
 (ride may be gone), and the delete flow.
+
+**Concurrency — double-record guard.** The *claim* (the conditional
+`feedback_given` flip for a live ride, or the queue-row delete for a gone ride)
+happens **before** the stat write, so two concurrent answers — a double-click, or
+an in-app answer racing a tapped push — produce exactly one `ride_stats` row. Both
+are single atomic statements (`UPDATE … WHERE feedback_given=false` /
+`DELETE … RETURNING` via sqlc `:execrows`), matching the codebase's existing
+`ON CONFLICT` dedup idiom rather than introducing an explicit transaction. The
+`RideRepository.SetFeedbackGiven` method becomes `ClaimFeedback(id) (bool, error)`
+and `FeedbackQueueRepository.DeleteByRideID` returns `(bool, error)` (rows
+deleted). Limitations (acceptable, documented): claim-then-write means a rare
+`stats.Save` failure *after* a won claim loses that single answer rather than
+corrupting data; and because the push send is a non-transactional external call,
+the guard targets duplicate *records*, not exactly-once delivery.
 
 ### Cron ordering (`main.go` goroutine — once at startup, then hourly)
 
@@ -190,7 +203,9 @@ It runs in the background goroutine and does not delay the HTTP server.
 ### Removed
 
 - `RideRepository.FindPendingFeedback()` and the `ListRidesPendingFeedback` sqlc
-  query (rides-based reminder path). `SetFeedbackGiven` stays.
+  query (rides-based reminder path).
+- `RideRepository.SetFeedbackGiven` / the `SetRideFeedbackGiven` query are replaced
+  by the conditional `ClaimFeedback` / `ClaimRideFeedback` (the live-ride claim).
 
 ---
 

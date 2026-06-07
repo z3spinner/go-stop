@@ -145,7 +145,9 @@ SET sent_count = sent_count + 1,
     last_sent_at = NOW()
 WHERE id = $1;
 
--- name: DeleteFeedbackByRideID :exec
+-- name: DeleteFeedbackByRideID :execrows
+-- :execrows returns the number of rows deleted, used as the "claim" signal in
+-- RecordFeedback: only the caller that actually deletes the row records the stat.
 DELETE FROM feedback_queue WHERE ride_id = $1;
 
 -- name: DeleteExhaustedFeedback :exec
@@ -163,7 +165,7 @@ Expected: regenerates `internal/infrastructure/postgres/sqlc/queries/*.go` with 
 - `queries.FindDueFeedback(ctx, FindDueFeedbackParams{MaxRetries int32, RetryBefore pgtype.Timestamptz})` → `[]queries.FeedbackQueue`
 - `queries.GetFeedbackByRideID(ctx, rideID pgtype.UUID)` → `queries.FeedbackQueue`
 - `queries.MarkFeedbackSent(ctx, id pgtype.UUID)`
-- `queries.DeleteFeedbackByRideID(ctx, rideID pgtype.UUID)`
+- `queries.DeleteFeedbackByRideID(ctx, rideID pgtype.UUID) (int64, error)` — note: returns rows-affected (`:execrows`)
 - `queries.DeleteExhaustedFeedback(ctx, DeleteExhaustedFeedbackParams{MaxRetries int32, TtlBefore pgtype.Timestamptz})`
 
 - [ ] **Step 3: Verify it builds**
@@ -247,8 +249,11 @@ type FeedbackQueueRepository interface {
 	// MarkSent increments sent_count and sets last_sent_at.
 	MarkSent(id string) error
 
-	// DeleteByRideID removes the task for a ride (called when feedback is recorded).
-	DeleteByRideID(rideID string) error
+	// DeleteByRideID removes the task for a ride and reports whether a row was
+	// actually deleted. The bool is the concurrency "claim": when feedback is
+	// recorded for a ride whose row is gone, only the caller that deletes the
+	// task (returns true) writes the stat; concurrent callers get false and no-op.
+	DeleteByRideID(rideID string) (bool, error)
 
 	// DeleteExhausted removes tasks that hit maxRetries or are older than ttl.
 	DeleteExhausted(maxRetries int, ttl time.Duration) error
@@ -351,8 +356,9 @@ func (r *FeedbackQueueRepo) MarkSent(id string) error {
 	return r.q.MarkFeedbackSent(context.Background(), uuidFrom(id))
 }
 
-func (r *FeedbackQueueRepo) DeleteByRideID(rideID string) error {
-	return r.q.DeleteFeedbackByRideID(context.Background(), uuidFrom(rideID))
+func (r *FeedbackQueueRepo) DeleteByRideID(rideID string) (bool, error) {
+	n, err := r.q.DeleteFeedbackByRideID(context.Background(), uuidFrom(rideID))
+	return n > 0, err
 }
 
 func (r *FeedbackQueueRepo) DeleteExhausted(maxRetries int, ttl time.Duration) error {
@@ -407,6 +413,7 @@ type mockFeedbackQueue struct {
 	enqueueErr        error
 	due               []domain.FeedbackTask
 	byRideID          map[string]domain.FeedbackTask
+	claimedRides      map[string]bool // ride IDs already claimed via DeleteByRideID
 	marked            []string
 	deletedByRideID   []string
 	deleteExhaustedOK bool
@@ -432,9 +439,26 @@ func (m *mockFeedbackQueue) MarkSent(id string) error {
 	m.marked = append(m.marked, id)
 	return nil
 }
-func (m *mockFeedbackQueue) DeleteByRideID(rideID string) error {
+// DeleteByRideID models the atomic claim: the first call for a ride that has a
+// queued task returns true (claimed); later calls return false. byRideID is left
+// intact so FindByRideID still serves the phone check, modelling the real race
+// where concurrent callers both read the task before either claims it.
+func (m *mockFeedbackQueue) DeleteByRideID(rideID string) (bool, error) {
 	m.deletedByRideID = append(m.deletedByRideID, rideID)
-	return nil
+	if m.byRideID == nil {
+		return false, nil
+	}
+	if _, ok := m.byRideID[rideID]; !ok {
+		return false, nil
+	}
+	if m.claimedRides[rideID] {
+		return false, nil
+	}
+	if m.claimedRides == nil {
+		m.claimedRides = map[string]bool{}
+	}
+	m.claimedRides[rideID] = true
+	return true, nil
 }
 func (m *mockFeedbackQueue) DeleteExhausted(maxRetries int, ttl time.Duration) error {
 	m.deleteExhaustedOK = true
@@ -531,13 +555,20 @@ git commit -m "feat(feedback): EnqueueFeedback use case"
 
 ---
 
-## Task 6: Rewrite `RecordFeedback` (decoupled, idempotent) + `ErrNotFound` + handler 404
+## Task 6: Rewrite `RecordFeedback` (decoupled, idempotent, claim-guarded) + `ErrNotFound` + handler 404
+
+This task also introduces the **double-record guard**: a live ride is claimed by flipping `feedback_given` false→true conditionally (`ClaimFeedback`), and a gone ride is claimed by deleting its queue row (`DeleteByRideID` returning rows-affected). Only the caller that wins the claim writes the `ride_stats` row, so a double-click or an in-app answer racing the push answer can't produce duplicate stats. The claim happens *before* the stat write.
 
 **Files:**
 - Modify: `internal/usecase/errors.go`
+- Modify: `internal/infrastructure/postgres/sqlc/queries/sql/rides.sql` (SetRideFeedbackGiven → ClaimRideFeedback)
+- Modify: `internal/boundaries/repository/ride_repository.go` (SetFeedbackGiven → ClaimFeedback)
+- Modify: `internal/infrastructure/postgres/ride_repo.go` (method swap)
+- Modify test mocks: `internal/usecase/{delete_ride,expire,post_request,post_ride,search_rides}_test.go`
 - Modify: `internal/usecase/record_feedback.go`
 - Modify: `internal/usecase/record_feedback_test.go`
 - Modify: `internal/boundaries/handler/feedback_handler.go`
+- Regenerated: `queries/querier.go`, `queries/rides.sql.go`
 
 - [ ] **Step 1: Add the `ErrNotFound` sentinel**
 
@@ -554,9 +585,67 @@ var ErrUnauthorized = errors.New("unauthorized")
 var ErrNotFound = errors.New("not found")
 ```
 
+- [ ] **Step 1b: Replace `SetFeedbackGiven` with a conditional `ClaimFeedback` (live-ride double-record guard)**
+
+`SetFeedbackGiven` set the flag unconditionally; `ClaimFeedback` only flips it when still false and reports whether *this* call won, so exactly one concurrent caller records the stat.
+
+(a) In `internal/infrastructure/postgres/sqlc/queries/sql/rides.sql`, replace the `SetRideFeedbackGiven` query with:
+```sql
+-- name: ClaimRideFeedback :execrows
+UPDATE rides SET feedback_given = true WHERE id = $1 AND feedback_given = false;
+```
+
+(b) Regenerate: `make sqlc` → generates `queries.ClaimRideFeedback(ctx, id pgtype.UUID) (int64, error)` (replaces `SetRideFeedbackGiven`).
+
+(c) In `internal/boundaries/repository/ride_repository.go:28`, replace `SetFeedbackGiven(id string) error` with:
+```go
+	// ClaimFeedback flips feedback_given false→true and reports whether this call
+	// performed the flip (true = caller won the claim and should record the stat).
+	ClaimFeedback(id string) (bool, error)
+```
+
+(d) In `internal/infrastructure/postgres/ride_repo.go` (~line 184), replace the `SetFeedbackGiven` method with:
+```go
+func (r *RideRepo) ClaimFeedback(id string) (bool, error) {
+	n, err := r.q.ClaimRideFeedback(context.Background(), uuidFrom(id))
+	return n == 1, err
+}
+```
+
+(e) In each of these test mocks, replace the `SetFeedbackGiven(string) error { return nil }` line with `ClaimFeedback(string) (bool, error) { return true, nil }`:
+- `internal/usecase/delete_ride_test.go:52`
+- `internal/usecase/expire_test.go:44`
+- `internal/usecase/post_request_test.go:46`
+- `internal/usecase/post_ride_test.go:58`
+- `internal/usecase/search_rides_test.go:44`
+
+(The `mockRideRepoFeedback` in `record_feedback_test.go` is updated in Step 2; the `mockRideRepoPendingFeedback` in `send_feedback_reminders_test.go` is removed in Task 7.)
+
 - [ ] **Step 2: Update the tests (failing)**
 
-Replace the body of `internal/usecase/record_feedback_test.go` below the mock definitions. Keep the `mockStatRepo` definition; **remove** the local `mockRideRepoFeedback` only if you instead reuse another ride mock — simplest is to keep `mockRideRepoFeedback` and add the queue mock arg. Update every `usecase.NewRecordFeedback(rides, stats)` call to `usecase.NewRecordFeedback(rides, stats, queue)` and add the new cases:
+First update the `mockRideRepoFeedback` definition in this file: add a `claimed map[string]bool` field, and replace its `SetFeedbackGiven` method with a stateful `ClaimFeedback` (so the double-submit test sees the second claim fail):
+```go
+type mockRideRepoFeedback struct {
+	rides       map[string]domain.Ride
+	feedbackSet []string
+	claimed     map[string]bool
+}
+
+func (m *mockRideRepoFeedback) ClaimFeedback(id string) (bool, error) {
+	if m.claimed[id] {
+		return false, nil
+	}
+	if m.claimed == nil {
+		m.claimed = map[string]bool{}
+	}
+	m.claimed[id] = true
+	m.feedbackSet = append(m.feedbackSet, id)
+	return true, nil
+}
+```
+(Keep the `FindPendingFeedback` stub for now — Task 8 removes it. Keep `mockStatRepo`.)
+
+Then replace the test functions. Every `usecase.NewRecordFeedback(rides, stats)` call becomes `usecase.NewRecordFeedback(rides, stats, queue)`. The cases:
 
 ```go
 func TestRecordFeedback_SavesStatAndMarksFeedbackGiven(t *testing.T) {
@@ -657,12 +746,39 @@ func TestRecordFeedback_ReturnsNotFoundWhenNeitherExists(t *testing.T) {
 		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }
+
+func TestRecordFeedback_DoubleSubmitLiveRideRecordsOnce(t *testing.T) {
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{
+		"ride-1": {ID: "ride-1", Phone: "p", Origin: "A", Destination: "B", Date: time.Now()},
+	}}
+	stats := &mockStatRepo{}
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	_ = uc.Execute("ride-1", "p", true)
+	_ = uc.Execute("ride-1", "p", true) // second call loses the claim
+	if len(stats.saved) != 1 {
+		t.Errorf("expected exactly 1 stat, got %d", len(stats.saved))
+	}
+}
+
+func TestRecordFeedback_DoubleSubmitGoneRideRecordsOnce(t *testing.T) {
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{}}
+	stats := &mockStatRepo{}
+	queue := &mockFeedbackQueue{byRideID: map[string]domain.FeedbackTask{
+		"ride-9": {RideID: "ride-9", Phone: "p", Origin: "Die", Destination: "Crest"},
+	}}
+	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	_ = uc.Execute("ride-9", "p", true)
+	_ = uc.Execute("ride-9", "p", true) // second call loses the claim (DeleteByRideID returns false)
+	if len(stats.saved) != 1 {
+		t.Errorf("expected exactly 1 stat, got %d", len(stats.saved))
+	}
+}
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `go test ./internal/usecase/ -run TestRecordFeedback -v`
-Expected: FAIL — `NewRecordFeedback` takes 2 args, not 3 (compile error).
+Expected: FAIL (compile error) — the still-old `record_feedback.go` calls `uc.rides.SetFeedbackGiven` (now removed) and `NewRecordFeedback` takes 2 args, not 3. Both are fixed in Step 4.
 
 - [ ] **Step 4: Rewrite the use case**
 
@@ -698,35 +814,49 @@ func NewRecordFeedback(
 // idempotent and ride-independent: ownership and route/date come from the live
 // ride if it still exists, otherwise from the queued task — so the in-app
 // prompt, the push reminder (ride may be gone), and the delete flow all converge.
+// The "claim" (conditional feedback_given flip, or queue-row delete) happens
+// before the stat write, so only one concurrent caller records a stat.
 func (uc *RecordFeedback) Execute(rideID, phone string, taken bool) error {
-	ride, rideErr := uc.rides.FindByID(rideID)
-	task, taskErr := uc.queue.FindByRideID(rideID)
-	rideExists := rideErr == nil
-	taskExists := taskErr == nil
+	if ride, err := uc.rides.FindByID(rideID); err == nil {
+		// Ride still exists: verify ownership, then claim by flipping feedback_given.
+		if ride.Phone != phone {
+			return ErrUnauthorized
+		}
+		claimed, err := uc.rides.ClaimFeedback(rideID)
+		if err != nil {
+			return err
+		}
+		// Cancel any pending push reminder (idempotent; safe even if we lost the claim).
+		_, _ = uc.queue.DeleteByRideID(rideID)
+		if !claimed {
+			return nil // already answered — idempotent no-op
+		}
+		return uc.record(rideID, ride.Origin, ride.Destination, ride.Date, taken)
+	}
 
-	if !rideExists && !taskExists {
+	// Ride gone (deleted/expired): fall back to the queued task.
+	task, err := uc.queue.FindByRideID(rideID)
+	if err != nil {
 		return ErrNotFound
 	}
-
-	var ownerPhone, origin, destination string
-	var date time.Time
-	if rideExists {
-		ownerPhone, origin, destination, date = ride.Phone, ride.Origin, ride.Destination, ride.Date
-	} else {
-		ownerPhone, origin, destination, date = task.Phone, task.Origin, task.Destination, task.RideDate
-	}
-
-	if ownerPhone != phone {
+	if task.Phone != phone {
 		return ErrUnauthorized
 	}
+	// Claim by deleting the queue row; only the caller that deletes it records.
+	claimed, err := uc.queue.DeleteByRideID(rideID)
+	if err != nil {
+		return err
+	}
+	if !claimed {
+		return nil // already answered — idempotent no-op
+	}
+	return uc.record(rideID, task.Origin, task.Destination, task.RideDate, taken)
+}
 
+func (uc *RecordFeedback) record(rideID, origin, destination string, date time.Time, taken bool) error {
 	if err := uc.stats.Save(origin, destination, date, taken); err != nil {
 		return err
 	}
-
-	// Cancel any pending reminder for this ride (no-op if none queued).
-	_ = uc.queue.DeleteByRideID(rideID)
-
 	// Logged explicitly so yes/no is visible in the logs — the HTTP access log
 	// only shows the path, and `taken` travels in the request body.
 	outcome := "drove_alone"
@@ -734,10 +864,6 @@ func (uc *RecordFeedback) Execute(rideID, phone string, taken bool) error {
 		outcome = "shared"
 	}
 	log.Printf("ride feedback ride=%s outcome=%s route=%q->%q", rideID, outcome, origin, destination)
-
-	if rideExists {
-		return uc.rides.SetFeedbackGiven(rideID)
-	}
 	return nil
 }
 ```
@@ -745,7 +871,7 @@ func (uc *RecordFeedback) Execute(rideID, phone string, taken bool) error {
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `go test ./internal/usecase/ -run TestRecordFeedback -v`
-Expected: PASS (all 6 cases).
+Expected: PASS (all 8 cases, including the two double-submit guards).
 
 - [ ] **Step 6: Map `ErrNotFound` → 404 in the handler**
 
@@ -773,8 +899,13 @@ Expected: builds cleanly (only `main.go` wiring is stale; fixed in Task 9).
 - [ ] **Step 8: Commit**
 
 ```bash
-git add internal/usecase/errors.go internal/usecase/record_feedback.go internal/usecase/record_feedback_test.go internal/boundaries/handler/feedback_handler.go
-git commit -m "feat(feedback): decouple RecordFeedback from the ride (queue fallback, idempotent)"
+git add internal/usecase/errors.go internal/usecase/record_feedback.go internal/usecase/record_feedback_test.go \
+  internal/boundaries/handler/feedback_handler.go \
+  internal/boundaries/repository/ride_repository.go internal/infrastructure/postgres/ride_repo.go \
+  internal/infrastructure/postgres/sqlc/queries/ \
+  internal/usecase/delete_ride_test.go internal/usecase/expire_test.go internal/usecase/post_request_test.go \
+  internal/usecase/post_ride_test.go internal/usecase/search_rides_test.go
+git commit -m "feat(feedback): decouple RecordFeedback + claim-based double-record guard"
 ```
 
 ---
@@ -1370,4 +1501,6 @@ git commit -m "chore(web): rebuild frontend with ask-on-delete"
 - **Spec coverage:** queue table (T1–T2), enqueue at window start before expiry (T5, T9), send_after = departure+flex+1h (T2 SQL), retry mirrors notification_queue (T7), decoupled idempotent RecordFeedback (T6), ask-on-delete past-only / silent future (T11), 7-locale i18n (T10), removal of the rides-based reminder path (T8). All present.
 - **Type consistency:** `FeedbackTask` fields used identically in domain (T3), converter (T4), mock (T5), and use cases (T6–T7). Repo method names (`EnqueueStartedRides`, `FindDue`, `FindByRideID`, `MarkSent`, `DeleteByRideID`, `DeleteExhausted`) match between interface (T3), postgres impl (T4), and mock (T5).
 - **Interface-vs-spec note:** the spec sketched `EnqueueStartedRides(bound, sendDelay time.Duration)`; the implementation uses `EnqueueStartedRides(windowStartAfter time.Time)` with the +1h send delay and flexibility computed in SQL — simpler to express in sqlc and equivalent in behaviour.
-- **Atomicity:** Task 8 removes the interface method and all mock implementations in a single commit so the package always compiles.
+- **Atomicity:** Task 8 removes the interface method and all mock implementations in a single commit so the package always compiles. Likewise Task 6 swaps `SetFeedbackGiven`→`ClaimFeedback` across interface + postgres + all mocks in one commit.
+- **Concurrency guard (double-record):** the claim precedes the stat write — live ride via conditional `ClaimFeedback` (`UPDATE … WHERE feedback_given=false`), gone ride via `DeleteByRideID` rows-affected. Single statements, no explicit transaction (matches the codebase's `ON CONFLICT` idiom). Known limitation: claim-then-write means a (rare) `stats.Save` failure after a successful claim loses that one answer rather than corrupting data; not guarded because it would require threading a pgx transaction through the repos, which the codebase does not currently do. The push send itself is a non-transactional external call, so end-to-end exactly-once is not attempted — the guard targets duplicate *records*, which is what skews the metric.
+- **Startup tick:** the cron cycle is extracted to a closure run once at boot and then hourly (T9), so first enqueue/send doesn't wait an hour post-deploy.
