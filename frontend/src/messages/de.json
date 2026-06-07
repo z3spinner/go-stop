@@ -45,6 +45,8 @@
 	"noMyRides": "Keine aktiven Fahrten für diese Nummer gefunden.",
 	"btnDelete": "Löschen",
 	"deleteOk": "Gelöscht.",
+	"deleteAskCameAlong": "Vor dem Löschen: ist jemand mitgefahren?",
+	"btnCancel": "Abbrechen",
 	"deleteErr": "Falsche Telefonnummer?",
 	"seekersTitle": "Personen, die diese Fahrt suchen",
 	"btnPingSearcher": "Benachrichtigen →",

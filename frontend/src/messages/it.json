@@ -45,6 +45,8 @@
 	"noMyRides": "Nessun viaggio attivo trovato per questo numero.",
 	"btnDelete": "Elimina",
 	"deleteOk": "Eliminato.",
+	"deleteAskCameAlong": "Prima di eliminare: è venuto qualcuno?",
+	"btnCancel": "Annulla",
 	"deleteErr": "Numero di telefono errato?",
 	"seekersTitle": "Persone che cercano questo viaggio",
 	"btnPingSearcher": "Notifica →",

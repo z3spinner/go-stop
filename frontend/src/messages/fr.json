@@ -45,6 +45,8 @@
 	"noMyRides": "Aucun trajet actif trouvé pour ce numéro.",
 	"btnDelete": "Supprimer",
 	"deleteOk": "Supprimé.",
+	"deleteAskCameAlong": "Avant de supprimer : quelqu'un est-il venu ?",
+	"btnCancel": "Annuler",
 	"deleteErr": "Impossible de supprimer — numéro incorrect ?",
 	"seekersTitle": "Personnes cherchant ce trajet",
 	"btnPingSearcher": "Prévenir →",

@@ -45,6 +45,8 @@
 	"noMyRides": "No active rides found for this number.",
 	"btnDelete": "Delete",
 	"deleteOk": "Deleted.",
+	"deleteAskCameAlong": "Before deleting: did someone come along?",
+	"btnCancel": "Cancel",
 	"deleteErr": "Could not delete — is that the right phone number?",
 	"seekersTitle": "People looking for this ride",
 	"btnPingSearcher": "Notify →",
