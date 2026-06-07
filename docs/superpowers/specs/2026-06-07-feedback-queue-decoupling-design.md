@@ -173,7 +173,11 @@ if rideErr == nil { rides.SetFeedbackGiven(rideID) }
 This makes every answer path converge: in-app prompt (ride alive), push reminder
 (ride may be gone), and the delete flow.
 
-### Cron ordering (`main.go` hourly goroutine)
+### Cron ordering (`main.go` goroutine — once at startup, then hourly)
+
+The cycle is extracted into a closure called once at boot (so the first
+enqueue/send doesn't wait an hour after a deploy) and then on every hourly tick.
+It runs in the background goroutine and does not delay the HTTP server.
 
 ```
 1. enqueueFeedback.Execute()      // NEW — before expiry, captures soon-to-expire rides

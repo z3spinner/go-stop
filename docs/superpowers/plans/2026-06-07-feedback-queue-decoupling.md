@@ -1043,11 +1043,16 @@ Change the `sendFeedbackReminders` line to the new signature and add `enqueueFee
 	sendFeedbackReminders := usecase.NewSendFeedbackReminders(feedbackQueueRepo, subRepo, notifier, 2, 3)
 ```
 
-- [ ] **Step 2: Reorder the cron — enqueue first, before expiry**
+- [ ] **Step 2: Reorder the cron — enqueue first, before expiry; run once at startup**
 
-Replace the body of the hourly `for range ticker.C` loop with:
+Extract the cycle into a closure and call it once before entering the ticker loop, so the first run happens at boot rather than an hour later. Replace the whole `go func() { ... }()` block with:
 ```go
-		for range ticker.C {
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		runCronCycle := func() {
+			// enqueueFeedback runs FIRST, before expireRides, so an evening ride
+			// about to be expired/deleted is still captured into the feedback queue.
 			if err := enqueueFeedback.Execute(); err != nil {
 				log.Printf("enqueue feedback: %v", err)
 			}
@@ -1064,7 +1069,14 @@ Replace the body of the hourly `for range ticker.C` loop with:
 				log.Printf("retry notifications: %v", err)
 			}
 		}
+		runCronCycle() // tick at startup — don't wait an hour for the first cycle
+		for range ticker.C {
+			runCronCycle()
+		}
+	}()
 ```
+
+> Note: the startup tick runs in a background goroutine, so it does not delay the HTTP server coming up. With a single web instance this is the only cron runner; if web is ever scaled >1, every instance runs its own startup cycle (enqueue is idempotent via `ON CONFLICT`, so that is safe — see the concurrency note below on send/record).
 
 - [ ] **Step 3: Verify the whole module builds and the full unit suite passes**
 
