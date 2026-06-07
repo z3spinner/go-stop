@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimRideFeedback = `-- name: ClaimRideFeedback :execrows
+UPDATE rides SET feedback_given = true WHERE id = $1 AND feedback_given = false
+`
+
+func (q *Queries) ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, claimRideFeedback, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteExpiredRides = `-- name: DeleteExpiredRides :exec
 DELETE FROM rides WHERE expires_at < NOW()
 `
@@ -705,13 +717,4 @@ func (q *Queries) SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyPara
 		return nil, err
 	}
 	return items, nil
-}
-
-const setRideFeedbackGiven = `-- name: SetRideFeedbackGiven :exec
-UPDATE rides SET feedback_given = true WHERE id = $1
-`
-
-func (q *Queries) SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, setRideFeedbackGiven, id)
-	return err
 }

@@ -55,7 +55,7 @@ func (m *mockRideRepo) FindMatching(domain.Request) ([]domain.Ride, error) { ret
 func (m *mockRideRepo) Delete(string) error                                { return nil }
 func (m *mockRideRepo) DeleteExpired() error                               { return nil }
 func (m *mockRideRepo) FindPendingFeedback() ([]domain.Ride, error)        { return nil, nil }
-func (m *mockRideRepo) SetFeedbackGiven(string) error                      { return nil }
+func (m *mockRideRepo) ClaimFeedback(string) (bool, error)                 { return true, nil }
 
 type mockRequestRepo struct {
 	saved    []domain.Request

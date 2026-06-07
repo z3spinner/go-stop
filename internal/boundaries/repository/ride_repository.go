@@ -25,5 +25,7 @@ type RideRepository interface {
 	FindPendingFeedback() ([]domain.Ride, error)
 	Delete(id string) error
 	DeleteExpired() error
-	SetFeedbackGiven(id string) error
+	// ClaimFeedback flips feedback_given false→true and reports whether this call
+	// performed the flip (true = caller won the claim and should record the stat).
+	ClaimFeedback(id string) (bool, error)
 }

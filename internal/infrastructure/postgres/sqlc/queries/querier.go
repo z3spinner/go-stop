@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
+	ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
 	DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error
@@ -106,7 +107,6 @@ type Querier interface {
 	// as a search fallback when the exact lookup returns nothing — NEVER for the
 	// notification matching path, where a loose match would ping the wrong driver.
 	SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyParams) ([]Ride, error)
-	SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error
 	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

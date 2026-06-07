@@ -181,6 +181,7 @@ func (r *RideRepo) FindPendingFeedback() ([]domain.Ride, error) {
 	return ridesFromRows(rows), nil
 }
 
-func (r *RideRepo) SetFeedbackGiven(id string) error {
-	return r.q.SetRideFeedbackGiven(context.Background(), uuidFrom(id))
+func (r *RideRepo) ClaimFeedback(id string) (bool, error) {
+	n, err := r.q.ClaimRideFeedback(context.Background(), uuidFrom(id))
+	return n == 1, err
 }

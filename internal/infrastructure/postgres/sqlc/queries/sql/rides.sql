@@ -119,5 +119,5 @@ WHERE departure_at BETWEEN (NOW() - INTERVAL '23 hours') AND (NOW() - INTERVAL '
   AND expires_at > NOW()
 ORDER BY departure_at ASC;
 
--- name: SetRideFeedbackGiven :exec
-UPDATE rides SET feedback_given = true WHERE id = $1;
+-- name: ClaimRideFeedback :execrows
+UPDATE rides SET feedback_given = true WHERE id = $1 AND feedback_given = false;

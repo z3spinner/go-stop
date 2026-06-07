@@ -45,7 +45,7 @@ func (m *mockRideRepoPendingFeedback) FindPendingFeedback() ([]domain.Ride, erro
 }
 func (m *mockRideRepoPendingFeedback) Delete(string) error           { return nil }
 func (m *mockRideRepoPendingFeedback) DeleteExpired() error          { return nil }
-func (m *mockRideRepoPendingFeedback) SetFeedbackGiven(string) error { return nil }
+func (m *mockRideRepoPendingFeedback) ClaimFeedback(string) (bool, error) { return true, nil }
 
 func TestSendFeedbackReminders_SendsPushToDriver(t *testing.T) {
 	rides := &mockRideRepoPendingFeedback{

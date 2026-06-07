@@ -43,7 +43,7 @@ func (m *mockRideRepoWithMatch) FindMatching(domain.Request) ([]domain.Ride, err
 func (m *mockRideRepoWithMatch) Delete(string) error                         { return nil }
 func (m *mockRideRepoWithMatch) DeleteExpired() error                        { return nil }
 func (m *mockRideRepoWithMatch) FindPendingFeedback() ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoWithMatch) SetFeedbackGiven(string) error               { return nil }
+func (m *mockRideRepoWithMatch) ClaimFeedback(string) (bool, error)          { return true, nil }
 
 func TestPostRequest_SavesRequest(t *testing.T) {
 	reqs := &mockRequestRepo{}
