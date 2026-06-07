@@ -5,44 +5,63 @@ package usecase
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/z3spinner/go-stop/internal/boundaries/notification"
 	"github.com/z3spinner/go-stop/internal/boundaries/repository"
 	"github.com/z3spinner/go-stop/internal/domain"
 )
 
+// feedbackTTL bounds how long an unanswered task lingers before cleanup.
+const feedbackTTL = 7 * 24 * time.Hour
+
 type SendFeedbackReminders struct {
-	rides    repository.RideRepository
-	subs     repository.SubscriptionRepository
-	notifier notification.Notifier
+	queue      repository.FeedbackQueueRepository
+	subs       repository.SubscriptionRepository
+	notifier   notification.Notifier
+	interval   time.Duration
+	maxRetries int
 }
 
 func NewSendFeedbackReminders(
-	rides repository.RideRepository,
+	queue repository.FeedbackQueueRepository,
 	subs repository.SubscriptionRepository,
 	notifier notification.Notifier,
+	intervalHours, maxRetries int,
 ) *SendFeedbackReminders {
-	return &SendFeedbackReminders{rides: rides, subs: subs, notifier: notifier}
+	if intervalHours <= 0 {
+		intervalHours = DefaultRetryIntervalHours
+	}
+	if maxRetries <= 0 {
+		maxRetries = DefaultMaxRetries
+	}
+	return &SendFeedbackReminders{
+		queue:      queue,
+		subs:       subs,
+		notifier:   notifier,
+		interval:   time.Duration(intervalHours) * time.Hour,
+		maxRetries: maxRetries,
+	}
 }
 
 func (uc *SendFeedbackReminders) Execute() error {
-	pending, err := uc.rides.FindPendingFeedback()
+	retryAfter := time.Now().Add(-uc.interval)
+	due, err := uc.queue.FindDue(retryAfter, uc.maxRetries)
 	if err != nil {
 		return err
 	}
-	for _, ride := range pending {
-		sendToAll(ride.Phone, domain.Message{
-			Title: "Votre trajet est-il parti avec des passagers ?",
-			Body:  fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
-			// Open a dedicated, single-purpose feedback screen rather than burying
-			// the question at the bottom of the My Rides list.
-			URL:         "/rides/" + ride.ID + "/feedback",
-			ContactName: ride.DriverName,
-			Phone:       ride.Phone,
-			Origin:      ride.Origin,
-			Destination: ride.Destination,
-			DepartureAt: ride.DepartureAt,
+	for _, task := range due {
+		sendToAll(task.Phone, domain.Message{
+			Title:       "Votre trajet est-il parti avec des passagers ?",
+			Body:        fmt.Sprintf("%s → %s", task.Origin, task.Destination),
+			URL:         "/rides/" + task.RideID + "/feedback",
+			Phone:       task.Phone,
+			Origin:      task.Origin,
+			Destination: task.Destination,
+			DepartureAt: task.DepartureAt,
 		}, uc.subs, uc.notifier)
+		_ = uc.queue.MarkSent(task.ID)
 	}
+	_ = uc.queue.DeleteExhausted(uc.maxRetries, feedbackTTL)
 	return nil
 }
