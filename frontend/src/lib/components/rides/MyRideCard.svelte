@@ -17,6 +17,7 @@
 	let deleted = $state(false);
 	let delMsg = $state('');
 	let fbDone = $state(false);
+	let confirmingDelete = $state(false);
 
 	const isPast = $derived(new Date(ride.DepartureAt).getTime() < Date.now());
 	const showFeedback = $derived(isPast && !ride.FeedbackGiven && !fbDone);
@@ -38,6 +39,17 @@
 	async function del() {
 		try { await api.rides.del(ride.ID, phone); deleted = true; delMsg = m.deleteOk(); }
 		catch { delMsg = m.deleteErr(); }
+	}
+	function requestDelete() {
+		// Ask "did someone come along?" only for trips that have actually departed
+		// and haven't been answered yet. Future deletes are silent cancellations.
+		if (isPast && !ride.FeedbackGiven && !fbDone) { confirmingDelete = true; }
+		else { del(); }
+	}
+	async function deleteWithFeedback(taken: boolean) {
+		try { await api.rides.feedback(ride.ID, phone, taken); } catch { /* best-effort */ }
+		confirmingDelete = false;
+		await del();
 	}
 	const pendingCount = $derived(interests.filter((i) => i.status === 'pending').length);
 	const displayName = (it: InterestListItem) => it.searcher_name?.trim() || m.anonymousSearcher();
@@ -87,6 +99,17 @@
 		<div class="feedback-thanks text-sm text-green-600">{m.feedbackThanks()}</div>
 	{/if}
 
-	<button type="button" class="btn btn-danger btn-delete" data-id={ride.ID} data-phone={phone} disabled={deleted} onclick={del}>{m.btnDelete()}</button>
+	{#if confirmingDelete}
+		<div class="delete-confirm mt-2" id="del-confirm-{ride.ID}">
+			<div class="delete-confirm-q text-sm">{m.deleteAskCameAlong()}</div>
+			<div class="delete-confirm-btns flex gap-2">
+				<button type="button" class="btn-del-yes" onclick={() => deleteWithFeedback(true)}>{m.feedbackYes()}</button>
+				<button type="button" class="btn-del-no" onclick={() => deleteWithFeedback(false)}>{m.feedbackNo()}</button>
+				<button type="button" class="btn-del-cancel" onclick={() => (confirmingDelete = false)}>{m.btnCancel()}</button>
+			</div>
+		</div>
+	{:else}
+		<button type="button" class="btn btn-danger btn-delete" data-id={ride.ID} data-phone={phone} disabled={deleted} onclick={requestDelete}>{m.btnDelete()}</button>
+	{/if}
 	<div class="delete-msg" id="msg-{ride.ID}">{delMsg}</div>
 </div>
