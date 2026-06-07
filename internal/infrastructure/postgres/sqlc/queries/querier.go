@@ -14,9 +14,13 @@ type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
+	DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error
 	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
 	DeleteExpiredRides(ctx context.Context) error
+	// :execrows returns the number of rows deleted, used as the "claim" signal in
+	// RecordFeedback: only the caller that actually deletes the row records the stat.
+	DeleteFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (int64, error)
 	DeleteInterest(ctx context.Context, id pgtype.UUID) error
 	DeleteNotificationsForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
@@ -25,6 +29,13 @@ type Querier interface {
 	// Removes a specific device subscription (e.g. when push returns 410 Gone).
 	DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) error
+	// Inserts a feedback task for every ride whose window has started (departure in
+	// the past, but within the bound), that hasn't been answered, and isn't already
+	// queued. send_after = window end (departure + flexibility minutes) + 1 hour.
+	// Idempotent via ride_id UNIQUE.
+	EnqueueStartedRides(ctx context.Context, windowStartAfter pgtype.Timestamptz) error
+	// Tasks past their send time and still retry-eligible.
+	FindDueFeedback(ctx context.Context, arg FindDueFeedbackParams) ([]FeedbackQueue, error)
 	// Returns entries due for (re-)notification.
 	// Excludes entries where the searcher has already expressed interest.
 	FindPendingNotifications(ctx context.Context, arg FindPendingNotificationsParams) ([]NotificationQueue, error)
@@ -38,6 +49,7 @@ type Querier interface {
 	FindRidesMatchingDailyRequest(ctx context.Context, arg FindRidesMatchingDailyRequestParams) ([]Ride, error)
 	FindRidesMatchingDayRequest(ctx context.Context, arg FindRidesMatchingDayRequestParams) ([]Ride, error)
 	FindRidesMatchingTimeRequest(ctx context.Context, arg FindRidesMatchingTimeRequestParams) ([]Ride, error)
+	GetFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (FeedbackQueue, error)
 	GetInterestByID(ctx context.Context, id pgtype.UUID) (Interest, error)
 	GetInterestByRideAndSearcher(ctx context.Context, arg GetInterestByRideAndSearcherParams) (Interest, error)
 	GetRequestByID(ctx context.Context, id pgtype.UUID) (Request, error)
@@ -79,6 +91,7 @@ type Querier interface {
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)
 	ListRidesPendingFeedback(ctx context.Context) ([]Ride, error)
 	ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error)
+	MarkFeedbackSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSentByRideAndRequest(ctx context.Context, arg MarkNotificationSentByRideAndRequestParams) error
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)

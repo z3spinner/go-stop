@@ -14,6 +14,20 @@ type AppSetting struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at"`
 }
 
+type FeedbackQueue struct {
+	ID          pgtype.UUID        `db:"id"`
+	RideID      pgtype.UUID        `db:"ride_id"`
+	Phone       string             `db:"phone"`
+	Origin      string             `db:"origin"`
+	Destination string             `db:"destination"`
+	RideDate    pgtype.Date        `db:"ride_date"`
+	DepartureAt pgtype.Timestamptz `db:"departure_at"`
+	SendAfter   pgtype.Timestamptz `db:"send_after"`
+	SentCount   int32              `db:"sent_count"`
+	LastSentAt  pgtype.Timestamptz `db:"last_sent_at"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at"`
+}
+
 type Interest struct {
 	ID            pgtype.UUID        `db:"id"`
 	RideID        pgtype.UUID        `db:"ride_id"`
