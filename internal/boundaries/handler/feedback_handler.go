@@ -33,6 +33,7 @@ type feedbackRequest struct {
 // @Success  204
 // @Failure  400  {object}  handler.ErrorResponse
 // @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
 // @Failure  500  {object}  handler.ErrorResponse
 // @Router   /rides/{id}/feedback [post]
 func (h *FeedbackHandler) Post(c *gin.Context) {
