@@ -27,21 +27,28 @@ func NewAcceptInterest(
 	return &AcceptInterest{interests: interests, rides: rides, subs: subs, notifier: notifier}
 }
 
-func (uc *AcceptInterest) Execute(interestID, driverPhone string) (string, error) {
+// Execute returns the searcher's phone and whether this call newly established a
+// connection (the interest actually transitioned pending → accepted). A repeat
+// accept of an already-accepted or driver_shared interest reports connected=false
+// so the connection is not counted twice in the statistics.
+func (uc *AcceptInterest) Execute(interestID, driverPhone string) (searcherPhone string, connected bool, err error) {
 	interest, err := uc.interests.FindByID(interestID)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	ride, err := uc.rides.FindByID(interest.RideID)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if ride.Phone != driverPhone {
-		return "", ErrUnauthorized
+		return "", false, ErrUnauthorized
 	}
 	if err := uc.interests.Accept(interestID); err != nil {
-		return "", err
+		return "", false, err
 	}
+	// A connection is "made" only when a still-pending interest is accepted; a
+	// driver_shared interest already counted when the driver pinged the searcher.
+	connected = interest.Status == "pending"
 	// Notify searcher on all their devices (best-effort)
 	sendToAll(interest.SearcherPhone, domain.Message{
 		Title:       "Le conducteur accepte le contact",
@@ -51,5 +58,5 @@ func (uc *AcceptInterest) Execute(interestID, driverPhone string) (string, error
 		Destination: ride.Destination,
 		DepartureAt: ride.DepartureAt,
 	}, uc.subs, uc.notifier)
-	return interest.SearcherPhone, nil
+	return interest.SearcherPhone, connected, nil
 }

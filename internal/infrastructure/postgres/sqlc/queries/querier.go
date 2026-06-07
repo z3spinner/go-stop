@@ -12,11 +12,16 @@ import (
 
 type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
+	ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
+	DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error
 	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
 	DeleteExpiredRides(ctx context.Context) error
+	// :execrows returns the number of rows deleted, used as the "claim" signal in
+	// RecordFeedback: only the caller that actually deletes the row records the stat.
+	DeleteFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (int64, error)
 	DeleteInterest(ctx context.Context, id pgtype.UUID) error
 	DeleteNotificationsForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
@@ -25,6 +30,13 @@ type Querier interface {
 	// Removes a specific device subscription (e.g. when push returns 410 Gone).
 	DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error
 	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) error
+	// Inserts a feedback task for every ride whose window has started (departure in
+	// the past, but within the bound), that hasn't been answered, and isn't already
+	// queued. send_after = window end (departure + flexibility minutes) + 1 hour.
+	// Idempotent via ride_id UNIQUE.
+	EnqueueStartedRides(ctx context.Context, windowStartAfter pgtype.Timestamptz) error
+	// Tasks past their send time and still retry-eligible.
+	FindDueFeedback(ctx context.Context, arg FindDueFeedbackParams) ([]FeedbackQueue, error)
 	// Returns entries due for (re-)notification.
 	// Excludes entries where the searcher has already expressed interest.
 	FindPendingNotifications(ctx context.Context, arg FindPendingNotificationsParams) ([]NotificationQueue, error)
@@ -38,6 +50,8 @@ type Querier interface {
 	FindRidesMatchingDailyRequest(ctx context.Context, arg FindRidesMatchingDailyRequestParams) ([]Ride, error)
 	FindRidesMatchingDayRequest(ctx context.Context, arg FindRidesMatchingDayRequestParams) ([]Ride, error)
 	FindRidesMatchingTimeRequest(ctx context.Context, arg FindRidesMatchingTimeRequestParams) ([]Ride, error)
+	GetConnectionEventCounts(ctx context.Context) (GetConnectionEventCountsRow, error)
+	GetFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (FeedbackQueue, error)
 	GetInterestByID(ctx context.Context, id pgtype.UUID) (Interest, error)
 	GetInterestByRideAndSearcher(ctx context.Context, arg GetInterestByRideAndSearcherParams) (Interest, error)
 	GetRequestByID(ctx context.Context, id pgtype.UUID) (Request, error)
@@ -47,6 +61,14 @@ type Querier interface {
 	GetSearchEventCounts(ctx context.Context) (GetSearchEventCountsRow, error)
 	GetSetting(ctx context.Context, key string) (string, error)
 	GetTopRoutes(ctx context.Context) ([]GetTopRoutesRow, error)
+	// Contact requests that went unanswered: still pending once the ride is no longer
+	// available. The hourly cron DELETEs rides past expires_at, so an unanswered
+	// request is usually a pending interest whose ride row is already gone; the
+	// expires_at check also catches the brief window before cleanup runs. Left join
+	// so the (dominant) orphaned-interest case is counted, not dropped. Bucketed by
+	// when the request was made.
+	GetUnansweredCounts(ctx context.Context) (GetUnansweredCountsRow, error)
+	InsertConnectionEvent(ctx context.Context) error
 	InsertInterest(ctx context.Context, arg InsertInterestParams) error
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
 	InsertRide(ctx context.Context, arg InsertRideParams) error
@@ -77,8 +99,8 @@ type Querier interface {
 	// grace_minutes: hides rides whose flex window ended more than N minutes ago
 	ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ride, error)
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)
-	ListRidesPendingFeedback(ctx context.Context) ([]Ride, error)
 	ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error)
+	MarkFeedbackSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSentByRideAndRequest(ctx context.Context, arg MarkNotificationSentByRideAndRequestParams) error
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)
@@ -93,7 +115,6 @@ type Querier interface {
 	// as a search fallback when the exact lookup returns nothing — NEVER for the
 	// notification matching path, where a loose match would ping the wrong driver.
 	SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyParams) ([]Ride, error)
-	SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error
 	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

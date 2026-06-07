@@ -39,6 +39,12 @@ func (r *StatRepo) RecordRide(origin, destination string) error {
 	})
 }
 
+// RecordConnection logs that two people exchanged contact (a driver accepted an
+// interest, or proactively pinged a searcher).
+func (r *StatRepo) RecordConnection() error {
+	return r.q.InsertConnectionEvent(context.Background())
+}
+
 func (r *StatRepo) GetStats() (domain.Stats, error) {
 	ctx := context.Background()
 
@@ -66,6 +72,16 @@ func (r *StatRepo) GetStats() (domain.Stats, error) {
 		return domain.Stats{}, err
 	}
 
+	connectionCounts, err := r.q.GetConnectionEventCounts(ctx)
+	if err != nil {
+		return domain.Stats{}, err
+	}
+
+	unansweredCounts, err := r.q.GetUnansweredCounts(ctx)
+	if err != nil {
+		return domain.Stats{}, err
+	}
+
 	return domain.Stats{
 		TopRoutes:      topRoutes,
 		TotalConfirmed: int(totals.TotalConfirmed),
@@ -79,6 +95,16 @@ func (r *StatRepo) GetStats() (domain.Stats, error) {
 			AllTime:   int(rideCounts.AllTime),
 			ThisYear:  int(rideCounts.ThisYear),
 			ThisMonth: int(rideCounts.ThisMonth),
+		},
+		Connections: domain.ActivityCounts{
+			AllTime:   int(connectionCounts.AllTime),
+			ThisYear:  int(connectionCounts.ThisYear),
+			ThisMonth: int(connectionCounts.ThisMonth),
+		},
+		Unanswered: domain.ActivityCounts{
+			AllTime:   int(unansweredCounts.AllTime),
+			ThisYear:  int(unansweredCounts.ThisYear),
+			ThisMonth: int(unansweredCounts.ThisMonth),
 		},
 	}, nil
 }

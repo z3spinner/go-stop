@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, notification_queue`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue`)
 		if truncErr == nil {
 			break
 		}
@@ -88,7 +88,7 @@ func setupRouter() *gin.Engine {
 	statRepo := postgres.NewStatRepo(handlerPool)
 	interestRepo := postgres.NewInterestRepo(handlerPool)
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, reqRepo)
-	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, postgres.NewFeedbackQueueRepo(handlerPool))
 	getStats := usecase.NewGetStats(statRepo)
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, n)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, n)
@@ -97,10 +97,10 @@ func setupRouter() *gin.Engine {
 	getActiveRequests := usecase.NewGetActiveRequests(reqRepo)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
 
@@ -120,6 +120,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/requests", reqH.List)
 	r.GET("/api/requests/:id", reqH.Get)
 	r.DELETE("/api/requests/:id", reqH.Delete)
+	r.POST("/api/requests/:id/ping", reqH.Ping)
 	r.GET("/api/destinations", destH.List)
 	r.POST("/api/subscriptions", subH.Subscribe)
 	r.DELETE("/api/subscriptions/:phone", subH.Unsubscribe)
@@ -130,7 +131,7 @@ func setupRouter() *gin.Engine {
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, notification_queue`); err != nil {
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }
@@ -159,6 +160,28 @@ func searchEventCount(t *testing.T) int {
 		t.Fatalf("count search_events: %v", err)
 	}
 	return n
+}
+
+func connectionEventCount(t *testing.T) int {
+	t.Helper()
+	var n int
+	if err := handlerPool.QueryRow(context.Background(),
+		`SELECT count(*) FROM connection_events`).Scan(&n); err != nil {
+		t.Fatalf("count connection_events: %v", err)
+	}
+	return n
+}
+
+// waitConnectionCount waits for the async RecordConnection goroutine to reach
+// `want`, then briefly re-reads to catch an erroneous extra insert.
+func waitConnectionCount(t *testing.T, want int) int {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for connectionEventCount(t) < want && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	time.Sleep(200 * time.Millisecond)
+	return connectionEventCount(t)
 }
 
 func TestHTTP_PostAndGetRides(t *testing.T) {
@@ -1137,5 +1160,150 @@ func TestHTTP_Search_CountFalseSuppressesRecording(t *testing.T) {
 
 	if got := searchEventCount(t); got != 1 {
 		t.Errorf("expected exactly 1 recorded search event (count=false must suppress the reverse lookup), got %d", got)
+	}
+}
+
+// A driver accepting a searcher's interest is a "connection made": it records
+// exactly one connection event, and a repeated accept must not add another.
+func TestHTTP_Connection_RecordedOnAcceptOnce(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	// Pending interest alone records no connection.
+	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5550002", "name": "Bob",
+	})
+	var interest map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &interest)
+	interestID := interest["id"].(string)
+	time.Sleep(200 * time.Millisecond)
+	if got := connectionEventCount(t); got != 0 {
+		t.Fatalf("a pending interest must not record a connection, got %d", got)
+	}
+
+	// Accepting it records exactly one connection.
+	if w3 := postJSON(r, "/api/interests/"+interestID+"/accept", map[string]interface{}{"phone": "5550001"}); w3.Code != http.StatusOK {
+		t.Fatalf("accept: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Fatalf("expected 1 connection after accept, got %d", got)
+	}
+
+	// Re-accepting must not double-count.
+	if w4 := postJSON(r, "/api/interests/"+interestID+"/accept", map[string]interface{}{"phone": "5550001"}); w4.Code != http.StatusOK {
+		t.Fatalf("re-accept: expected 200, got %d: %s", w4.Code, w4.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Errorf("repeat accept must not add a connection, got %d", got)
+	}
+}
+
+// A driver pinging a matching searcher (driver_shared) is a "connection made":
+// one connection event, and a repeated ping must not add another.
+func TestHTTP_Connection_RecordedOnPingOnce(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Searcher posts an alert.
+	wr := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "5550002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var request map[string]interface{}
+	json.Unmarshal(wr.Body.Bytes(), &request)
+	requestID := request["ID"].(string)
+
+	// Driver posts a matching ride.
+	wd := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(wd.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	ping := func() *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		b, _ := json.Marshal(map[string]interface{}{"ride_id": rideID})
+		req, _ := http.NewRequest(http.MethodPost, "/api/requests/"+requestID+"/ping", bytes.NewBuffer(b))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Phone", "5550001")
+		r.ServeHTTP(w, req)
+		return w
+	}
+
+	if w := ping(); w.Code != http.StatusNoContent {
+		t.Fatalf("ping: expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Fatalf("expected 1 connection after ping, got %d", got)
+	}
+
+	// Re-pinging finds the existing driver_shared interest and must not add one.
+	if w := ping(); w.Code != http.StatusNoContent {
+		t.Fatalf("re-ping: expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Errorf("repeat ping must not add a connection, got %d", got)
+	}
+}
+
+// Unanswered = still-pending interests whose ride has expired. Inserted directly
+// because the API will not accept rides in the past.
+func TestHTTP_Stats_UnansweredCountsPendingOnceRideGone(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+	ctx := context.Background()
+
+	insertRide := func(id string, expiresAt time.Time) {
+		if _, err := handlerPool.Exec(ctx,
+			`INSERT INTO rides (id, driver_name, phone, origin, destination, date, departure_at, flexibility, expires_at)
+			 VALUES ($1,'D','5550001','Saillans','Crest', $2::timestamptz::date, $2, 0, $3)`,
+			id, expiresAt, expiresAt); err != nil {
+			t.Fatalf("insert ride: %v", err)
+		}
+	}
+	insertInterest := func(rideID, phone, status string) {
+		if _, err := handlerPool.Exec(ctx,
+			`INSERT INTO interests (ride_id, searcher_phone, searcher_name, status)
+			 VALUES ($1, $2, 'S', $3)`, rideID, phone, status); err != nil {
+			t.Fatalf("insert interest: %v", err)
+		}
+	}
+
+	past := time.Now().Add(-2 * time.Hour)
+	future := time.Now().Add(48 * time.Hour)
+	expired := "11111111-1111-1111-1111-111111111111"
+	live := "22222222-2222-2222-2222-222222222222"
+	gone := "33333333-3333-3333-3333-333333333333" // ride_id with no rides row (deleted by expiry cron)
+	insertRide(expired, past)
+	insertRide(live, future)
+
+	insertInterest(expired, "5550010", "pending")  // counts: pending + expired ride still present
+	insertInterest(gone, "5550013", "pending")     // counts: pending + ride already deleted (the common case)
+	insertInterest(live, "5550011", "pending")     // not counted: ride still live
+	insertInterest(expired, "5550012", "accepted") // not counted: not pending
+
+	w := getReq(r, "/api/stats")
+	if w.Code != http.StatusOK {
+		t.Fatalf("stats: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var stats domain.Stats
+	if err := json.Unmarshal(w.Body.Bytes(), &stats); err != nil {
+		t.Fatalf("decode stats: %v", err)
+	}
+	if stats.Unanswered.AllTime != 2 {
+		t.Errorf("expected unanswered all_time=2 (expired-ride + deleted-ride pending interests), got %d", stats.Unanswered.AllTime)
 	}
 }

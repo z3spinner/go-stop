@@ -1,0 +1,41 @@
+# Isolated integration-test stack (project: gostop-itest).
+#
+#   make test-integration
+#
+# No host ports are published — the `tests` runner reaches `db` by name on the
+# private network — so this coexists with the devstack and the e2e stack and can
+# run in parallel with them. The runner migrates a fresh DB then runs the
+# integration-tagged Go tests; `--exit-code-from tests` surfaces the result.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gostop
+      POSTGRES_PASSWORD: gostop
+      POSTGRES_DB: gostop
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gostop"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  tests:
+    build:
+      context: .
+      target: development
+    command: sh -c "go run ./cmd/migratedb up && go test -tags integration -count=1 -p 1 ./..."
+    environment:
+      DATABASE_URL: postgres://gostop:gostop@db:5432/gostop?sslmode=disable
+      TEST_DATABASE_URL: postgres://gostop:gostop@db:5432/gostop?sslmode=disable
+    volumes:
+      - .:/app
+      - itest-gocache:/root/go/pkg/mod
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  itest-gocache:

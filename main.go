@@ -55,6 +55,7 @@ func main() {
 	notifier := webpush.New(vapidKeys.Public, vapidKeys.Private, vapidKeys.Email)
 
 	notifQueueRepo := postgres.NewNotificationQueueRepo(pool)
+	feedbackQueueRepo := postgres.NewFeedbackQueueRepo(pool)
 
 	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier)
 	postRequest := usecase.NewPostRequest(requestRepo, rideRepo, subRepo, notifier)
@@ -75,9 +76,10 @@ func main() {
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, requestRepo)
 	retryNotifications := usecase.NewRetryNotifications(notifQueueRepo, rideRepo, subRepo, notifier, 2, 3)
 	getPendingNotifications := usecase.NewGetPendingNotifications(notifQueueRepo, rideRepo)
-	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, feedbackQueueRepo)
 	getStats := usecase.NewGetStats(statRepo)
-	sendFeedbackReminders := usecase.NewSendFeedbackReminders(rideRepo, subRepo, notifier)
+	enqueueFeedback := usecase.NewEnqueueFeedback(feedbackQueueRepo)
+	sendFeedbackReminders := usecase.NewSendFeedbackReminders(feedbackQueueRepo, subRepo, notifier, 2, 3)
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
@@ -94,8 +96,8 @@ func main() {
 	}
 
 	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
-	requestH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, requestRepo)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
+	requestH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, requestRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
@@ -118,7 +120,12 @@ func main() {
 	go func() {
 		ticker := time.NewTicker(time.Hour)
 		defer ticker.Stop()
-		for range ticker.C {
+		runCronCycle := func() {
+			// enqueueFeedback runs FIRST, before expireRides, so an evening ride
+			// about to be expired/deleted is still captured into the feedback queue.
+			if err := enqueueFeedback.Execute(); err != nil {
+				log.Printf("enqueue feedback: %v", err)
+			}
 			if err := expireRides.Execute(); err != nil {
 				log.Printf("expire rides: %v", err)
 			}
@@ -131,6 +138,10 @@ func main() {
 			if err := retryNotifications.Execute(); err != nil {
 				log.Printf("retry notifications: %v", err)
 			}
+		}
+		runCronCycle() // tick at startup — don't wait an hour for the first cycle
+		for range ticker.C {
+			runCronCycle()
 		}
 	}()
 
