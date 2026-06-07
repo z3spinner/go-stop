@@ -1261,7 +1261,7 @@ func TestHTTP_Connection_RecordedOnPingOnce(t *testing.T) {
 
 // Unanswered = still-pending interests whose ride has expired. Inserted directly
 // because the API will not accept rides in the past.
-func TestHTTP_Stats_UnansweredCountsExpiredPendingOnly(t *testing.T) {
+func TestHTTP_Stats_UnansweredCountsPendingOnceRideGone(t *testing.T) {
 	truncateAll(t)
 	r := setupRouter()
 	ctx := context.Background()
@@ -1286,10 +1286,12 @@ func TestHTTP_Stats_UnansweredCountsExpiredPendingOnly(t *testing.T) {
 	future := time.Now().Add(48 * time.Hour)
 	expired := "11111111-1111-1111-1111-111111111111"
 	live := "22222222-2222-2222-2222-222222222222"
+	gone := "33333333-3333-3333-3333-333333333333" // ride_id with no rides row (deleted by expiry cron)
 	insertRide(expired, past)
 	insertRide(live, future)
 
-	insertInterest(expired, "5550010", "pending")  // counts: pending + expired ride
+	insertInterest(expired, "5550010", "pending")  // counts: pending + expired ride still present
+	insertInterest(gone, "5550013", "pending")     // counts: pending + ride already deleted (the common case)
 	insertInterest(live, "5550011", "pending")     // not counted: ride still live
 	insertInterest(expired, "5550012", "accepted") // not counted: not pending
 
@@ -1301,7 +1303,7 @@ func TestHTTP_Stats_UnansweredCountsExpiredPendingOnly(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &stats); err != nil {
 		t.Fatalf("decode stats: %v", err)
 	}
-	if stats.Unanswered.AllTime != 1 {
-		t.Errorf("expected unanswered all_time=1 (only the expired pending interest), got %d", stats.Unanswered.AllTime)
+	if stats.Unanswered.AllTime != 2 {
+		t.Errorf("expected unanswered all_time=2 (expired-ride + deleted-ride pending interests), got %d", stats.Unanswered.AllTime)
 	}
 }

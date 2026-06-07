@@ -30,9 +30,14 @@ A `pending` interest (expressed but not yet answered) is **not** a connection.
 
 ### Went unanswered
 A contact request counts as unanswered when it is still `pending` **and the ride
-is no longer available** — i.e. the ride's `expires_at` (departure + flexibility
-+ grace, always non-null) has passed. At that point the chance to connect is
-gone and the driver never replied.
+is no longer available**. An hourly cron (`expireRides` → `DELETE FROM rides
+WHERE expires_at < NOW()`) physically removes rides once past their `expires_at`
+(departure + flexibility + grace), and interests have no FK to rides — so a
+genuinely-unanswered request is, in the common case, a `pending` interest whose
+**ride row is already gone**. The `expires_at < NOW()` check additionally covers
+the brief window between a ride expiring and the next cron tick.
+
+So: a `pending` interest counts when its ride is missing **or** present-but-expired.
 
 This is **derived from current state**, not recorded as an event:
 - It self-corrects: if the driver accepts in time, the interest is no longer
@@ -135,12 +140,14 @@ SELECT
   COUNT(*) FILTER (WHERE i.created_at >= DATE_TRUNC('year',  NOW()))    AS this_year,
   COUNT(*) FILTER (WHERE i.created_at >= DATE_TRUNC('month', NOW()))    AS this_month
 FROM interests i
-JOIN rides r ON r.id = i.ride_id
-WHERE i.status = 'pending' AND r.expires_at < NOW();
+LEFT JOIN rides r ON r.id = i.ride_id
+WHERE i.status = 'pending' AND (r.id IS NULL OR r.expires_at < NOW());
 ```
 
-Inner join, so a `pending` interest whose ride was deleted (orphaned) drops out
-rather than counting. No backfill needed — it reads live state.
+Left join with `r.id IS NULL OR r.expires_at < NOW()`: the dominant unanswered
+case is a `pending` interest whose ride was already deleted by the expiry cron,
+so an inner join would wrongly drop exactly the rows we want to count. No
+backfill needed — it reads live state.
 
 ### 4. Domain + assembly
 
@@ -179,9 +186,10 @@ Integration tests (`//go:build integration`, real Postgres):
   (`driver_shared`).
 - A repeated accept / repeated ping does **not** add a second event.
 - Expressing interest (`pending`) and cancelling record **no** connection.
-- `GetUnansweredCounts`: a `pending` interest on an **expired** ride counts; a
-  `pending` interest on a **future** ride does not; an `accepted` interest does
-  not; the same request stops counting once accepted.
+- `GetUnansweredCounts`: a `pending` interest on an **expired** ride counts, and
+  so does one whose **ride row is gone** (deleted by the expiry cron — the common
+  case); a `pending` interest on a **future** ride does not; an `accepted` interest
+  does not.
 - `GET /api/stats` returns populated `connections` and `unanswered` objects.
 
 Frontend:

@@ -135,8 +135,8 @@ SELECT
   COUNT(*) FILTER (WHERE i.created_at >= DATE_TRUNC('year',  NOW()))                AS this_year,
   COUNT(*) FILTER (WHERE i.created_at >= DATE_TRUNC('month', NOW()))                AS this_month
 FROM interests i
-JOIN rides r ON r.id = i.ride_id
-WHERE i.status = 'pending' AND r.expires_at < NOW()
+LEFT JOIN rides r ON r.id = i.ride_id
+WHERE i.status = 'pending' AND (r.id IS NULL OR r.expires_at < NOW())
 `
 
 type GetUnansweredCountsRow struct {
@@ -145,9 +145,12 @@ type GetUnansweredCountsRow struct {
 	ThisMonth int64 `db:"this_month"`
 }
 
-// Contact requests that went unanswered: still pending after the ride is gone
-// (expires_at = departure + flexibility + grace). Bucketed by when the request
-// was made. Inner join drops interests whose ride was deleted.
+// Contact requests that went unanswered: still pending once the ride is no longer
+// available. The hourly cron DELETEs rides past expires_at, so an unanswered
+// request is usually a pending interest whose ride row is already gone; the
+// expires_at check also catches the brief window before cleanup runs. Left join
+// so the (dominant) orphaned-interest case is counted, not dropped. Bucketed by
+// when the request was made.
 func (q *Queries) GetUnansweredCounts(ctx context.Context) (GetUnansweredCountsRow, error) {
 	row := q.db.QueryRow(ctx, getUnansweredCounts)
 	var i GetUnansweredCountsRow
