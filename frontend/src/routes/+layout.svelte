@@ -14,8 +14,7 @@
 	import { loadConfig } from '$lib/config';
 	import { userPhone } from '$lib/stores';
 	import { get } from 'svelte/store';
-	import { updateBellState, pollForNotifications, isStandalone, maybeMarkStandalonePrompted } from '$lib/pwa';
-	import { openNotifModal } from '$lib/notifModal';
+	import { updateBellState, pollForNotifications } from '$lib/pwa';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
 	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
 	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
@@ -51,9 +50,12 @@
 		loadConfig();
 		const phone = get(userPhone);
 		updateBellState(phone);
-		if (isStandalone() && maybeMarkStandalonePrompted()) {
-			openNotifModal('default');
-		}
+		// No notification prompt on first launch: it used to fire here before the
+		// user could orient or pick a language, and a language change reloads the
+		// page (locale.ts) — discarding the prompt and forcing the bell to be
+		// re-activated. Notifications are offered contextually instead (after
+		// posting a ride/request or expressing interest) and via the bell, which
+		// shows an "Activate" label until subscribed.
 		const onVis = () => {
 			if (document.visibilityState === 'visible') pollForNotifications(get(userPhone));
 		};
