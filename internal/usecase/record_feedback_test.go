@@ -47,8 +47,8 @@ func (m *mockRideRepoFeedback) FindByOriginAndDestinationFuzzy(string, string) (
 func (m *mockRideRepoFeedback) FindMatching(domain.Request) ([]domain.Ride, error) {
 	return nil, nil
 }
-func (m *mockRideRepoFeedback) Delete(string) error      { return nil }
-func (m *mockRideRepoFeedback) DeleteExpired() error     { return nil }
+func (m *mockRideRepoFeedback) Delete(string) error  { return nil }
+func (m *mockRideRepoFeedback) DeleteExpired() error { return nil }
 func (m *mockRideRepoFeedback) ClaimFeedback(id string) (bool, error) {
 	if m.claimed[id] {
 		return false, nil
