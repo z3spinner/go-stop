@@ -16,6 +16,7 @@ import (
 type mockRideRepoFeedback struct {
 	rides       map[string]domain.Ride
 	feedbackSet []string
+	claimed     map[string]bool
 }
 
 func (m *mockRideRepoFeedback) Save(domain.Ride) error { return nil }
@@ -46,12 +47,18 @@ func (m *mockRideRepoFeedback) FindByOriginAndDestinationFuzzy(string, string) (
 func (m *mockRideRepoFeedback) FindMatching(domain.Request) ([]domain.Ride, error) {
 	return nil, nil
 }
-func (m *mockRideRepoFeedback) FindPendingFeedback() ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoFeedback) Delete(string) error                         { return nil }
-func (m *mockRideRepoFeedback) DeleteExpired() error                        { return nil }
-func (m *mockRideRepoFeedback) SetFeedbackGiven(id string) error {
+func (m *mockRideRepoFeedback) Delete(string) error  { return nil }
+func (m *mockRideRepoFeedback) DeleteExpired() error { return nil }
+func (m *mockRideRepoFeedback) ClaimFeedback(id string) (bool, error) {
+	if m.claimed[id] {
+		return false, nil
+	}
+	if m.claimed == nil {
+		m.claimed = map[string]bool{}
+	}
+	m.claimed[id] = true
 	m.feedbackSet = append(m.feedbackSet, id)
-	return nil
+	return true, nil
 }
 
 // mockStatRepo
@@ -90,40 +97,53 @@ func TestRecordFeedback_SavesStatAndMarksFeedbackGiven(t *testing.T) {
 		},
 	}
 	stats := &mockStatRepo{}
+	queue := &mockFeedbackQueue{}
 
-	uc := usecase.NewRecordFeedback(rides, stats)
-	err := uc.Execute("ride-1", "555-0001", true)
-
-	if err != nil {
+	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	if err := uc.Execute("ride-1", "555-0001", true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(stats.saved) != 1 {
-		t.Errorf("expected 1 stat saved, got %d", len(stats.saved))
-	}
-	if !stats.saved[0].taken {
-		t.Error("expected taken=true")
-	}
-	if stats.saved[0].origin != "Saillans" {
-		t.Errorf("expected origin Saillans, got %s", stats.saved[0].origin)
+	if len(stats.saved) != 1 || !stats.saved[0].taken || stats.saved[0].origin != "Saillans" {
+		t.Errorf("unexpected stat saved: %+v", stats.saved)
 	}
 	if len(rides.feedbackSet) != 1 || rides.feedbackSet[0] != "ride-1" {
 		t.Error("expected feedback_given set on ride-1")
 	}
+	if len(queue.deletedByRideID) != 1 || queue.deletedByRideID[0] != "ride-1" {
+		t.Error("expected queue entry for ride-1 to be deleted")
+	}
+}
+
+func TestRecordFeedback_RecordsViaQueueWhenRideGone(t *testing.T) {
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{}} // ride deleted/expired
+	stats := &mockStatRepo{}
+	queue := &mockFeedbackQueue{byRideID: map[string]domain.FeedbackTask{
+		"ride-9": {RideID: "ride-9", Phone: "555-0001", Origin: "Die", Destination: "Crest",
+			RideDate: time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC)},
+	}}
+
+	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	if err := uc.Execute("ride-9", "555-0001", true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(stats.saved) != 1 || stats.saved[0].origin != "Die" {
+		t.Errorf("expected stat from queue task, got %+v", stats.saved)
+	}
+	if len(rides.feedbackSet) != 0 {
+		t.Error("must not set feedback_given when the ride is gone")
+	}
+	if len(queue.deletedByRideID) != 1 || queue.deletedByRideID[0] != "ride-9" {
+		t.Error("expected queue entry for ride-9 to be deleted")
+	}
 }
 
 func TestRecordFeedback_SavesNegativeFeedback(t *testing.T) {
-	rides := &mockRideRepoFeedback{
-		rides: map[string]domain.Ride{
-			"ride-2": {ID: "ride-2", Phone: "555-0001", Origin: "A", Destination: "B",
-				Date: time.Now()},
-		},
-	}
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{
+		"ride-2": {ID: "ride-2", Phone: "555-0001", Origin: "A", Destination: "B", Date: time.Now()},
+	}}
 	stats := &mockStatRepo{}
-
-	uc := usecase.NewRecordFeedback(rides, stats)
-	err := uc.Execute("ride-2", "555-0001", false)
-
-	if err != nil {
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	if err := uc.Execute("ride-2", "555-0001", false); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if stats.saved[0].taken {
@@ -132,17 +152,10 @@ func TestRecordFeedback_SavesNegativeFeedback(t *testing.T) {
 }
 
 func TestRecordFeedback_RejectsWrongPhone(t *testing.T) {
-	rides := &mockRideRepoFeedback{
-		rides: map[string]domain.Ride{
-			"ride-1": {ID: "ride-1", Phone: "555-0001"},
-		},
-	}
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-0001"}}}
 	stats := &mockStatRepo{}
-
-	uc := usecase.NewRecordFeedback(rides, stats)
-	err := uc.Execute("ride-1", "555-9999", true)
-
-	if !errors.Is(err, usecase.ErrUnauthorized) {
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	if err := uc.Execute("ride-1", "555-9999", true); !errors.Is(err, usecase.ErrUnauthorized) {
 		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
 	if len(stats.saved) != 0 {
@@ -150,14 +163,50 @@ func TestRecordFeedback_RejectsWrongPhone(t *testing.T) {
 	}
 }
 
-func TestRecordFeedback_ReturnsErrorIfRideNotFound(t *testing.T) {
+func TestRecordFeedback_RejectsWrongPhoneViaQueue(t *testing.T) {
 	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{}}
 	stats := &mockStatRepo{}
+	queue := &mockFeedbackQueue{byRideID: map[string]domain.FeedbackTask{
+		"ride-9": {RideID: "ride-9", Phone: "555-0001", Origin: "Die", Destination: "Crest"},
+	}}
+	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	if err := uc.Execute("ride-9", "555-9999", true); !errors.Is(err, usecase.ErrUnauthorized) {
+		t.Errorf("expected ErrUnauthorized, got %v", err)
+	}
+}
 
-	uc := usecase.NewRecordFeedback(rides, stats)
-	err := uc.Execute("nonexistent", "555-0001", true)
+func TestRecordFeedback_ReturnsNotFoundWhenNeitherExists(t *testing.T) {
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{}}
+	stats := &mockStatRepo{}
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	if err := uc.Execute("nonexistent", "555-0001", true); !errors.Is(err, usecase.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
 
-	if err == nil {
-		t.Error("expected not found error")
+func TestRecordFeedback_DoubleSubmitLiveRideRecordsOnce(t *testing.T) {
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{
+		"ride-1": {ID: "ride-1", Phone: "p", Origin: "A", Destination: "B", Date: time.Now()},
+	}}
+	stats := &mockStatRepo{}
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	_ = uc.Execute("ride-1", "p", true)
+	_ = uc.Execute("ride-1", "p", true) // second call loses the claim
+	if len(stats.saved) != 1 {
+		t.Errorf("expected exactly 1 stat, got %d", len(stats.saved))
+	}
+}
+
+func TestRecordFeedback_DoubleSubmitGoneRideRecordsOnce(t *testing.T) {
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{}}
+	stats := &mockStatRepo{}
+	queue := &mockFeedbackQueue{byRideID: map[string]domain.FeedbackTask{
+		"ride-9": {RideID: "ride-9", Phone: "p", Origin: "Die", Destination: "Crest"},
+	}}
+	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	_ = uc.Execute("ride-9", "p", true)
+	_ = uc.Execute("ride-9", "p", true) // second call loses the claim (DeleteByRideID returns false)
+	if len(stats.saved) != 1 {
+		t.Errorf("expected exactly 1 stat, got %d", len(stats.saved))
 	}
 }

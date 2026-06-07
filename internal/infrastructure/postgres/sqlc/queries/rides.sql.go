@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimRideFeedback = `-- name: ClaimRideFeedback :execrows
+UPDATE rides SET feedback_given = true WHERE id = $1 AND feedback_given = false
+`
+
+func (q *Queries) ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, claimRideFeedback, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteExpiredRides = `-- name: DeleteExpiredRides :exec
 DELETE FROM rides WHERE expires_at < NOW()
 `
@@ -379,49 +391,6 @@ func (q *Queries) ListRidesByPhone(ctx context.Context, phone string) ([]Ride, e
 	return items, nil
 }
 
-const listRidesPendingFeedback = `-- name: ListRidesPendingFeedback :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
-FROM rides
-WHERE departure_at BETWEEN (NOW() - INTERVAL '23 hours') AND (NOW() - INTERVAL '30 minutes')
-  AND feedback_given = false
-  AND expires_at > NOW()
-ORDER BY departure_at ASC
-`
-
-func (q *Queries) ListRidesPendingFeedback(ctx context.Context) ([]Ride, error) {
-	rows, err := q.db.Query(ctx, listRidesPendingFeedback)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Ride{}
-	for rows.Next() {
-		var i Ride
-		if err := rows.Scan(
-			&i.ID,
-			&i.DriverName,
-			&i.Phone,
-			&i.Origin,
-			&i.Destination,
-			&i.Date,
-			&i.DepartureAt,
-			&i.Flexibility,
-			&i.PostedAt,
-			&i.ExpiresAt,
-			&i.FeedbackGiven,
-			&i.OriginNorm,
-			&i.DestinationNorm,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const searchRides = `-- name: SearchRides :many
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
 FROM rides
@@ -705,13 +674,4 @@ func (q *Queries) SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyPara
 		return nil, err
 	}
 	return items, nil
-}
-
-const setRideFeedbackGiven = `-- name: SetRideFeedbackGiven :exec
-UPDATE rides SET feedback_given = true WHERE id = $1
-`
-
-func (q *Queries) SetRideFeedbackGiven(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, setRideFeedbackGiven, id)
-	return err
 }

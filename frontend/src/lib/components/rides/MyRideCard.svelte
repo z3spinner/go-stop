@@ -16,10 +16,15 @@
 	let interests = $state<InterestListItem[]>([]);
 	let deleted = $state(false);
 	let delMsg = $state('');
-	let fbDone = $state(false);
+	// The driver's pending answer to "did someone come along?": null until chosen.
+	// It is only committed to the server when they hit Delete, so they can change
+	// it freely until then.
+	let chosen = $state<boolean | null>(null);
 
 	const isPast = $derived(new Date(ride.DepartureAt).getTime() < Date.now());
-	const showFeedback = $derived(isPast && !ride.FeedbackGiven && !fbDone);
+	// A past ride that hasn't been answered yet must be answered before deletion.
+	const needsAnswer = $derived(isPast && !ride.FeedbackGiven);
+	const canDelete = $derived(!needsAnswer || chosen !== null);
 
 	onMount(async () => {
 		try { seekers = await api.rides.listMatchingRequests(ride.ID, phone); } catch { seekers = []; }
@@ -32,10 +37,12 @@
 			interests = interests.map((x) => x.id === it.id ? { ...x, status: 'accepted', searcher_phone: res.searcher_phone } : x);
 		} catch { /* surfaced inline below if needed */ }
 	}
-	async function feedback(taken: boolean) {
-		try { await api.rides.feedback(ride.ID, phone, taken); fbDone = true; } catch { /* ignore */ }
-	}
 	async function del() {
+		// Commit the (final) feedback choice before deleting, so the answer reflects
+		// whatever the driver had selected at the moment they hit Delete.
+		if (needsAnswer && chosen !== null) {
+			try { await api.rides.feedback(ride.ID, phone, chosen); } catch { /* best-effort */ }
+		}
 		try { await api.rides.del(ride.ID, phone); deleted = true; delMsg = m.deleteOk(); }
 		catch { delMsg = m.deleteErr(); }
 	}
@@ -75,18 +82,19 @@
 		{/each}
 	</div>
 
-	{#if showFeedback}
+	<!-- A past ride must be answered before it can be deleted. The choice stays
+	     visible (selected option highlighted) and can be changed until Delete is
+	     hit, at which point the final choice is committed. -->
+	{#if needsAnswer && !deleted}
 		<div class="feedback-prompt mt-2" id="fb-{ride.ID}">
 			<div class="feedback-question text-sm">{m.feedbackTitle()}</div>
-			<div class="feedback-btns flex gap-2">
-				<button type="button" class="btn-fb-yes" data-id={ride.ID} data-phone={phone} onclick={() => feedback(true)}>{m.feedbackYes()}</button>
-				<button type="button" class="btn-fb-no" data-id={ride.ID} data-phone={phone} onclick={() => feedback(false)}>{m.feedbackNo()}</button>
+			<div class="feedback-btns">
+				<button type="button" class="btn-fb-yes" class:selected={chosen === true} aria-pressed={chosen === true} data-id={ride.ID} data-phone={phone} onclick={() => (chosen = true)}>{m.feedbackYes()}</button>
+				<button type="button" class="btn-fb-no" class:selected={chosen === false} aria-pressed={chosen === false} data-id={ride.ID} data-phone={phone} onclick={() => (chosen = false)}>{m.feedbackNo()}</button>
 			</div>
 		</div>
-	{:else if fbDone}
-		<div class="feedback-thanks text-sm text-green-600">{m.feedbackThanks()}</div>
 	{/if}
 
-	<button type="button" class="btn btn-danger btn-delete" data-id={ride.ID} data-phone={phone} disabled={deleted} onclick={del}>{m.btnDelete()}</button>
+	<button type="button" class="btn btn-danger btn-delete" data-id={ride.ID} data-phone={phone} disabled={deleted || !canDelete} onclick={del}>{m.btnDelete()}</button>
 	<div class="delete-msg" id="msg-{ride.ID}">{delMsg}</div>
 </div>
