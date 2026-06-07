@@ -15,7 +15,7 @@
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     environment:
       POSTGRES_USER: gostop
       POSTGRES_PASSWORD: gostop
