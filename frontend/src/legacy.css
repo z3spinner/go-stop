@@ -374,6 +374,40 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-fb-no:hover  { background: var(--gray-100); }
 .feedback-thanks  { font-size: 0.85rem; color: var(--green); font-weight: 500; }
 
+/* Ask-on-delete confirm — mirrors the feedback prompt, with a red accent to
+   signal the destructive (delete) context. Only shown after the Supprimer click. */
+.delete-confirm {
+  background: var(--gray-50);
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+.delete-confirm-q { font-size: 0.9rem; font-weight: 500; display: block; margin-bottom: 8px; }
+.delete-confirm-btns { display: flex; gap: 8px; }
+.btn-del-yes, .btn-del-no {
+  flex: 1;
+  padding: 7px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  background: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn-del-yes:hover { background: var(--green); color: white; border-color: var(--green); }
+.btn-del-no:hover  { background: var(--gray-100); }
+.btn-del-cancel {
+  display: block;
+  margin-top: 8px;
+  border: none;
+  background: none;
+  color: var(--gray-600);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.btn-del-cancel:hover { color: var(--gray-900); }
+
 .alert-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .btn-see-matches {
   flex: 1;

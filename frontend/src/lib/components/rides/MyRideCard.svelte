@@ -87,7 +87,7 @@
 		{/each}
 	</div>
 
-	{#if showFeedback}
+	{#if showFeedback && !confirmingDelete}
 		<div class="feedback-prompt mt-2" id="fb-{ride.ID}">
 			<div class="feedback-question text-sm">{m.feedbackTitle()}</div>
 			<div class="feedback-btns flex gap-2">
@@ -101,12 +101,12 @@
 
 	{#if confirmingDelete}
 		<div class="delete-confirm mt-2" id="del-confirm-{ride.ID}">
-			<div class="delete-confirm-q text-sm">{m.deleteAskCameAlong()}</div>
-			<div class="delete-confirm-btns flex gap-2">
+			<div class="delete-confirm-q">{m.deleteAskCameAlong()}</div>
+			<div class="delete-confirm-btns">
 				<button type="button" class="btn-del-yes" onclick={() => deleteWithFeedback(true)}>{m.feedbackYes()}</button>
 				<button type="button" class="btn-del-no" onclick={() => deleteWithFeedback(false)}>{m.feedbackNo()}</button>
-				<button type="button" class="btn-del-cancel" onclick={() => (confirmingDelete = false)}>{m.btnCancel()}</button>
 			</div>
+			<button type="button" class="btn-del-cancel" onclick={() => (confirmingDelete = false)}>{m.btnCancel()}</button>
 		</div>
 	{:else}
 		<button type="button" class="btn btn-danger btn-delete" data-id={ride.ID} data-phone={phone} disabled={deleted} onclick={requestDelete}>{m.btnDelete()}</button>
