@@ -50,6 +50,7 @@ type Querier interface {
 	FindRidesMatchingDailyRequest(ctx context.Context, arg FindRidesMatchingDailyRequestParams) ([]Ride, error)
 	FindRidesMatchingDayRequest(ctx context.Context, arg FindRidesMatchingDayRequestParams) ([]Ride, error)
 	FindRidesMatchingTimeRequest(ctx context.Context, arg FindRidesMatchingTimeRequestParams) ([]Ride, error)
+	GetConnectionEventCounts(ctx context.Context) (GetConnectionEventCountsRow, error)
 	GetFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (FeedbackQueue, error)
 	GetInterestByID(ctx context.Context, id pgtype.UUID) (Interest, error)
 	GetInterestByRideAndSearcher(ctx context.Context, arg GetInterestByRideAndSearcherParams) (Interest, error)
@@ -60,6 +61,11 @@ type Querier interface {
 	GetSearchEventCounts(ctx context.Context) (GetSearchEventCountsRow, error)
 	GetSetting(ctx context.Context, key string) (string, error)
 	GetTopRoutes(ctx context.Context) ([]GetTopRoutesRow, error)
+	// Contact requests that went unanswered: still pending after the ride is gone
+	// (expires_at = departure + flexibility + grace). Bucketed by when the request
+	// was made. Inner join drops interests whose ride was deleted.
+	GetUnansweredCounts(ctx context.Context) (GetUnansweredCountsRow, error)
+	InsertConnectionEvent(ctx context.Context) error
 	InsertInterest(ctx context.Context, arg InsertInterestParams) error
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
 	InsertRide(ctx context.Context, arg InsertRideParams) error

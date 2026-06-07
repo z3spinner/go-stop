@@ -34,17 +34,21 @@ func NewPingSearcher(
 	return &PingSearcher{requests: requests, rides: rides, interests: interests, subs: subs, notifier: notifier}
 }
 
-func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) error {
+// Execute returns whether this ping newly established a connection: true only
+// when it actually created a new driver_shared interest. A repeat ping (an
+// interest already exists for this ride+searcher) re-notifies but reports
+// connected=false, so the connection is not counted twice in the statistics.
+func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) (connected bool, err error) {
 	req, err := uc.requests.FindByID(requestID)
 	if err != nil {
-		return errors.New("request not found")
+		return false, errors.New("request not found")
 	}
 	ride, err := uc.rides.FindByID(rideID)
 	if err != nil {
-		return errors.New("ride not found")
+		return false, errors.New("ride not found")
 	}
 	if ride.Phone != driverPhone {
-		return ErrUnauthorized
+		return false, ErrUnauthorized
 	}
 
 	// Create a "driver_shared" interest: driver consents to share their number.
@@ -53,7 +57,8 @@ func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) error {
 	// (that requires the full mutual-consent flow).
 	interest, err := uc.interests.FindByRideAndSearcher(rideID, req.Phone)
 	if err != nil {
-		// No existing interest — create a driver_shared one
+		// No existing interest — create a driver_shared one. This is the moment a
+		// connection is made: the driver is sharing their contact with the searcher.
 		interest = domain.Interest{
 			ID:            uuid.New().String(),
 			RideID:        rideID,
@@ -62,8 +67,9 @@ func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) error {
 			Status:        "driver_shared",
 		}
 		if err := uc.interests.Save(interest); err != nil {
-			return fmt.Errorf("create interest: %w", err)
+			return false, fmt.Errorf("create interest: %w", err)
 		}
+		connected = true
 	}
 	// If interest already exists (pending/accepted/driver_shared), just re-notify.
 
@@ -78,5 +84,5 @@ func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) error {
 		DepartureAt: ride.DepartureAt,
 	}
 	sendToAll(req.Phone, msg, uc.subs, uc.notifier)
-	return nil
+	return connected, nil
 }

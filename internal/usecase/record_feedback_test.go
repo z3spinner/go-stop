@@ -83,6 +83,7 @@ func (m *mockStatRepo) Save(origin, destination string, rideDate time.Time, take
 }
 func (m *mockStatRepo) RecordSearch(string, string) error { return nil }
 func (m *mockStatRepo) RecordRide(string, string) error   { return nil }
+func (m *mockStatRepo) RecordConnection() error           { return nil }
 func (m *mockStatRepo) GetStats() (domain.Stats, error)   { return m.stats, nil }
 
 func TestRecordFeedback_SavesStatAndMarksFeedbackGiven(t *testing.T) {
