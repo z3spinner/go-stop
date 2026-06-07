@@ -58,11 +58,13 @@ export interface DomainRouteStat {
 }
 
 export interface DomainStats {
+  connections?: DomainActivityCounts;
   rides_posted?: DomainActivityCounts;
   searches?: DomainActivityCounts;
   top_routes?: DomainRouteStat[];
   total_confirmed?: number;
   total_this_week?: number;
+  unanswered?: DomainActivityCounts;
 }
 
 export interface HandlerAcceptInterestBody {
@@ -998,6 +1000,11 @@ export type submitRideFeedbackResponse403 = {
   status: 403
 }
 
+export type submitRideFeedbackResponse404 = {
+  data: HandlerErrorResponse
+  status: 404
+}
+
 export type submitRideFeedbackResponse500 = {
   data: HandlerErrorResponse
   status: 500
@@ -1006,7 +1013,7 @@ export type submitRideFeedbackResponse500 = {
 export type submitRideFeedbackResponseSuccess = (submitRideFeedbackResponse204) & {
   headers: Headers;
 };
-export type submitRideFeedbackResponseError = (submitRideFeedbackResponse400 | submitRideFeedbackResponse403 | submitRideFeedbackResponse500) & {
+export type submitRideFeedbackResponseError = (submitRideFeedbackResponse400 | submitRideFeedbackResponse403 | submitRideFeedbackResponse404 | submitRideFeedbackResponse500) & {
   headers: Headers;
 };
 

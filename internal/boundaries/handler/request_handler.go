@@ -21,6 +21,7 @@ type RequestHandler struct {
 	deleteRequest     *usecase.DeleteRequest
 	pingSearcher      *usecase.PingSearcher
 	requestRepo       repository.RequestRepository
+	statRepo          repository.StatRepository
 }
 
 func NewRequestHandler(
@@ -30,6 +31,7 @@ func NewRequestHandler(
 	deleteRequest *usecase.DeleteRequest,
 	pingSearcher *usecase.PingSearcher,
 	requestRepo repository.RequestRepository,
+	statRepo repository.StatRepository,
 ) *RequestHandler {
 	return &RequestHandler{
 		postRequest:       postRequest,
@@ -38,6 +40,7 @@ func NewRequestHandler(
 		deleteRequest:     deleteRequest,
 		pingSearcher:      pingSearcher,
 		requestRepo:       requestRepo,
+		statRepo:          statRepo,
 	}
 }
 
@@ -87,13 +90,19 @@ func (h *RequestHandler) Ping(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.pingSearcher.Execute(c.Param("id"), body.RideID, driverPhone); err != nil {
+	connected, err := h.pingSearcher.Execute(c.Param("id"), body.RideID, driverPhone)
+	if err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
 			return
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
+	}
+	// Record the connection asynchronously (best-effort), only when the ping
+	// actually created a new driver_shared interest so repeats don't double-count.
+	if connected && h.statRepo != nil {
+		go func() { _ = h.statRepo.RecordConnection() }()
 	}
 	c.Status(http.StatusNoContent)
 }

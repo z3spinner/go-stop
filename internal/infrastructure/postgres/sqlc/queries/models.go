@@ -14,6 +14,11 @@ type AppSetting struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at"`
 }
 
+type ConnectionEvent struct {
+	ID          pgtype.UUID        `db:"id"`
+	ConnectedAt pgtype.Timestamptz `db:"connected_at"`
+}
+
 type FeedbackQueue struct {
 	ID          pgtype.UUID        `db:"id"`
 	RideID      pgtype.UUID        `db:"ride_id"`

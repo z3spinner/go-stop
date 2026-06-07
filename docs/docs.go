@@ -798,6 +798,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -1277,6 +1283,9 @@ const docTemplate = `{
         "domain.Stats": {
             "type": "object",
             "properties": {
+                "connections": {
+                    "$ref": "#/definitions/domain.ActivityCounts"
+                },
                 "rides_posted": {
                     "$ref": "#/definitions/domain.ActivityCounts"
                 },
@@ -1294,6 +1303,9 @@ const docTemplate = `{
                 },
                 "total_this_week": {
                     "type": "integer"
+                },
+                "unanswered": {
+                    "$ref": "#/definitions/domain.ActivityCounts"
                 }
             }
         },

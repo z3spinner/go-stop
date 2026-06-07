@@ -21,4 +21,6 @@ type Stats struct {
 	TotalThisWeek  int            `json:"total_this_week"`
 	Searches       ActivityCounts `json:"searches"`
 	RidesPosted    ActivityCounts `json:"rides_posted"`
+	Connections    ActivityCounts `json:"connections"`
+	Unanswered     ActivityCounts `json:"unanswered"`
 }

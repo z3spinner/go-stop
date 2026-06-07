@@ -82,6 +82,8 @@ definitions:
     type: object
   domain.Stats:
     properties:
+      connections:
+        $ref: '#/definitions/domain.ActivityCounts'
       rides_posted:
         $ref: '#/definitions/domain.ActivityCounts'
       searches:
@@ -94,6 +96,8 @@ definitions:
         type: integer
       total_this_week:
         type: integer
+      unanswered:
+        $ref: '#/definitions/domain.ActivityCounts'
     type: object
   handler.AcceptInterestBody:
     properties:
@@ -844,6 +848,10 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":

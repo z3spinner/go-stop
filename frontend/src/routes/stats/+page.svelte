@@ -15,7 +15,9 @@
 
 	const tables = $derived(stats ? [
 		{ title: m.statsSearches(), c: stats.searches },
-		{ title: m.statsRidesPosted(), c: stats.rides_posted }
+		{ title: m.statsRidesPosted(), c: stats.rides_posted },
+		{ title: m.statsConnections(), c: stats.connections },
+		{ title: m.statsUnanswered(), c: stats.unanswered }
 	] : []);
 	function rows(c: ActivityCounts) {
 		return [
