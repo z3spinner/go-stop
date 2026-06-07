@@ -63,31 +63,45 @@ describe('MyRideCard name display', () => {
 	});
 });
 
-describe('MyRideCard ask-on-delete', () => {
-	it('asks the came-along question when deleting a past, unanswered ride', async () => {
+describe('MyRideCard delete gated on feedback', () => {
+	it('disables delete on a past, unanswered ride and shows the question', async () => {
 		const { container } = render(MyRideCard, { props: { ride: pastRide, phone: 'p' } });
-		await fireEvent.click(container.querySelector('.btn-delete')!);
-		// the confirm block appears; nothing deleted yet
-		expect(container.querySelector('.delete-confirm')).toBeInTheDocument();
-		expect(del).not.toHaveBeenCalled();
-		// answering yes records feedback then deletes
-		await fireEvent.click(container.querySelector('.btn-del-yes')!);
-		expect(feedback).toHaveBeenCalledWith('rp', 'p', true);
-		expect(del).toHaveBeenCalledWith('rp', 'p');
+		expect(container.querySelector('.feedback-prompt')).toBeInTheDocument();
+		expect(container.querySelector('.btn-delete')).toBeDisabled();
 	});
 
-	it('records "no" then deletes', async () => {
+	it('selecting an answer enables delete and shows the selection, without recording yet', async () => {
 		const { container } = render(MyRideCard, { props: { ride: pastRide, phone: 'p' } });
+		await fireEvent.click(container.querySelector('.btn-fb-yes')!);
+		// nothing committed to the server on selection
+		expect(feedback).not.toHaveBeenCalled();
+		// the choice stays visible and marked selected (no "Merci" collapse)
+		expect(container.querySelector('.feedback-prompt')).toBeInTheDocument();
+		expect(container.querySelector('.btn-fb-yes')).toHaveClass('selected');
+		expect(container.querySelector('.btn-fb-no')).not.toHaveClass('selected');
+		// delete is now enabled
+		expect(container.querySelector('.btn-delete')).not.toBeDisabled();
+	});
+
+	it('lets the user change the choice and commits the final one on delete', async () => {
+		const { container } = render(MyRideCard, { props: { ride: pastRide, phone: 'p' } });
+		await fireEvent.click(container.querySelector('.btn-fb-yes')!);
+		await fireEvent.click(container.querySelector('.btn-fb-no')!); // change of mind
+		expect(container.querySelector('.btn-fb-no')).toHaveClass('selected');
+		expect(container.querySelector('.btn-fb-yes')).not.toHaveClass('selected');
+		expect(feedback).not.toHaveBeenCalled(); // still not recorded
 		await fireEvent.click(container.querySelector('.btn-delete')!);
-		await fireEvent.click(container.querySelector('.btn-del-no')!);
+		// committed once, with the final choice
+		expect(feedback).toHaveBeenCalledTimes(1);
 		expect(feedback).toHaveBeenCalledWith('rp', 'p', false);
 		expect(del).toHaveBeenCalledWith('rp', 'p');
 	});
 
-	it('deletes a future ride silently (no question)', async () => {
+	it('deletes a future ride immediately (no question, no feedback)', async () => {
 		const { container } = render(MyRideCard, { props: { ride: futureRide, phone: 'p' } });
+		expect(container.querySelector('.feedback-prompt')).toBeNull();
+		expect(container.querySelector('.btn-delete')).not.toBeDisabled();
 		await fireEvent.click(container.querySelector('.btn-delete')!);
-		expect(container.querySelector('.delete-confirm')).toBeNull();
 		expect(feedback).not.toHaveBeenCalled();
 		expect(del).toHaveBeenCalledWith('r1', 'p');
 	});

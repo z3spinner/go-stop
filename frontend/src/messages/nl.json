@@ -45,8 +45,6 @@
 	"noMyRides": "Geen actieve ritten gevonden voor dit nummer.",
 	"btnDelete": "Verwijderen",
 	"deleteOk": "Verwijderd.",
-	"deleteAskCameAlong": "Voor het verwijderen: is er iemand meegereden?",
-	"btnCancel": "Annuleren",
 	"deleteErr": "Verkeerd telefoonnummer?",
 	"seekersTitle": "Mensen die deze rit zoeken",
 	"btnPingSearcher": "Notificeer →",
