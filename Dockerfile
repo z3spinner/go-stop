@@ -18,7 +18,9 @@ RUN CGO_ENABLED=0 go build -o go-stop . && CGO_ENABLED=0 go build -o migratedb .
 
 # ── production ──
 FROM alpine:latest AS production
-RUN apk --no-cache add ca-certificates
+# tzdata so SERVICE_TZ (e.g. Europe/Paris) resolves — the app interprets
+# time-only searches in that zone; without it Alpine falls back to UTC.
+RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /app/go-stop .
 COPY --from=builder /app/migratedb .

@@ -49,7 +49,16 @@ any number can run at once.
 - `tests`: `mcr.microsoft.com/playwright:v1.60.0-noble` (matches
   `@playwright/test@1.60.0`). Mounts the repo + a node_modules volume.
   `depends_on: app (healthy)`. Command `sh -c "npm ci && npx playwright test"`.
-  Env: `E2E_BASE_URL=http://app:8080`.
+  Uses `network_mode: "service:app"` and `E2E_BASE_URL=http://localhost:8080`:
+  the runner shares the app's network namespace so the suite reaches it at
+  `localhost`, which Chromium exempts from its automatic http→https upgrade. (A
+  by-name host like `app:8080` gets upgraded and fails with
+  `ERR_SSL_PROTOCOL_ERROR` against the TLS-less app.) The spec's `BASE` constant
+  honors `E2E_BASE_URL`.
+- **Dockerfile `production` gains `tzdata`** so `SERVICE_TZ=Europe/Paris`
+  resolves — the app interprets time-only searches in that zone; without it
+  Alpine falls back to UTC and the time-window e2e test fails. (Real prod runs on
+  the Scalingo Go buildpack, which already ships tzdata; this aligns the image.)
 
 ### 3. `playwright.config.js` change
 
@@ -71,17 +80,18 @@ it fresh inside the image.
 
 ```
 test-unit         host `go test ./internal/usecase/...` (no DB; unchanged)
-test-integration  bring up gostop-itest, run, capture exit, always `down -v`
-test-e2e          bring up gostop-e2e, run, capture exit, always `down -v`
+test-integration  bring up gostop-itest, run, capture exit, always `down`
+test-e2e          bring up gostop-e2e, run, capture exit, always `down`
 test              alias for test-integration
 test-all          test-unit, then test-integration & test-e2e in parallel
 ```
 
 Containerized targets use
 `up --build --abort-on-container-exit --exit-code-from tests`, then **always**
-`down -v --remove-orphans`, propagating the runner's exit code so `make` fails
-when tests fail. Each stack uses its own module-cache / node_modules volume
-(isolation; first run downloads deps, subsequent runs are cached).
+`down --remove-orphans`, propagating the runner's exit code so `make` fails when
+tests fail. `down` (no `-v`) keeps each stack's module-cache / node_modules
+volume so subsequent runs are fast; the Postgres data is tmpfs, so every run
+still gets a fresh DB.
 
 ## Out of scope
 
