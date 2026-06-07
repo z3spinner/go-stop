@@ -47,7 +47,7 @@
 		else { del(); }
 	}
 	async function deleteWithFeedback(taken: boolean) {
-		try { await api.rides.feedback(ride.ID, phone, taken); } catch { /* best-effort */ }
+		try { await api.rides.feedback(ride.ID, phone, taken); fbDone = true; } catch { /* best-effort */ }
 		confirmingDelete = false;
 		await del();
 	}

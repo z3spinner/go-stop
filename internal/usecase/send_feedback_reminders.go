@@ -45,6 +45,12 @@ func NewSendFeedbackReminders(
 }
 
 func (uc *SendFeedbackReminders) Execute() error {
+	// Clean up exhausted/expired tasks at the START of the cycle, not the end, so a
+	// task that reaches its final retry this cycle survives until the next one —
+	// the driver can still tap that last push (and answer via the queue) instead of
+	// hitting a 404 if the ride has also just expired.
+	_ = uc.queue.DeleteExhausted(uc.maxRetries, feedbackTTL)
+
 	retryAfter := time.Now().Add(-uc.interval)
 	due, err := uc.queue.FindDue(retryAfter, uc.maxRetries)
 	if err != nil {
@@ -62,6 +68,5 @@ func (uc *SendFeedbackReminders) Execute() error {
 		}, uc.subs, uc.notifier)
 		_ = uc.queue.MarkSent(task.ID)
 	}
-	_ = uc.queue.DeleteExhausted(uc.maxRetries, feedbackTTL)
 	return nil
 }
