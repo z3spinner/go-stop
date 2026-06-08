@@ -6,12 +6,13 @@ package usecase
 import "github.com/z3spinner/go-stop/internal/boundaries/repository"
 
 type DeleteRide struct {
-	rides      repository.RideRepository
-	notifQueue repository.NotificationQueueRepository
+	rides         repository.RideRepository
+	notifQueue    repository.NotificationQueueRepository
+	feedbackQueue repository.FeedbackQueueRepository
 }
 
-func NewDeleteRide(rides repository.RideRepository, notifQueue repository.NotificationQueueRepository) *DeleteRide {
-	return &DeleteRide{rides: rides, notifQueue: notifQueue}
+func NewDeleteRide(rides repository.RideRepository, notifQueue repository.NotificationQueueRepository, feedbackQueue repository.FeedbackQueueRepository) *DeleteRide {
+	return &DeleteRide{rides: rides, notifQueue: notifQueue, feedbackQueue: feedbackQueue}
 }
 
 func (uc *DeleteRide) Execute(id, phone string) error {
@@ -26,5 +27,10 @@ func (uc *DeleteRide) Execute(id, phone string) error {
 		return err
 	}
 	_ = uc.notifQueue.DeleteForRide(id) // best-effort cleanup
+	// Drop any pending feedback task: the driver explicitly deleted this ride, so
+	// they should not keep getting "did someone come along?" reminders for it
+	// (which also 404 once the ride row is gone). Expired rides keep their task —
+	// that post-ride feedback is still wanted. Best-effort.
+	_, _ = uc.feedbackQueue.DeleteByRideID(id)
 	return nil
 }

@@ -52,7 +52,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue`)
 		if truncErr == nil {
 			break
 		}
@@ -78,7 +78,7 @@ func setupRouter() *gin.Engine {
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)
-	deleteRide := usecase.NewDeleteRide(rideRepo, postgres.NewNotificationQueueRepo(handlerPool))
+	deleteRide := usecase.NewDeleteRide(rideRepo, postgres.NewNotificationQueueRepo(handlerPool), postgres.NewFeedbackQueueRepo(handlerPool))
 	postRequest := usecase.NewPostRequest(reqRepo, rideRepo, subRepo, n)
 	getMyRequests := usecase.NewGetMyRequests(reqRepo)
 	deleteRequest := usecase.NewDeleteRequest(reqRepo)
@@ -131,7 +131,7 @@ func setupRouter() *gin.Engine {
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue`); err != nil {
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }
@@ -1305,5 +1305,47 @@ func TestHTTP_Stats_UnansweredCountsPendingOnceRideGone(t *testing.T) {
 	}
 	if stats.Unanswered.AllTime != 2 {
 		t.Errorf("expected unanswered all_time=2 (expired-ride + deleted-ride pending interests), got %d", stats.Unanswered.AllTime)
+	}
+}
+
+// Deleting a ride must also drop its pending feedback task, so the driver stops
+// getting "did someone come along?" reminders for a ride they removed (which
+// otherwise 404 once the ride row is gone).
+func TestHTTP_DeleteRide_RemovesFeedbackTask(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	id := ride["ID"].(string)
+
+	// A queued feedback task, as the enqueue cron would create once the ride departs.
+	if _, err := handlerPool.Exec(context.Background(),
+		`INSERT INTO feedback_queue (ride_id, phone, origin, destination, ride_date, departure_at, send_after)
+		 VALUES ($1, '5550001', 'Saillans', 'Crest', '2030-06-01', '2030-06-01T09:00:00Z', '2030-06-01T11:00:00Z')`, id); err != nil {
+		t.Fatalf("insert feedback task: %v", err)
+	}
+
+	b, _ := json.Marshal(map[string]string{"phone": "5550001"})
+	req, _ := http.NewRequest(http.MethodDelete, "/api/rides/"+id, bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req)
+	if w2.Code != http.StatusNoContent {
+		t.Fatalf("delete: expected 204, got %d: %s", w2.Code, w2.Body.String())
+	}
+
+	var n int
+	if err := handlerPool.QueryRow(context.Background(),
+		`SELECT count(*) FROM feedback_queue WHERE ride_id=$1`, id).Scan(&n); err != nil {
+		t.Fatalf("count feedback_queue: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("expected feedback task removed on ride delete, got %d", n)
 	}
 }
