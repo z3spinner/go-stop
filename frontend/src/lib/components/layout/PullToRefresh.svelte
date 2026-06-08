@@ -4,31 +4,50 @@
 -->
 
 <!--
-  Custom pull-to-refresh for the installed (standalone) iOS PWA, where iOS
-  provides no native pull-to-refresh. In a normal browser tab we do nothing so
-  the browser's own gesture keeps working. The actual refresh is delegated to the
-  `onrefresh` callback (the layout re-fetches page data).
+  Native-feel pull-to-refresh for the installed (standalone) iOS PWA, where iOS
+  provides no built-in pull-to-refresh. Wraps the page content: pulling drags the
+  whole content down (1:1 with the finger), revealing an iOS-style "spoke"
+  activity indicator in the gap above; past the threshold it refreshes via the
+  `onrefresh` callback, then springs back. In a normal browser tab we do nothing,
+  so the browser's own gesture keeps working.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import { isStandalone } from '$lib/pwa';
 
-	let { onrefresh }: { onrefresh: () => Promise<void> | void } = $props();
+	let { onrefresh, children }: { onrefresh: () => Promise<void> | void; children?: Snippet } =
+		$props();
 
 	const THRESHOLD = 70; // damped px the user must pull to trigger a refresh
-	const MAX = 110; // cap on indicator travel
+	const MAX = 110; // cap on pull travel
 	const DAMP = 0.5; // pull resistance
+	const REST = 56; // content offset held while refreshing
+	const SPOKES = 12;
 
-	let pull = $state(0); // damped distance currently shown
+	let pull = $state(0); // damped drag distance
 	let refreshing = $state(false);
+	let settling = $state(false); // animate the content back (transition on)
 
 	let armed = false; // gesture began at the top with a single finger
 	let decided = false; // vertical-vs-horizontal direction locked in
 	let startY = 0;
 	let startX = 0;
 
+	// How far the content is translated down.
+	const offset = $derived(refreshing ? REST : pull);
 	const progress = $derived(Math.min(1, pull / THRESHOLD));
-	const visible = $derived(pull > 0 || refreshing);
+	// Spokes lit while pulling (fill clockwise); all lit (spinning) while refreshing.
+	const litSpokes = $derived(refreshing ? SPOKES : Math.round(progress * SPOKES));
+	const indicatorOpacity = $derived(refreshing ? 1 : Math.min(1, progress * 1.2));
+
+	function spokeOpacity(i: number): number {
+		if (refreshing) {
+			// Fading gradient around the ring → a leading bright spoke "chases" as it spins.
+			return 0.25 + (0.75 * i) / (SPOKES - 1);
+		}
+		return i < litSpokes ? 1 : 0.12; // reveal in pull order
+	}
 
 	onMount(() => {
 		// Browser tabs keep their native pull-to-refresh; only the chrome-less
@@ -42,6 +61,7 @@
 			}
 			armed = true;
 			decided = false;
+			settling = false;
 			startY = e.touches[0].clientY;
 			startX = e.touches[0].clientX;
 		};
@@ -75,11 +95,11 @@
 			}
 			armed = false;
 			if (pull < THRESHOLD) {
+				settling = true; // spring back
 				pull = 0;
 				return;
 			}
-			refreshing = true;
-			pull = THRESHOLD;
+			refreshing = true; // holds content at REST and spins the indicator
 			const started = performance.now();
 			try {
 				await onrefresh();
@@ -87,6 +107,7 @@
 				// Keep the spinner up briefly so a fast refresh still reads as one.
 				const elapsed = performance.now() - started;
 				if (elapsed < 500) await new Promise((r) => setTimeout(r, 500 - elapsed));
+				settling = true;
 				refreshing = false;
 				pull = 0;
 			}
@@ -106,55 +127,73 @@
 	});
 </script>
 
-{#if visible}
-	<div
-		class="ptr-host"
-		aria-hidden="true"
-		style="transform: translate(-50%, {pull}px); transition: {refreshing || pull === 0
-			? 'transform 0.2s ease'
-			: 'none'};"
-	>
-		<div class="ptr-badge" style="opacity: {Math.min(1, progress + 0.25)}; scale: {0.7 + 0.3 * progress};">
-			<span
-				class="ptr-spinner"
-				class:spin={refreshing}
-				style={refreshing ? '' : `transform: rotate(${progress * 300}deg)`}
-			></span>
+<div
+	class="ptr-track"
+	style="transform: translateY({offset}px); transition: {settling || refreshing
+		? 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
+		: 'none'};"
+	ontransitionend={() => (settling = false)}
+>
+	{#if offset > 0 || refreshing}
+		<div class="ptr-indicator" aria-hidden="true" style="opacity: {indicatorOpacity};">
+			<div class="ptr-spokes" class:spin={refreshing}>
+				{#each Array(SPOKES) as _, i (i)}
+					<span
+						class="ptr-spoke"
+						style="transform: rotate({(i * 360) / SPOKES}deg) translateY(-6px); opacity: {spokeOpacity(i)};"
+					></span>
+				{/each}
+			</div>
 		</div>
-	</div>
-{/if}
+	{/if}
+
+	{@render children?.()}
+</div>
 
 <style>
-	.ptr-host {
-		position: fixed;
-		top: calc(env(safe-area-inset-top, 0px) - 30px);
+	.ptr-track {
+		position: relative; /* containing block for the absolutely-positioned indicator */
+		will-change: transform;
+	}
+	/* Sits just above the content so it descends into the gap as the page pulls down. */
+	.ptr-indicator {
+		position: absolute;
+		top: -34px;
 		left: 50%;
-		z-index: 40;
+		width: 28px;
+		height: 28px;
+		transform: translateX(-50%);
 		pointer-events: none;
+		z-index: 40;
 	}
-	.ptr-badge {
-		display: grid;
-		place-items: center;
-		width: 34px;
-		height: 34px;
-		border-radius: 9999px;
-		background: white;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+	.ptr-spokes {
+		position: relative;
+		width: 100%;
+		height: 100%;
+		color: #28a836; /* brand primary */
 	}
-	.ptr-spinner {
-		display: block;
-		width: 18px;
-		height: 18px;
-		border: 2px solid var(--gray-300, #d1d5db);
-		border-top-color: #28a836; /* brand primary */
-		border-radius: 9999px;
+	.ptr-spokes.spin {
+		animation: ptr-spin 0.8s steps(12) infinite;
 	}
-	.ptr-spinner.spin {
-		animation: ptr-rot 0.7s linear infinite;
+	.ptr-spoke {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 2px;
+		height: 8px;
+		margin: -4px 0 0 -1px; /* center the bar, then push out via translateY */
+		border-radius: 1px;
+		background: currentColor;
+		transform-origin: center;
 	}
-	@keyframes ptr-rot {
+	@keyframes ptr-spin {
 		to {
 			transform: rotate(360deg);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ptr-spokes.spin {
+			animation-duration: 1.6s;
 		}
 	}
 </style>
