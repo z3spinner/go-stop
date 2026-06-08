@@ -64,28 +64,30 @@
 	});
 </script>
 
-<header class="top-bar mx-auto flex max-w-xl items-center gap-2 p-3" class:page-bar={!isHome}>
-	{#if !isHome}
-		<button id="back" type="button" class="btn-back" onclick={back}>{m.btnBack()}</button>
-	{/if}
-	<TopBar onprivacy={() => (showPrivacy = true)} />
-</header>
+<!-- The whole page (header + content + footer) lives inside PullToRefresh so a
+     pull drags it down natively; modals/toasts below stay outside (overlays). -->
+<PullToRefresh onrefresh={refresh}>
+	<header class="top-bar mx-auto flex max-w-xl items-center gap-2 p-3" class:page-bar={!isHome}>
+		{#if !isHome}
+			<button id="back" type="button" class="btn-back" onclick={back}>{m.btnBack()}</button>
+		{/if}
+		<TopBar onprivacy={() => (showPrivacy = true)} />
+	</header>
 
-<PullToRefresh onrefresh={refresh} />
+	<div id="app" class="mx-auto max-w-xl p-3">
+		{#key refreshNonce}
+			{@render children()}
+		{/key}
+	</div>
 
-<div id="app" class="mx-auto max-w-xl p-3">
-	{#key refreshNonce}
-		{@render children()}
-	{/key}
-</div>
-
-<footer id="app-footer" class="mx-auto max-w-xl p-3 text-center text-sm text-gray-500">
-	<button type="button" class="btn-footer-privacy underline" onclick={() => (showPrivacy = true)}>{m.footerPrivacy()}</button>
-	<span> · </span>
-	<a class="btn-footer-about underline" href="/about">{m.aboutTitle()}</a>
-	<span> · </span>
-	<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
-</footer>
+	<footer id="app-footer" class="mx-auto max-w-xl p-3 text-center text-sm text-gray-500">
+		<button type="button" class="btn-footer-privacy underline" onclick={() => (showPrivacy = true)}>{m.footerPrivacy()}</button>
+		<span> · </span>
+		<a class="btn-footer-about underline" href="/about">{m.aboutTitle()}</a>
+		<span> · </span>
+		<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
+	</footer>
+</PullToRefresh>
 
 <A2HSBanner />
 <A2HSModal />
