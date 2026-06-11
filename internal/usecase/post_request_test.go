@@ -16,7 +16,9 @@ type mockRideRepoWithMatch struct {
 	matchResult []domain.Ride
 }
 
-func (m *mockRideRepoWithMatch) Save(domain.Ride) error { return nil }
+func (m *mockRideRepoWithMatch) Save(rd domain.Ride) (domain.Ride, bool, error) {
+	return rd, true, nil
+}
 func (m *mockRideRepoWithMatch) FindByID(string) (domain.Ride, error) {
 	return domain.Ride{}, errors.New("not found")
 }

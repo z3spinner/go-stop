@@ -17,7 +17,7 @@ type mockRideRepoDelete struct {
 	deleted []string
 }
 
-func (m *mockRideRepoDelete) Save(domain.Ride) error { return nil }
+func (m *mockRideRepoDelete) Save(rd domain.Ride) (domain.Ride, bool, error) { return rd, true, nil }
 func (m *mockRideRepoDelete) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.rides[id]
 	if !ok {

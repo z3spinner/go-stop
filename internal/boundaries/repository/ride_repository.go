@@ -10,7 +10,11 @@ import (
 )
 
 type RideRepository interface {
-	Save(ride domain.Ride) error
+	// Save inserts the ride idempotently. If an identical ride already exists
+	// (same phone + normalized driver name + normalized route + exact departure
+	// instant) no row is inserted and the existing ride is returned with
+	// created=false; otherwise the inserted ride is returned with created=true.
+	Save(ride domain.Ride) (saved domain.Ride, created bool, err error)
 	FindByID(id string) (domain.Ride, error)
 	FindAll() ([]domain.Ride, error)
 	FindByPhone(phone string) ([]domain.Ride, error)

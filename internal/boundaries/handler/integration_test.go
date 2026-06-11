@@ -217,6 +217,74 @@ func TestHTTP_PostAndGetRides(t *testing.T) {
 	}
 }
 
+func TestHTTP_PostRide_IsIdempotent(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	ride := map[string]interface{}{
+		"driver_name": "Alice", "phone": "06 12 34 56 78",
+		"origin": "Village A", "destination": "Station",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	}
+
+	// First post creates the ride.
+	w1 := postJSON(r, "/api/rides", ride)
+	if w1.Code != http.StatusCreated {
+		t.Fatalf("first post: expected 201, got %d: %s", w1.Code, w1.Body.String())
+	}
+	var first map[string]interface{}
+	json.Unmarshal(w1.Body.Bytes(), &first)
+	id := first["ID"].(string)
+	if id == "" {
+		t.Fatal("expected an ID on the created ride")
+	}
+
+	// Re-posting the identical ride is a no-op: 200 with the same ride.
+	w2 := postJSON(r, "/api/rides", ride)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("duplicate post: expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var second map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &second)
+	if second["ID"] != id {
+		t.Errorf("duplicate post should return the existing ride %q, got %q", id, second["ID"])
+	}
+
+	// Same ride with different name case, route case, whitespace and phone
+	// formatting still collapses to the same ride (normalized dedup key).
+	w3 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "  alice ", "phone": "0612345678",
+		"origin": "village a", "destination": "STATION",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	if w3.Code != http.StatusOK {
+		t.Fatalf("normalized duplicate: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+	var third map[string]interface{}
+	json.Unmarshal(w3.Body.Bytes(), &third)
+	if third["ID"] != id {
+		t.Errorf("normalized duplicate should return ride %q, got %q", id, third["ID"])
+	}
+
+	// A different departure instant is a genuinely new ride.
+	w4 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "06 12 34 56 78",
+		"origin": "Village A", "destination": "Station",
+		"departure_at": "2030-06-01T09:01:00Z", "flexibility": 30,
+	})
+	if w4.Code != http.StatusCreated {
+		t.Fatalf("different time: expected 201, got %d: %s", w4.Code, w4.Body.String())
+	}
+
+	// Exactly two rides exist: the original and the different-time one.
+	wList := getReq(r, "/api/rides")
+	var rides []map[string]interface{}
+	json.Unmarshal(wList.Body.Bytes(), &rides)
+	if len(rides) != 2 {
+		t.Errorf("expected 2 rides after dedup, got %d", len(rides))
+	}
+}
+
 func TestHTTP_DeleteRide_WrongPhone_Returns403(t *testing.T) {
 	truncateAll(t)
 	r := setupRouter()

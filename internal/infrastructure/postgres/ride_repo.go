@@ -8,6 +8,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres/sqlc/queries"
@@ -22,8 +23,12 @@ func NewRideRepo(pool *pgxpool.Pool, graceMins int) *RideRepo {
 	return &RideRepo{q: queries.New(pool), graceMins: int32(graceMins)}
 }
 
-func (r *RideRepo) Save(ride domain.Ride) error {
-	return r.q.InsertRide(context.Background(), queries.InsertRideParams{
+// Save inserts the ride idempotently. If an identical ride already exists — same
+// phone, normalized driver name, normalized route and exact departure instant
+// (the uq_rides_dedup index) — no row is inserted; the existing ride is returned
+// with created=false so the caller can skip re-notifying searchers.
+func (r *RideRepo) Save(ride domain.Ride) (domain.Ride, bool, error) {
+	_, err := r.q.InsertRide(context.Background(), queries.InsertRideParams{
 		ID:          uuidFrom(ride.ID),
 		DriverName:  ride.DriverName,
 		Phone:       ride.Phone,
@@ -35,6 +40,25 @@ func (r *RideRepo) Save(ride domain.Ride) error {
 		PostedAt:    tsFrom(ride.PostedAt),
 		ExpiresAt:   tsFrom(ride.ExpiresAt),
 	})
+	if err == nil {
+		return ride, true, nil
+	}
+	// ON CONFLICT DO NOTHING returns no rows on a duplicate; anything else is a
+	// real error.
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return domain.Ride{}, false, err
+	}
+	existing, err := r.q.GetRideByDedupKey(context.Background(), queries.GetRideByDedupKeyParams{
+		Phone:       ride.Phone,
+		DriverName:  ride.DriverName,
+		Origin:      ride.Origin,
+		Destination: ride.Destination,
+		DepartureAt: tsFrom(ride.DepartureAt),
+	})
+	if err != nil {
+		return domain.Ride{}, false, err
+	}
+	return rideFromRow(existing), false, nil
 }
 
 func (r *RideRepo) FindByID(id string) (domain.Ride, error) {

@@ -18,14 +18,20 @@ type mockRideRepo struct {
 	saved   []domain.Ride
 	byID    map[string]domain.Ride
 	saveErr error
+	// dup, when set, makes Save report the ride as a pre-existing duplicate:
+	// it returns dup with created=false and does not record a new save.
+	dup *domain.Ride
 }
 
-func (m *mockRideRepo) Save(r domain.Ride) error {
+func (m *mockRideRepo) Save(r domain.Ride) (domain.Ride, bool, error) {
 	if m.saveErr != nil {
-		return m.saveErr
+		return domain.Ride{}, false, m.saveErr
+	}
+	if m.dup != nil {
+		return *m.dup, false, nil
 	}
 	m.saved = append(m.saved, r)
-	return nil
+	return r, true, nil
 }
 func (m *mockRideRepo) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.byID[id]
@@ -115,7 +121,7 @@ func TestPostRide_SavesRide(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n)
-	_, err := uc.Execute(domain.Ride{
+	saved, created, err := uc.Execute(domain.Ride{
 		DriverName: "Alice", Phone: "555-0001",
 		Origin: "Village A", Destination: "Station",
 		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
@@ -124,6 +130,12 @@ func TestPostRide_SavesRide(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if !created {
+		t.Error("expected a new ride to report created=true")
+	}
+	if saved.ID == "" {
+		t.Error("expected returned ride to have an ID")
 	}
 	if len(rides.saved) != 1 {
 		t.Errorf("expected 1 saved ride, got %d", len(rides.saved))
@@ -147,7 +159,7 @@ func TestPostRide_NotifiesMatchingSearchers(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n)
-	_, err := uc.Execute(domain.Ride{
+	_, _, err := uc.Execute(domain.Ride{
 		DriverName: "Alice", Phone: "555-0001",
 		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
 	})
@@ -160,6 +172,44 @@ func TestPostRide_NotifiesMatchingSearchers(t *testing.T) {
 	}
 }
 
+// A duplicate re-post must return the existing ride without re-running the
+// match/notify path — searchers were already pinged for the original.
+func TestPostRide_DuplicateReturnsExistingAndSkipsNotify(t *testing.T) {
+	existing := domain.Ride{
+		ID: "ride-original", DriverName: "Alice", Phone: "555-0001",
+		Origin: "Village A", Destination: "Station",
+		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
+	}
+	rides := &mockRideRepo{dup: &existing}
+	reqs := &mockRequestRepo{
+		matching: []domain.Request{{ID: "req-1", SearcherName: "Bob", Phone: "555-0002"}},
+	}
+	subs := &mockSubRepo{subs: map[string]domain.Subscription{
+		"555-0002": {Phone: "555-0002", Endpoint: "https://push.example.com"},
+	}}
+	n := &mockNotifier{}
+
+	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n)
+	saved, created, err := uc.Execute(domain.Ride{
+		DriverName: "Alice", Phone: "555-0001",
+		Origin: "Village A", Destination: "Station",
+		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if created {
+		t.Error("expected a duplicate to report created=false")
+	}
+	if saved.ID != "ride-original" {
+		t.Errorf("expected the existing ride to be returned, got ID %q", saved.ID)
+	}
+	if n.called {
+		t.Error("should not notify searchers for a duplicate re-post")
+	}
+}
+
 func TestPostRide_SkipsNotificationIfNoSubscription(t *testing.T) {
 	rides := &mockRideRepo{}
 	reqs := &mockRequestRepo{matching: []domain.Request{{Phone: "555-0003"}}}
@@ -167,7 +217,7 @@ func TestPostRide_SkipsNotificationIfNoSubscription(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n)
-	_, err := uc.Execute(domain.Ride{DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)})
+	_, _, err := uc.Execute(domain.Ride{DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -180,7 +230,7 @@ func TestPostRide_SkipsNotificationIfNoSubscription(t *testing.T) {
 func TestPostRide_ReturnsErrorIfSaveFails(t *testing.T) {
 	rides := &mockRideRepo{saveErr: errors.New("db error")}
 	uc := usecase.NewPostRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{})
-	if _, err := uc.Execute(domain.Ride{DepartureAt: time.Now()}); err == nil {
+	if _, _, err := uc.Execute(domain.Ride{DepartureAt: time.Now()}); err == nil {
 		t.Error("expected error when save fails")
 	}
 }

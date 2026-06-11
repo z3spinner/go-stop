@@ -55,6 +55,9 @@ type Querier interface {
 	GetInterestByID(ctx context.Context, id pgtype.UUID) (Interest, error)
 	GetInterestByRideAndSearcher(ctx context.Context, arg GetInterestByRideAndSearcherParams) (Interest, error)
 	GetRequestByID(ctx context.Context, id pgtype.UUID) (Request, error)
+	// Fetch the ride that owns a given dedup key (used after InsertRide hits a
+	// conflict). Mirrors the unique index in migration 014.
+	GetRideByDedupKey(ctx context.Context, arg GetRideByDedupKeyParams) (Ride, error)
 	GetRideByID(ctx context.Context, id pgtype.UUID) (Ride, error)
 	GetRideEventCounts(ctx context.Context) (GetRideEventCountsRow, error)
 	GetRideStatsTotals(ctx context.Context) (GetRideStatsTotalsRow, error)
@@ -71,7 +74,11 @@ type Querier interface {
 	InsertConnectionEvent(ctx context.Context) error
 	InsertInterest(ctx context.Context, arg InsertInterestParams) error
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
-	InsertRide(ctx context.Context, arg InsertRideParams) error
+	// Idempotent insert. ON CONFLICT on the dedup key (phone + normalized driver
+	// name + normalized route + exact departure instant) means a re-posted ride
+	// inserts nothing and returns zero rows; the caller then re-reads the existing
+	// ride via GetRideByDedupKey.
+	InsertRide(ctx context.Context, arg InsertRideParams) (pgtype.UUID, error)
 	InsertRideEvent(ctx context.Context, arg InsertRideEventParams) error
 	InsertRideStat(ctx context.Context, arg InsertRideStatParams) error
 	InsertSearchEvent(ctx context.Context, arg InsertSearchEventParams) error

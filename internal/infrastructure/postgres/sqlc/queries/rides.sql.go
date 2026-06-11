@@ -42,7 +42,7 @@ func (q *Queries) DeleteRide(ctx context.Context, id pgtype.UUID) error {
 }
 
 const findRidesMatchingAnytimeRequest = `-- name: FindRidesMatchingAnytimeRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
@@ -76,6 +76,7 @@ func (q *Queries) FindRidesMatchingAnytimeRequest(ctx context.Context, arg FindR
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -88,7 +89,7 @@ func (q *Queries) FindRidesMatchingAnytimeRequest(ctx context.Context, arg FindR
 }
 
 const findRidesMatchingDailyRequest = `-- name: FindRidesMatchingDailyRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
@@ -131,6 +132,7 @@ func (q *Queries) FindRidesMatchingDailyRequest(ctx context.Context, arg FindRid
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -143,7 +145,7 @@ func (q *Queries) FindRidesMatchingDailyRequest(ctx context.Context, arg FindRid
 }
 
 const findRidesMatchingDayRequest = `-- name: FindRidesMatchingDayRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
@@ -179,6 +181,7 @@ func (q *Queries) FindRidesMatchingDayRequest(ctx context.Context, arg FindRides
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -191,7 +194,7 @@ func (q *Queries) FindRidesMatchingDayRequest(ctx context.Context, arg FindRides
 }
 
 const findRidesMatchingTimeRequest = `-- name: FindRidesMatchingTimeRequest :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
@@ -237,6 +240,7 @@ func (q *Queries) FindRidesMatchingTimeRequest(ctx context.Context, arg FindRide
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -248,8 +252,56 @@ func (q *Queries) FindRidesMatchingTimeRequest(ctx context.Context, arg FindRide
 	return items, nil
 }
 
+const getRideByDedupKey = `-- name: GetRideByDedupKey :one
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
+FROM rides
+WHERE phone = $1
+  AND driver_name_norm = route_norm($2::text)
+  AND origin_norm = route_norm($3::text)
+  AND destination_norm = route_norm($4::text)
+  AND departure_at = $5
+`
+
+type GetRideByDedupKeyParams struct {
+	Phone       string             `db:"phone"`
+	DriverName  string             `db:"driver_name"`
+	Origin      string             `db:"origin"`
+	Destination string             `db:"destination"`
+	DepartureAt pgtype.Timestamptz `db:"departure_at"`
+}
+
+// Fetch the ride that owns a given dedup key (used after InsertRide hits a
+// conflict). Mirrors the unique index in migration 014.
+func (q *Queries) GetRideByDedupKey(ctx context.Context, arg GetRideByDedupKeyParams) (Ride, error) {
+	row := q.db.QueryRow(ctx, getRideByDedupKey,
+		arg.Phone,
+		arg.DriverName,
+		arg.Origin,
+		arg.Destination,
+		arg.DepartureAt,
+	)
+	var i Ride
+	err := row.Scan(
+		&i.ID,
+		&i.DriverName,
+		&i.Phone,
+		&i.Origin,
+		&i.Destination,
+		&i.Date,
+		&i.DepartureAt,
+		&i.Flexibility,
+		&i.PostedAt,
+		&i.ExpiresAt,
+		&i.FeedbackGiven,
+		&i.OriginNorm,
+		&i.DestinationNorm,
+		&i.DriverNameNorm,
+	)
+	return i, err
+}
+
 const getRideByID = `-- name: GetRideByID :one
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides WHERE id = $1
 `
 
@@ -270,13 +322,16 @@ func (q *Queries) GetRideByID(ctx context.Context, id pgtype.UUID) (Ride, error)
 		&i.FeedbackGiven,
 		&i.OriginNorm,
 		&i.DestinationNorm,
+		&i.DriverNameNorm,
 	)
 	return i, err
 }
 
-const insertRide = `-- name: InsertRide :exec
+const insertRide = `-- name: InsertRide :one
 INSERT INTO rides (id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (phone, driver_name_norm, origin_norm, destination_norm, departure_at) DO NOTHING
+RETURNING id
 `
 
 type InsertRideParams struct {
@@ -292,8 +347,12 @@ type InsertRideParams struct {
 	ExpiresAt   pgtype.Timestamptz `db:"expires_at"`
 }
 
-func (q *Queries) InsertRide(ctx context.Context, arg InsertRideParams) error {
-	_, err := q.db.Exec(ctx, insertRide,
+// Idempotent insert. ON CONFLICT on the dedup key (phone + normalized driver
+// name + normalized route + exact departure instant) means a re-posted ride
+// inserts nothing and returns zero rows; the caller then re-reads the existing
+// ride via GetRideByDedupKey.
+func (q *Queries) InsertRide(ctx context.Context, arg InsertRideParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, insertRide,
 		arg.ID,
 		arg.DriverName,
 		arg.Phone,
@@ -305,11 +364,13 @@ func (q *Queries) InsertRide(ctx context.Context, arg InsertRideParams) error {
 		arg.PostedAt,
 		arg.ExpiresAt,
 	)
-	return err
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const listRidesActive = `-- name: ListRidesActive :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + ($1::int * interval '1 minute') > NOW()
@@ -340,6 +401,7 @@ func (q *Queries) ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ri
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -352,7 +414,7 @@ func (q *Queries) ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ri
 }
 
 const listRidesByPhone = `-- name: ListRidesByPhone :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides WHERE phone = $1 AND expires_at > NOW()
 ORDER BY departure_at ASC
 `
@@ -380,6 +442,7 @@ func (q *Queries) ListRidesByPhone(ctx context.Context, phone string) ([]Ride, e
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -392,7 +455,7 @@ func (q *Queries) ListRidesByPhone(ctx context.Context, phone string) ([]Ride, e
 }
 
 const searchRides = `-- name: SearchRides :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
@@ -429,6 +492,7 @@ func (q *Queries) SearchRides(ctx context.Context, arg SearchRidesParams) ([]Rid
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -441,7 +505,7 @@ func (q *Queries) SearchRides(ctx context.Context, arg SearchRidesParams) ([]Rid
 }
 
 const searchRidesByDate = `-- name: SearchRidesByDate :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
@@ -485,6 +549,7 @@ func (q *Queries) SearchRidesByDate(ctx context.Context, arg SearchRidesByDatePa
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -497,7 +562,7 @@ func (q *Queries) SearchRidesByDate(ctx context.Context, arg SearchRidesByDatePa
 }
 
 const searchRidesByDateTime = `-- name: SearchRidesByDateTime :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND date = $3
@@ -549,6 +614,7 @@ func (q *Queries) SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDa
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -561,7 +627,7 @@ func (q *Queries) SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDa
 }
 
 const searchRidesByTime = `-- name: SearchRidesByTime :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
@@ -609,6 +675,7 @@ func (q *Queries) SearchRidesByTime(ctx context.Context, arg SearchRidesByTimePa
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}
@@ -621,7 +688,7 @@ func (q *Queries) SearchRidesByTime(ctx context.Context, arg SearchRidesByTimePa
 }
 
 const searchRidesFuzzy = `-- name: SearchRidesFuzzy :many
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm
+SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm % route_norm($1::text)
   AND destination_norm % route_norm($2::text)
@@ -665,6 +732,7 @@ func (q *Queries) SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyPara
 			&i.FeedbackGiven,
 			&i.OriginNorm,
 			&i.DestinationNorm,
+			&i.DriverNameNorm,
 		); err != nil {
 			return nil, err
 		}

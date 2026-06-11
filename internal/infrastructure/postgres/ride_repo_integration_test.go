@@ -6,6 +6,8 @@
 package postgres_test
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -32,7 +34,7 @@ func TestRideRepo_SaveAndFindByID(t *testing.T) {
 		ExpiresAt:   time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC),
 	}
 
-	if err := repo.Save(ride); err != nil {
+	if _, _, err := repo.Save(ride); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
@@ -53,7 +55,7 @@ func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 	repo := postgres.NewRideRepo(testPool, 60)
 
 	activeID := uuid.New().String()
-	_ = repo.Save(domain.Ride{
+	_, _, _ = repo.Save(domain.Ride{
 		ID: activeID, DriverName: "Alice", Phone: "1",
 		Origin: "A", Destination: "B",
 		Date:        time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -61,7 +63,7 @@ func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 		PostedAt:    time.Now().UTC(),
 		ExpiresAt:   time.Date(2030, 1, 2, 0, 0, 0, 0, time.UTC),
 	})
-	_ = repo.Save(domain.Ride{
+	_, _, _ = repo.Save(domain.Ride{
 		ID: uuid.New().String(), DriverName: "Bob", Phone: "2",
 		Origin: "A", Destination: "B",
 		Date:        time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -87,7 +89,7 @@ func TestRideRepo_FindMatching_WindowOverlap(t *testing.T) {
 	repo := postgres.NewRideRepo(testPool, 60)
 
 	// Ride: 09:00 ±30 min → window 08:30–09:30
-	_ = repo.Save(domain.Ride{
+	_, _, _ = repo.Save(domain.Ride{
 		ID: uuid.New().String(), DriverName: "Alice", Phone: "1",
 		Origin: "Village A", Destination: "Station",
 		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
@@ -120,7 +122,7 @@ func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 	repo := postgres.NewRideRepo(testPool, 60)
 
 	// Ride: 09:00 exact
-	_ = repo.Save(domain.Ride{
+	_, _, _ = repo.Save(domain.Ride{
 		ID: uuid.New().String(), DriverName: "Alice", Phone: "1",
 		Origin: "Village A", Destination: "Station",
 		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
@@ -148,12 +150,111 @@ func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 	}
 }
 
+func TestRideRepo_Save_Idempotent(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewRideRepo(testPool, 60)
+
+	base := func(id string) domain.Ride {
+		return domain.Ride{
+			ID: id, DriverName: "Alice", Phone: "0612345678",
+			Origin: "Village A", Destination: "Station",
+			Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
+			DepartureAt: time.Date(2030, 6, 1, 9, 0, 0, 0, time.UTC),
+			Flexibility: domain.Approximate,
+			PostedAt:    time.Now().UTC(),
+			ExpiresAt:   time.Date(2030, 6, 2, 0, 0, 0, 0, time.UTC),
+		}
+	}
+
+	originalID := uuid.New().String()
+	saved, created, err := repo.Save(base(originalID))
+	if err != nil {
+		t.Fatalf("first Save: %v", err)
+	}
+	if !created || saved.ID != originalID {
+		t.Fatalf("first Save should create ride %q (created=%v, id=%q)", originalID, created, saved.ID)
+	}
+
+	// Same dedup key, but normalized differences and a fresh ID: no new row, the
+	// original ride is returned.
+	dup := base(uuid.New().String())
+	dup.DriverName = " alice "
+	dup.Origin = "village a"
+	dup.Destination = "STATION"
+	saved2, created2, err := repo.Save(dup)
+	if err != nil {
+		t.Fatalf("duplicate Save: %v", err)
+	}
+	if created2 {
+		t.Error("duplicate Save should report created=false")
+	}
+	if saved2.ID != originalID {
+		t.Errorf("duplicate Save should return original ride %q, got %q", originalID, saved2.ID)
+	}
+
+	all, err := repo.FindAll()
+	if err != nil {
+		t.Fatalf("FindAll: %v", err)
+	}
+	if len(all) != 1 {
+		t.Errorf("expected exactly 1 ride after duplicate Save, got %d", len(all))
+	}
+}
+
+// Concurrent identical submits (the double-tap / retry case) must insert exactly
+// one row — the unique index, not a TOCTOU check, is what guarantees this.
+func TestRideRepo_Save_ConcurrentDuplicatesInsertOnce(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewRideRepo(testPool, 60)
+
+	const n = 8
+	var createdCount int32
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, created, err := repo.Save(domain.Ride{
+				ID: uuid.New().String(), DriverName: "Alice", Phone: "0612345678",
+				Origin: "Village A", Destination: "Station",
+				Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
+				DepartureAt: time.Date(2030, 6, 1, 9, 0, 0, 0, time.UTC),
+				Flexibility: domain.Approximate,
+				PostedAt:    time.Now().UTC(),
+				ExpiresAt:   time.Date(2030, 6, 2, 0, 0, 0, 0, time.UTC),
+			})
+			if err != nil {
+				t.Errorf("concurrent Save: %v", err)
+				return
+			}
+			if created {
+				atomic.AddInt32(&createdCount, 1)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+
+	if createdCount != 1 {
+		t.Errorf("expected exactly 1 concurrent Save to create the ride, got %d", createdCount)
+	}
+	all, err := repo.FindAll()
+	if err != nil {
+		t.Fatalf("FindAll: %v", err)
+	}
+	if len(all) != 1 {
+		t.Errorf("expected exactly 1 ride row after %d concurrent submits, got %d", n, len(all))
+	}
+}
+
 func TestRideRepo_Delete(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewRideRepo(testPool, 60)
 
 	deleteID := uuid.New().String()
-	_ = repo.Save(domain.Ride{
+	_, _, _ = repo.Save(domain.Ride{
 		ID: deleteID, DriverName: "Alice", Phone: "1",
 		Origin: "A", Destination: "B",
 		Date:        time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),

@@ -81,6 +81,7 @@ type Ride struct {
 	FeedbackGiven   bool               `db:"feedback_given"`
 	OriginNorm      pgtype.Text        `db:"origin_norm"`
 	DestinationNorm pgtype.Text        `db:"destination_norm"`
+	DriverNameNorm  pgtype.Text        `db:"driver_name_norm"`
 }
 
 type RideEvent struct {

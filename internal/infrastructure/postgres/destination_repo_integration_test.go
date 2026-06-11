@@ -20,7 +20,7 @@ func TestDestinationRepo_GetAll_DeduplicatesAndSorts(t *testing.T) {
 	reqRepo := postgres.NewRequestRepo(testPool, 60)
 	destRepo := postgres.NewDestinationRepo(testPool)
 
-	_ = rideRepo.Save(domain.Ride{
+	_, _, _ = rideRepo.Save(domain.Ride{
 		ID: uuid.New().String(), DriverName: "A", Phone: "1",
 		Origin: "Village A", Destination: "Station",
 		Date:        time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
