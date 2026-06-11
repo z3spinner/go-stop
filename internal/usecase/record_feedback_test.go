@@ -19,7 +19,9 @@ type mockRideRepoFeedback struct {
 	claimed     map[string]bool
 }
 
-func (m *mockRideRepoFeedback) Save(domain.Ride) error { return nil }
+func (m *mockRideRepoFeedback) Save(rd domain.Ride) (domain.Ride, bool, error) {
+	return rd, true, nil
+}
 func (m *mockRideRepoFeedback) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.rides[id]
 	if !ok {

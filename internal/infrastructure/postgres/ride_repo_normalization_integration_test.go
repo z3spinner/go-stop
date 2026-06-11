@@ -18,7 +18,7 @@ import (
 func saveActiveRide(t *testing.T, repo *postgres.RideRepo, origin, destination string) string {
 	t.Helper()
 	id := uuid.New().String()
-	if err := repo.Save(domain.Ride{
+	if _, _, err := repo.Save(domain.Ride{
 		ID: id, DriverName: "Alice", Phone: "555-0001",
 		Origin: origin, Destination: destination,
 		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),

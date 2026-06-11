@@ -106,6 +106,7 @@ type postRideRequest struct {
 // @Produce  json
 // @Param    body  body  handler.PostRideBody  true  "Ride to create"
 // @Success  201  {object}  domain.Ride
+// @Success  200  {object}  domain.Ride  "Idempotent re-post: existing ride upserted and returned"
 // @Failure  400  {object}  handler.ErrorResponse
 // @Failure  500  {object}  handler.ErrorResponse
 // @Router   /rides [post]
@@ -128,9 +129,15 @@ func (h *RideHandler) Post(c *gin.Context) {
 		DepartureAt: dept,
 		Flexibility: domain.Flexibility(req.Flexibility),
 	}
-	saved, err := h.postRide.Execute(ride)
+	saved, created, err := h.postRide.Execute(ride)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !created {
+		// Idempotent re-post: the ride already existed (its mutable fields were
+		// refreshed); return the canonical ride with 200.
+		c.JSON(http.StatusOK, saved)
 		return
 	}
 	// Record ride-posted event asynchronously (best-effort)

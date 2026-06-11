@@ -71,7 +71,11 @@ type Querier interface {
 	InsertConnectionEvent(ctx context.Context) error
 	InsertInterest(ctx context.Context, arg InsertInterestParams) error
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
-	InsertRide(ctx context.Context, arg InsertRideParams) error
+	// Idempotent insert. ON CONFLICT on the dedup key (phone + normalized driver
+	// name + normalized route + exact departure instant) means a re-posted ride
+	// inserts nothing and returns zero rows; the caller then re-reads the existing
+	// ride via GetRideByDedupKey.
+	InsertRide(ctx context.Context, arg InsertRideParams) (pgtype.UUID, error)
 	InsertRideEvent(ctx context.Context, arg InsertRideEventParams) error
 	InsertRideStat(ctx context.Context, arg InsertRideStatParams) error
 	InsertSearchEvent(ctx context.Context, arg InsertSearchEventParams) error
@@ -115,6 +119,12 @@ type Querier interface {
 	// as a search fallback when the exact lookup returns nothing — NEVER for the
 	// notification matching path, where a loose match would ping the wrong driver.
 	SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyParams) ([]Ride, error)
+	// Upsert tail for an idempotent re-post: when InsertRide hits the dedup-key
+	// conflict, refresh the mutable non-key fields and return the canonical row.
+	// id, phone, departure_at, posted_at and feedback_given are deliberately kept;
+	// the generated *_norm columns recompute from the new raw values (to the same
+	// key, since the key matched). Matches the uq_rides_dedup index from migration 014.
+	UpdateRideByDedupKey(ctx context.Context, arg UpdateRideByDedupKeyParams) (Ride, error)
 	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

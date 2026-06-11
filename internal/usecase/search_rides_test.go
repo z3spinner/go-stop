@@ -17,10 +17,10 @@ type mockRideRepoSearch struct {
 	fuzzyCalled    bool
 }
 
-func (m *mockRideRepoSearch) Save(domain.Ride) error                    { return nil }
-func (m *mockRideRepoSearch) FindByID(string) (domain.Ride, error)      { return domain.Ride{}, nil }
-func (m *mockRideRepoSearch) FindAll() ([]domain.Ride, error)           { return nil, nil }
-func (m *mockRideRepoSearch) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepoSearch) Save(rd domain.Ride) (domain.Ride, bool, error) { return rd, true, nil }
+func (m *mockRideRepoSearch) FindByID(string) (domain.Ride, error)           { return domain.Ride{}, nil }
+func (m *mockRideRepoSearch) FindAll() ([]domain.Ride, error)                { return nil, nil }
+func (m *mockRideRepoSearch) FindByPhone(string) ([]domain.Ride, error)      { return nil, nil }
 func (m *mockRideRepoSearch) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return m.resultsByRoute[o+"|"+d], nil
 }

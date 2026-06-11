@@ -650,6 +650,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "Idempotent re-post: existing ride upserted and returned",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Ride"
+                        }
+                    },
                     "201": {
                         "description": "Created",
                         "schema": {
