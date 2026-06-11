@@ -150,24 +150,21 @@ func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 	}
 }
 
-func TestRideRepo_Save_Idempotent(t *testing.T) {
+func TestRideRepo_Save_UpsertsOnDuplicate(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewRideRepo(testPool, 60)
 
-	base := func(id string) domain.Ride {
-		return domain.Ride{
-			ID: id, DriverName: "Alice", Phone: "0612345678",
-			Origin: "Village A", Destination: "Station",
-			Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
-			DepartureAt: time.Date(2030, 6, 1, 9, 0, 0, 0, time.UTC),
-			Flexibility: domain.Approximate,
-			PostedAt:    time.Now().UTC(),
-			ExpiresAt:   time.Date(2030, 6, 2, 0, 0, 0, 0, time.UTC),
-		}
-	}
-
 	originalID := uuid.New().String()
-	saved, created, err := repo.Save(base(originalID))
+	originalPosted := time.Now().UTC().Truncate(time.Second)
+	saved, created, err := repo.Save(domain.Ride{
+		ID: originalID, DriverName: "Alice", Phone: "0612345678",
+		Origin: "Village A", Destination: "Station",
+		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
+		DepartureAt: time.Date(2030, 6, 1, 9, 0, 0, 0, time.UTC),
+		Flexibility: domain.Approximate, // 30
+		PostedAt:    originalPosted,
+		ExpiresAt:   time.Date(2030, 6, 2, 0, 0, 0, 0, time.UTC),
+	})
 	if err != nil {
 		t.Fatalf("first Save: %v", err)
 	}
@@ -175,13 +172,18 @@ func TestRideRepo_Save_Idempotent(t *testing.T) {
 		t.Fatalf("first Save should create ride %q (created=%v, id=%q)", originalID, created, saved.ID)
 	}
 
-	// Same dedup key, but normalized differences and a fresh ID: no new row, the
-	// original ride is returned.
-	dup := base(uuid.New().String())
-	dup.DriverName = " alice "
-	dup.Origin = "village a"
-	dup.Destination = "STATION"
-	saved2, created2, err := repo.Save(dup)
+	// Same dedup key (normalized name/route differences, a fresh ID, a later
+	// posted_at) but a changed flexibility: no new row — the existing ride is
+	// upserted and returned, keeping its id and posted_at.
+	saved2, created2, err := repo.Save(domain.Ride{
+		ID: uuid.New().String(), DriverName: " alice ", Phone: "0612345678",
+		Origin: "village a", Destination: "STATION",
+		Date:        time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC),
+		DepartureAt: time.Date(2030, 6, 1, 9, 0, 0, 0, time.UTC),
+		Flexibility: domain.Exact, // 0 — different from the original 30
+		PostedAt:    originalPosted.Add(time.Hour),
+		ExpiresAt:   time.Date(2030, 6, 2, 0, 0, 0, 0, time.UTC),
+	})
 	if err != nil {
 		t.Fatalf("duplicate Save: %v", err)
 	}
@@ -191,13 +193,23 @@ func TestRideRepo_Save_Idempotent(t *testing.T) {
 	if saved2.ID != originalID {
 		t.Errorf("duplicate Save should return original ride %q, got %q", originalID, saved2.ID)
 	}
+	if saved2.Flexibility != domain.Exact {
+		t.Errorf("duplicate Save should refresh flexibility to %d, got %d", domain.Exact, saved2.Flexibility)
+	}
+	if !saved2.PostedAt.Equal(originalPosted) {
+		t.Errorf("duplicate Save should preserve posted_at %v, got %v", originalPosted, saved2.PostedAt)
+	}
 
+	// Exactly one row, and the persisted flexibility reflects the upsert.
 	all, err := repo.FindAll()
 	if err != nil {
 		t.Fatalf("FindAll: %v", err)
 	}
 	if len(all) != 1 {
-		t.Errorf("expected exactly 1 ride after duplicate Save, got %d", len(all))
+		t.Fatalf("expected exactly 1 ride after duplicate Save, got %d", len(all))
+	}
+	if all[0].Flexibility != domain.Exact {
+		t.Errorf("persisted ride should have upserted flexibility %d, got %d", domain.Exact, all[0].Flexibility)
 	}
 }
 

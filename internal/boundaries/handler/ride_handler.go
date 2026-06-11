@@ -106,7 +106,7 @@ type postRideRequest struct {
 // @Produce  json
 // @Param    body  body  handler.PostRideBody  true  "Ride to create"
 // @Success  201  {object}  domain.Ride
-// @Success  200  {object}  domain.Ride  "Idempotent re-post: the identical ride already existed"
+// @Success  200  {object}  domain.Ride  "Idempotent re-post: existing ride upserted and returned"
 // @Failure  400  {object}  handler.ErrorResponse
 // @Failure  500  {object}  handler.ErrorResponse
 // @Router   /rides [post]
@@ -135,7 +135,8 @@ func (h *RideHandler) Post(c *gin.Context) {
 		return
 	}
 	if !created {
-		// Idempotent re-post: the ride already existed, return it unchanged.
+		// Idempotent re-post: the ride already existed (its mutable fields were
+		// refreshed); return the canonical ride with 200.
 		c.JSON(http.StatusOK, saved)
 		return
 	}

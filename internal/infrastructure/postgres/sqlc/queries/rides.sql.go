@@ -252,54 +252,6 @@ func (q *Queries) FindRidesMatchingTimeRequest(ctx context.Context, arg FindRide
 	return items, nil
 }
 
-const getRideByDedupKey = `-- name: GetRideByDedupKey :one
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
-FROM rides
-WHERE phone = $1
-  AND driver_name_norm = route_norm($2::text)
-  AND origin_norm = route_norm($3::text)
-  AND destination_norm = route_norm($4::text)
-  AND departure_at = $5
-`
-
-type GetRideByDedupKeyParams struct {
-	Phone       string             `db:"phone"`
-	DriverName  string             `db:"driver_name"`
-	Origin      string             `db:"origin"`
-	Destination string             `db:"destination"`
-	DepartureAt pgtype.Timestamptz `db:"departure_at"`
-}
-
-// Fetch the ride that owns a given dedup key (used after InsertRide hits a
-// conflict). Mirrors the unique index in migration 014.
-func (q *Queries) GetRideByDedupKey(ctx context.Context, arg GetRideByDedupKeyParams) (Ride, error) {
-	row := q.db.QueryRow(ctx, getRideByDedupKey,
-		arg.Phone,
-		arg.DriverName,
-		arg.Origin,
-		arg.Destination,
-		arg.DepartureAt,
-	)
-	var i Ride
-	err := row.Scan(
-		&i.ID,
-		&i.DriverName,
-		&i.Phone,
-		&i.Origin,
-		&i.Destination,
-		&i.Date,
-		&i.DepartureAt,
-		&i.Flexibility,
-		&i.PostedAt,
-		&i.ExpiresAt,
-		&i.FeedbackGiven,
-		&i.OriginNorm,
-		&i.DestinationNorm,
-		&i.DriverNameNorm,
-	)
-	return i, err
-}
-
 const getRideByID = `-- name: GetRideByID :one
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides WHERE id = $1
@@ -742,4 +694,61 @@ func (q *Queries) SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateRideByDedupKey = `-- name: UpdateRideByDedupKey :one
+UPDATE rides SET
+  driver_name = $1,
+  origin      = $2,
+  destination = $3,
+  flexibility = $4
+WHERE phone = $5
+  AND driver_name_norm = route_norm($1::text)
+  AND origin_norm = route_norm($2::text)
+  AND destination_norm = route_norm($3::text)
+  AND departure_at = $6
+RETURNING id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
+`
+
+type UpdateRideByDedupKeyParams struct {
+	DriverName  string             `db:"driver_name"`
+	Origin      string             `db:"origin"`
+	Destination string             `db:"destination"`
+	Flexibility int32              `db:"flexibility"`
+	Phone       string             `db:"phone"`
+	DepartureAt pgtype.Timestamptz `db:"departure_at"`
+}
+
+// Upsert tail for an idempotent re-post: when InsertRide hits the dedup-key
+// conflict, refresh the mutable non-key fields and return the canonical row.
+// id, phone, departure_at, posted_at and feedback_given are deliberately kept;
+// the generated *_norm columns recompute from the new raw values (to the same
+// key, since the key matched). Matches the uq_rides_dedup index from migration 014.
+func (q *Queries) UpdateRideByDedupKey(ctx context.Context, arg UpdateRideByDedupKeyParams) (Ride, error) {
+	row := q.db.QueryRow(ctx, updateRideByDedupKey,
+		arg.DriverName,
+		arg.Origin,
+		arg.Destination,
+		arg.Flexibility,
+		arg.Phone,
+		arg.DepartureAt,
+	)
+	var i Ride
+	err := row.Scan(
+		&i.ID,
+		&i.DriverName,
+		&i.Phone,
+		&i.Origin,
+		&i.Destination,
+		&i.Date,
+		&i.DepartureAt,
+		&i.Flexibility,
+		&i.PostedAt,
+		&i.ExpiresAt,
+		&i.FeedbackGiven,
+		&i.OriginNorm,
+		&i.DestinationNorm,
+		&i.DriverNameNorm,
+	)
+	return i, err
 }

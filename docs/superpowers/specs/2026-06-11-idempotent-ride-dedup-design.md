@@ -42,11 +42,15 @@ Decisions locked during brainstorming:
 ## Behaviour
 
 - New ride → insert and return `201 Created` (unchanged).
-- Duplicate → return the **existing** ride with `200 OK`. The existing row keeps
-  its original `id` and `posted_at`.
-- On a duplicate, **matching/notification is skipped** — the searchers were
-  already notified when the ride was first posted. This is the main functional
-  reason the create-vs-existing distinction is threaded back to the use case.
+- Re-post (dedup-key match) → **upsert**: refresh the existing ride's mutable
+  non-key fields (driver name, route display, `flexibility`) and return the
+  canonical ride with `200 OK`. The row keeps its original `id`, `posted_at` and
+  `feedback_given`. A re-post with a changed flexibility therefore *updates* the
+  ride rather than silently dropping the new value.
+- On a re-post, **matching/notification is skipped** — the searchers were already
+  notified when the ride was first posted, and re-notifying on every edit would
+  spam them. This is the main functional reason the create-vs-existing
+  distinction is threaded back to the use case.
 
 ## Enforcement: DB constraint + app handling
 
@@ -93,35 +97,46 @@ ON CONFLICT (phone, driver_name_norm, origin_norm, destination_norm, departure_a
   DO NOTHING
 RETURNING id;
 
--- name: GetRideByDedupKey :one
-SELECT <ride columns>
-FROM rides
-WHERE phone = $1
+-- name: UpdateRideByDedupKey :one
+UPDATE rides SET
+  driver_name = sqlc.arg(driver_name),
+  origin      = sqlc.arg(origin),
+  destination = sqlc.arg(destination),
+  flexibility = sqlc.arg(flexibility)
+WHERE phone = sqlc.arg(phone)
   AND driver_name_norm  = route_norm(sqlc.arg(driver_name)::text)
   AND origin_norm       = route_norm(sqlc.arg(origin)::text)
   AND destination_norm  = route_norm(sqlc.arg(destination)::text)
-  AND departure_at      = sqlc.arg(departure_at);
+  AND departure_at      = sqlc.arg(departure_at)
+RETURNING <ride columns>;
 ```
 
-`InsertRide` becomes `:one`. On conflict, `DO NOTHING` returns zero rows →
-pgx `ErrNoRows`, which the repo treats as "duplicate" and follows up with
-`GetRideByDedupKey`.
+`InsertRide` is `:one`. On conflict, `DO NOTHING` returns zero rows → pgx
+`ErrNoRows`, which the repo treats as a re-post and follows up with
+`UpdateRideByDedupKey`, which refreshes the mutable non-key fields and returns
+the canonical row. `id`, `phone`, `departure_at`, `posted_at` and
+`feedback_given` are not in the `SET` list, so they are preserved; the generated
+`*_norm` columns recompute from the new raw values (to the same key, since the
+key matched). Using `DO NOTHING` + a targeted `UPDATE` (rather than
+`ON CONFLICT DO UPDATE … RETURNING (xmax = 0)`) keeps the create-vs-update
+signal robust and explicit about which columns change.
 
 ### Repository
 
 `RideRepository.Save` changes:
 
 ```go
-// Save inserts the ride. If an identical ride already exists (same
-// phone + normalized name + normalized route + exact departure time), no row
-// is inserted; the existing ride is returned with created=false.
+// Save upserts the ride on its dedup key (same phone + normalized name +
+// normalized route + exact departure time). A new ride is inserted
+// (created=true); a re-post refreshes the existing ride's mutable non-key
+// fields and returns the canonical row (created=false).
 Save(ride domain.Ride) (saved domain.Ride, created bool, err error)
 ```
 
 Implementation: call `InsertRide`. If it returns a row → `created=true`, return
-the input ride. If `ErrNoRows` → `created=false`, fetch via `GetRideByDedupKey`
-and return that canonical row. Both queries run autocommit (read-committed), so
-the follow-up select sees the committed conflicting row.
+the input ride. If `ErrNoRows` → `created=false`, call `UpdateRideByDedupKey` and
+return the refreshed canonical row. Both queries run autocommit (read-committed),
+so the follow-up update targets the committed conflicting row.
 
 ### Use case
 
@@ -151,6 +166,8 @@ status. Minimal: thread `created` through.)
   - Vary one field at a time (phone, name case, route case, departure instant)
     ⇒ confirms normalization folds case/space and that a different instant
     creates a second ride.
+  - A re-post with a changed `flexibility` ⇒ one row, original `id`/`posted_at`
+    preserved, persisted `flexibility` updated (upsert).
   - Concurrent identical double-submit ⇒ exactly one row (race safety).
 
 ## Out of scope
@@ -158,4 +175,7 @@ status. Minimal: thread `created` through.)
 - Fuzzy/near-duplicate detection (different wording of the same place beyond
   `route_norm` folding, or "close enough" times). Deliberately excluded — see the
   route-matching-scope note: matching folds accents/case/whitespace only.
-- Editing or merging existing rides.
+- A dedicated edit/merge flow. A re-post refreshes the matched ride's non-key
+  fields (it does not re-notify), but there is no separate "edit ride" endpoint,
+  and changing a key field (route, exact time, phone, name) creates a new ride
+  rather than moving the old one.

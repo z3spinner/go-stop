@@ -10,10 +10,12 @@ import (
 )
 
 type RideRepository interface {
-	// Save inserts the ride idempotently. If an identical ride already exists
-	// (same phone + normalized driver name + normalized route + exact departure
-	// instant) no row is inserted and the existing ride is returned with
-	// created=false; otherwise the inserted ride is returned with created=true.
+	// Save upserts the ride on its dedup key (phone + normalized driver name +
+	// normalized route + exact departure instant). A new ride is inserted and
+	// returned with created=true. A re-post of an existing ride refreshes its
+	// mutable non-key fields (driver name, route display, flexibility) and
+	// returns the canonical row with created=false; id, posted_at and
+	// feedback_given are preserved.
 	Save(ride domain.Ride) (saved domain.Ride, created bool, err error)
 	FindByID(id string) (domain.Ride, error)
 	FindAll() ([]domain.Ride, error)

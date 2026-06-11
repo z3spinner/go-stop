@@ -31,9 +31,9 @@ func NewPostRide(
 }
 
 // Execute posts a ride idempotently. A re-post of an identical ride (same
-// phone + name + route + exact departure time) returns the existing ride with
-// created=false and does not re-notify searchers, who were already notified when
-// the ride was first posted.
+// phone + name + route + exact departure time) upserts the existing ride's
+// mutable fields, returns it with created=false, and does not re-notify
+// searchers, who were already notified when the ride was first posted.
 func (uc *PostRide) Execute(ride domain.Ride) (saved domain.Ride, created bool, err error) {
 	ride.ID = uuid.New().String()
 	ride.PostedAt = time.Now()

@@ -23,10 +23,13 @@ func NewRideRepo(pool *pgxpool.Pool, graceMins int) *RideRepo {
 	return &RideRepo{q: queries.New(pool), graceMins: int32(graceMins)}
 }
 
-// Save inserts the ride idempotently. If an identical ride already exists — same
-// phone, normalized driver name, normalized route and exact departure instant
-// (the uq_rides_dedup index) — no row is inserted; the existing ride is returned
-// with created=false so the caller can skip re-notifying searchers.
+// Save upserts the ride on its dedup key. If no identical ride exists (same
+// phone, normalized driver name, normalized route and exact departure instant —
+// the uq_rides_dedup index) the ride is inserted and returned with created=true.
+// If one already exists, its mutable non-key fields (driver name, route display,
+// flexibility) are refreshed and the canonical row is returned with
+// created=false; id, posted_at and feedback_given are preserved, and the caller
+// can skip re-notifying searchers.
 func (r *RideRepo) Save(ride domain.Ride) (domain.Ride, bool, error) {
 	_, err := r.q.InsertRide(context.Background(), queries.InsertRideParams{
 		ID:          uuidFrom(ride.ID),
@@ -48,17 +51,18 @@ func (r *RideRepo) Save(ride domain.Ride) (domain.Ride, bool, error) {
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return domain.Ride{}, false, err
 	}
-	existing, err := r.q.GetRideByDedupKey(context.Background(), queries.GetRideByDedupKeyParams{
+	updated, err := r.q.UpdateRideByDedupKey(context.Background(), queries.UpdateRideByDedupKeyParams{
 		Phone:       ride.Phone,
 		DriverName:  ride.DriverName,
 		Origin:      ride.Origin,
 		Destination: ride.Destination,
+		Flexibility: int32(ride.Flexibility),
 		DepartureAt: tsFrom(ride.DepartureAt),
 	})
 	if err != nil {
 		return domain.Ride{}, false, err
 	}
-	return rideFromRow(existing), false, nil
+	return rideFromRow(updated), false, nil
 }
 
 func (r *RideRepo) FindByID(id string) (domain.Ride, error) {

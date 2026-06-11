@@ -651,7 +651,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Idempotent re-post: the identical ride already existed",
+                        "description": "Idempotent re-post: existing ride upserted and returned",
                         "schema": {
                             "$ref": "#/definitions/domain.Ride"
                         }

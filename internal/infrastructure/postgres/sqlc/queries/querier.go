@@ -55,9 +55,6 @@ type Querier interface {
 	GetInterestByID(ctx context.Context, id pgtype.UUID) (Interest, error)
 	GetInterestByRideAndSearcher(ctx context.Context, arg GetInterestByRideAndSearcherParams) (Interest, error)
 	GetRequestByID(ctx context.Context, id pgtype.UUID) (Request, error)
-	// Fetch the ride that owns a given dedup key (used after InsertRide hits a
-	// conflict). Mirrors the unique index in migration 014.
-	GetRideByDedupKey(ctx context.Context, arg GetRideByDedupKeyParams) (Ride, error)
 	GetRideByID(ctx context.Context, id pgtype.UUID) (Ride, error)
 	GetRideEventCounts(ctx context.Context) (GetRideEventCountsRow, error)
 	GetRideStatsTotals(ctx context.Context) (GetRideStatsTotalsRow, error)
@@ -122,6 +119,12 @@ type Querier interface {
 	// as a search fallback when the exact lookup returns nothing — NEVER for the
 	// notification matching path, where a loose match would ping the wrong driver.
 	SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyParams) ([]Ride, error)
+	// Upsert tail for an idempotent re-post: when InsertRide hits the dedup-key
+	// conflict, refresh the mutable non-key fields and return the canonical row.
+	// id, phone, departure_at, posted_at and feedback_given are deliberately kept;
+	// the generated *_norm columns recompute from the new raw values (to the same
+	// key, since the key matched). Matches the uq_rides_dedup index from migration 014.
+	UpdateRideByDedupKey(ctx context.Context, arg UpdateRideByDedupKeyParams) (Ride, error)
 	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

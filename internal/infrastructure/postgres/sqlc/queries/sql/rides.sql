@@ -1,23 +1,30 @@
 -- name: InsertRide :one
 -- Idempotent insert. ON CONFLICT on the dedup key (phone + normalized driver
 -- name + normalized route + exact departure instant) means a re-posted ride
--- inserts nothing and returns zero rows; the caller then re-reads the existing
--- ride via GetRideByDedupKey.
+-- inserts nothing and returns zero rows; the caller then upserts the existing
+-- ride's mutable fields via UpdateRideByDedupKey.
 INSERT INTO rides (id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (phone, driver_name_norm, origin_norm, destination_norm, departure_at) DO NOTHING
 RETURNING id;
 
--- name: GetRideByDedupKey :one
--- Fetch the ride that owns a given dedup key (used after InsertRide hits a
--- conflict). Mirrors the unique index in migration 014.
-SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
-FROM rides
-WHERE phone = $1
+-- name: UpdateRideByDedupKey :one
+-- Upsert tail for an idempotent re-post: when InsertRide hits the dedup-key
+-- conflict, refresh the mutable non-key fields and return the canonical row.
+-- id, phone, departure_at, posted_at and feedback_given are deliberately kept;
+-- the generated *_norm columns recompute from the new raw values (to the same
+-- key, since the key matched). Matches the uq_rides_dedup index from migration 014.
+UPDATE rides SET
+  driver_name = sqlc.arg(driver_name),
+  origin      = sqlc.arg(origin),
+  destination = sqlc.arg(destination),
+  flexibility = sqlc.arg(flexibility)
+WHERE phone = sqlc.arg(phone)
   AND driver_name_norm = route_norm(sqlc.arg(driver_name)::text)
   AND origin_norm = route_norm(sqlc.arg(origin)::text)
   AND destination_norm = route_norm(sqlc.arg(destination)::text)
-  AND departure_at = sqlc.arg(departure_at);
+  AND departure_at = sqlc.arg(departure_at)
+RETURNING id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm;
 
 -- name: GetRideByID :one
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
