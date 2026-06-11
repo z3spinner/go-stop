@@ -32,6 +32,7 @@ import type {
 	Config,
 	VapidKey,
 	PostRideBody,
+	UpdateRideBody,
 	PostRequestBody,
 	SubscriptionBody,
 	RideSearchParams
@@ -73,6 +74,8 @@ export const api = {
 		// public — no phone (the detail page is shareable; contact is gated via interests)
 		get: (id: string) => unwrap<PublicRide>(gen.getRide(id)),
 		post: (body: PostRideBody) => unwrap<Ride>(gen.createRide(body)),
+		// In-place edit of an owned ride (route, time, flexibility). Phone authorizes.
+		update: (id: string, body: UpdateRideBody) => unwrap<Ride>(gen.updateRide(id, body)),
 		del: (id: string, phone: string) => unwrap<null>(gen.deleteRide(id, { phone })),
 		listInterests: (id: string, phone: string) =>
 			unwrap<InterestListItem[]>(gen.listRideInterests(id, phoneHeader(phone))),

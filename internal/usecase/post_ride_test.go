@@ -16,8 +16,11 @@ import (
 
 type mockRideRepo struct {
 	saved   []domain.Ride
+	updated []domain.Ride
 	byID    map[string]domain.Ride
 	saveErr error
+	// updateErr, when set, makes UpdateByID fail (e.g. repository.ErrDuplicateRide).
+	updateErr error
 	// dup, when set, makes Save report the ride as a pre-existing duplicate:
 	// it returns dup with created=false and does not record a new save.
 	dup *domain.Ride
@@ -32,6 +35,16 @@ func (m *mockRideRepo) Save(r domain.Ride) (domain.Ride, bool, error) {
 	}
 	m.saved = append(m.saved, r)
 	return r, true, nil
+}
+func (m *mockRideRepo) UpdateByID(r domain.Ride) (domain.Ride, error) {
+	if m.updateErr != nil {
+		return domain.Ride{}, m.updateErr
+	}
+	m.updated = append(m.updated, r)
+	if m.byID != nil {
+		m.byID[r.ID] = r
+	}
+	return r, nil
 }
 func (m *mockRideRepo) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.byID[id]

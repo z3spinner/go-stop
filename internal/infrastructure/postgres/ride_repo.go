@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/z3spinner/go-stop/internal/boundaries/repository"
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres/sqlc/queries"
 )
@@ -63,6 +65,30 @@ func (r *RideRepo) Save(ride domain.Ride) (domain.Ride, bool, error) {
 		return domain.Ride{}, false, err
 	}
 	return rideFromRow(updated), false, nil
+}
+
+// UpdateByID edits a ride in place: route, departure time, derived date/expiry
+// and flexibility. id, driver_name, phone, posted_at and feedback_given are
+// preserved (the ride keeps its identity, so interests survive). A collision
+// with the driver's own dedup key surfaces as repository.ErrDuplicateRide.
+func (r *RideRepo) UpdateByID(ride domain.Ride) (domain.Ride, error) {
+	row, err := r.q.UpdateRideByID(context.Background(), queries.UpdateRideByIDParams{
+		ID:          uuidFrom(ride.ID),
+		Origin:      ride.Origin,
+		Destination: ride.Destination,
+		Date:        dateFrom(ride.Date),
+		DepartureAt: tsFrom(ride.DepartureAt),
+		Flexibility: int32(ride.Flexibility),
+		ExpiresAt:   tsFrom(ride.ExpiresAt),
+	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.Ride{}, repository.ErrDuplicateRide
+		}
+		return domain.Ride{}, err
+	}
+	return rideFromRow(row), nil
 }
 
 func (r *RideRepo) FindByID(id string) (domain.Ride, error) {

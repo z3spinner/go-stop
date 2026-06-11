@@ -95,6 +95,9 @@
 		</div>
 	{/if}
 
-	<button type="button" class="btn btn-danger btn-delete" data-id={ride.ID} data-phone={phone} disabled={deleted || !canDelete} onclick={del}>{m.btnDelete()}</button>
+	<div class="card-actions mt-2 flex gap-2">
+		<a class="btn btn-edit" href="/rides/{ride.ID}/edit">{m.btnEdit()}</a>
+		<button type="button" class="btn btn-danger btn-delete" data-id={ride.ID} data-phone={phone} disabled={deleted || !canDelete} onclick={del}>{m.btnDelete()}</button>
+	</div>
 	<div class="delete-msg" id="msg-{ride.ID}">{delMsg}</div>
 </div>

@@ -10,8 +10,10 @@ import (
 )
 
 type NotificationQueueRepository interface {
-	// Enqueue adds a ride↔request pair. Ignores duplicates (ON CONFLICT DO NOTHING).
-	Enqueue(rideID, requestID, searcherPhone string) error
+	// Enqueue adds a ride↔request pair, ignoring duplicates (ON CONFLICT DO
+	// NOTHING). Returns true when the pair was newly inserted, false when it
+	// already existed — callers push only newly-matched searchers.
+	Enqueue(rideID, requestID, searcherPhone string) (inserted bool, err error)
 
 	// FindPending returns entries due for (re-)notification:
 	//   - sent_count < maxRetries

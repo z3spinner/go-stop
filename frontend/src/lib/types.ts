@@ -53,13 +53,14 @@ import type {
 	HandlerVapidKeyResponse,
 	// Request bodies / params — keep as-is (callers build these, optionality is fine)
 	HandlerPostRideBody as PostRideBody,
+	HandlerUpdateRideBody as UpdateRideBody,
 	HandlerPostRequestBody as PostRequestBody,
 	HandlerSubscriptionBody as SubscriptionBody,
 	ListRidesParams as RideSearchParams
 } from './api/generated/go-stop-api';
 
 // Re-export request body / param aliases unchanged
-export type { PostRideBody, PostRequestBody, SubscriptionBody, RideSearchParams };
+export type { PostRideBody, UpdateRideBody, PostRequestBody, SubscriptionBody, RideSearchParams };
 
 // ── Response entity aliases (all fields required) ────────────────────────────
 export type Ride = DeepRequired<DomainRide>;

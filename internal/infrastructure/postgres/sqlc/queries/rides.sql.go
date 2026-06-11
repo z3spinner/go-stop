@@ -301,8 +301,8 @@ type InsertRideParams struct {
 
 // Idempotent insert. ON CONFLICT on the dedup key (phone + normalized driver
 // name + normalized route + exact departure instant) means a re-posted ride
-// inserts nothing and returns zero rows; the caller then re-reads the existing
-// ride via GetRideByDedupKey.
+// inserts nothing and returns zero rows; the caller then upserts the existing
+// ride's mutable fields via UpdateRideByDedupKey.
 func (q *Queries) InsertRide(ctx context.Context, arg InsertRideParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, insertRide,
 		arg.ID,
@@ -732,6 +732,63 @@ func (q *Queries) UpdateRideByDedupKey(ctx context.Context, arg UpdateRideByDedu
 		arg.Flexibility,
 		arg.Phone,
 		arg.DepartureAt,
+	)
+	var i Ride
+	err := row.Scan(
+		&i.ID,
+		&i.DriverName,
+		&i.Phone,
+		&i.Origin,
+		&i.Destination,
+		&i.Date,
+		&i.DepartureAt,
+		&i.Flexibility,
+		&i.PostedAt,
+		&i.ExpiresAt,
+		&i.FeedbackGiven,
+		&i.OriginNorm,
+		&i.DestinationNorm,
+		&i.DriverNameNorm,
+	)
+	return i, err
+}
+
+const updateRideByID = `-- name: UpdateRideByID :one
+UPDATE rides SET
+  origin       = $1,
+  destination  = $2,
+  date         = $3,
+  departure_at = $4,
+  flexibility  = $5,
+  expires_at   = $6
+WHERE id = $7
+RETURNING id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
+`
+
+type UpdateRideByIDParams struct {
+	Origin      string             `db:"origin"`
+	Destination string             `db:"destination"`
+	Date        pgtype.Date        `db:"date"`
+	DepartureAt pgtype.Timestamptz `db:"departure_at"`
+	Flexibility int32              `db:"flexibility"`
+	ExpiresAt   pgtype.Timestamptz `db:"expires_at"`
+	ID          pgtype.UUID        `db:"id"`
+}
+
+// In-place edit of a ride the driver owns. Only route, departure time, derived
+// date/expiry and flexibility change; id, driver_name, phone, posted_at and
+// feedback_given are preserved, so interests (tied to the ride id) survive. The
+// generated *_norm columns recompute from the new origin/destination. A clash
+// with the driver's own uq_rides_dedup key surfaces as a unique violation.
+func (q *Queries) UpdateRideByID(ctx context.Context, arg UpdateRideByIDParams) (Ride, error) {
+	row := q.db.QueryRow(ctx, updateRideByID,
+		arg.Origin,
+		arg.Destination,
+		arg.Date,
+		arg.DepartureAt,
+		arg.Flexibility,
+		arg.ExpiresAt,
+		arg.ID,
 	)
 	var i Ride
 	err := row.Scan(

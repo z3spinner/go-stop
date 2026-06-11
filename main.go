@@ -58,6 +58,7 @@ func main() {
 	feedbackQueueRepo := postgres.NewFeedbackQueueRepo(pool)
 
 	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier)
+	updateRide := usecase.NewUpdateRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier)
 	postRequest := usecase.NewPostRequest(requestRepo, rideRepo, subRepo, notifier)
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
@@ -95,7 +96,7 @@ func main() {
 		}
 	}
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
+	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 	requestH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, requestRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
@@ -171,6 +172,7 @@ func main() {
 		api.POST("/rides", rideH.Post)
 		api.GET("/rides", rideH.List)
 		api.GET("/rides/:id", rideH.Get)
+		api.PUT("/rides/:id", rideH.Update)
 		api.DELETE("/rides/:id", rideH.Delete)
 		api.GET("/rides/:id/requests", rideH.ListMatchingRequests)
 		api.POST("/rides/:id/feedback", feedbackH.Post)

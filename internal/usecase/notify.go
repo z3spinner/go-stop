@@ -39,6 +39,22 @@ func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRep
 	}
 }
 
+// enqueueAndNotifyMatches pushes a "ride available" notification to each matching
+// searcher not already notified for this ride. Enqueue reports whether the
+// ride↔request pair was newly recorded; only new pairs are pushed, so re-running
+// matching after a ride edit never re-pings an earlier match. On a fresh post
+// every match is new, so behaviour is unchanged.
+func enqueueAndNotifyMatches(ride domain.Ride, matches []domain.Request, queue repository.NotificationQueueRepository, subs repository.SubscriptionRepository, notifier notification.Notifier) {
+	for _, req := range matches {
+		inserted, _ := queue.Enqueue(ride.ID, req.ID, req.Phone)
+		if !inserted {
+			continue // already notified for this ride
+		}
+		NotifySearcher(req.Phone, ride, subs, notifier)
+		_ = queue.MarkSentByRideAndRequest(ride.ID, req.ID)
+	}
+}
+
 func NotifySearcher(phone string, ride domain.Ride, subs repository.SubscriptionRepository, notifier notification.Notifier) {
 	msg := domain.Message{
 		Title:       "Ride available!",

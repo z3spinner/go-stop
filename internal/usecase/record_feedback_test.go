@@ -22,6 +22,7 @@ type mockRideRepoFeedback struct {
 func (m *mockRideRepoFeedback) Save(rd domain.Ride) (domain.Ride, bool, error) {
 	return rd, true, nil
 }
+func (m *mockRideRepoFeedback) UpdateByID(rd domain.Ride) (domain.Ride, error) { return rd, nil }
 func (m *mockRideRepoFeedback) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.rides[id]
 	if !ok {
