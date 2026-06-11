@@ -29,7 +29,9 @@ type Querier interface {
 	DeleteSubscription(ctx context.Context, phone string) error
 	// Removes a specific device subscription (e.g. when push returns 410 Gone).
 	DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error
-	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) error
+	// Returns rows affected: 1 when a new ride↔request pair is inserted, 0 when it
+	// already existed. Callers use this to notify only newly-matched searchers.
+	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) (int64, error)
 	// Inserts a feedback task for every ride whose window has started (departure in
 	// the past, but within the bound), that hasn't been answered, and isn't already
 	// queued. send_after = window end (departure + flexibility minutes) + 1 hour.
@@ -73,8 +75,8 @@ type Querier interface {
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
 	// Idempotent insert. ON CONFLICT on the dedup key (phone + normalized driver
 	// name + normalized route + exact departure instant) means a re-posted ride
-	// inserts nothing and returns zero rows; the caller then re-reads the existing
-	// ride via GetRideByDedupKey.
+	// inserts nothing and returns zero rows; the caller then upserts the existing
+	// ride's mutable fields via UpdateRideByDedupKey.
 	InsertRide(ctx context.Context, arg InsertRideParams) (pgtype.UUID, error)
 	InsertRideEvent(ctx context.Context, arg InsertRideEventParams) error
 	InsertRideStat(ctx context.Context, arg InsertRideStatParams) error
@@ -125,6 +127,12 @@ type Querier interface {
 	// the generated *_norm columns recompute from the new raw values (to the same
 	// key, since the key matched). Matches the uq_rides_dedup index from migration 014.
 	UpdateRideByDedupKey(ctx context.Context, arg UpdateRideByDedupKeyParams) (Ride, error)
+	// In-place edit of a ride the driver owns. Only route, departure time, derived
+	// date/expiry and flexibility change; id, driver_name, phone, posted_at and
+	// feedback_given are preserved, so interests (tied to the ride id) survive. The
+	// generated *_norm columns recompute from the new origin/destination. A clash
+	// with the driver's own uq_rides_dedup key surfaces as a unique violation.
+	UpdateRideByID(ctx context.Context, arg UpdateRideByIDParams) (Ride, error)
 	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

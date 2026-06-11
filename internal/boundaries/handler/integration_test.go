@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/z3spinner/go-stop/internal/boundaries/handler"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -75,6 +76,7 @@ func setupRouter() *gin.Engine {
 	n := &noopNotifier{}
 
 	postRide := usecase.NewPostRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n)
+	updateRide := usecase.NewUpdateRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n)
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)
@@ -99,7 +101,7 @@ func setupRouter() *gin.Engine {
 	statsH := handler.NewStatsHandler(getStats)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
+	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
 	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
@@ -108,6 +110,7 @@ func setupRouter() *gin.Engine {
 	r.POST("/api/rides", rideH.Post)
 	r.GET("/api/rides", rideH.List)
 	r.GET("/api/rides/:id", rideH.Get)
+	r.PUT("/api/rides/:id", rideH.Update)
 	r.DELETE("/api/rides/:id", rideH.Delete)
 	r.GET("/api/rides/:id/requests", rideH.ListMatchingRequests)
 	r.POST("/api/rides/:id/feedback", feedbackH.Post)
@@ -148,6 +151,24 @@ func postJSON(r *gin.Engine, path string, body interface{}) *httptest.ResponseRe
 func getReq(r *gin.Engine, path string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, path, nil)
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func putJSON(r *gin.Engine, path string, body interface{}) *httptest.ResponseRecorder {
+	b, _ := json.Marshal(body)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPut, path, bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	return w
+}
+
+// getWithPhone issues a GET with the owner X-Phone header (driver-only views).
+func getWithPhone(r *gin.Engine, path, phone string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("X-Phone", phone)
 	r.ServeHTTP(w, req)
 	return w
 }
@@ -282,6 +303,120 @@ func TestHTTP_PostRide_IsIdempotent(t *testing.T) {
 	json.Unmarshal(wList.Body.Bytes(), &rides)
 	if len(rides) != 2 {
 		t.Errorf("expected 2 rides after dedup, got %d", len(rides))
+	}
+}
+
+func TestHTTP_UpdateRide_EditsInPlaceAndKeepsInterest(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	id := ride["ID"].(string)
+
+	// A searcher expresses interest in the original ride.
+	wi := postJSON(r, "/api/rides/"+id+"/interest", map[string]interface{}{
+		"phone": "5550002", "name": "Bob",
+	})
+	if wi.Code != http.StatusCreated {
+		t.Fatalf("express interest: expected 201, got %d: %s", wi.Code, wi.Body.String())
+	}
+
+	// Driver edits the route, time and flexibility.
+	wu := putJSON(r, "/api/rides/"+id, map[string]interface{}{
+		"phone": "5550001", "origin": "Saillans", "destination": "Die",
+		"departure_at": "2030-06-01T17:30:00Z", "flexibility": 60,
+	})
+	if wu.Code != http.StatusOK {
+		t.Fatalf("update: expected 200, got %d: %s", wu.Code, wu.Body.String())
+	}
+	var updated map[string]interface{}
+	json.Unmarshal(wu.Body.Bytes(), &updated)
+	if updated["ID"] != id {
+		t.Errorf("edit must keep the ride id: got %v", updated["ID"])
+	}
+	if updated["Destination"] != "Die" || updated["DriverName"] != "Alice" {
+		t.Errorf("unexpected updated ride: %+v", updated)
+	}
+	if updated["Flexibility"].(float64) != 60 {
+		t.Errorf("flexibility not updated: %v", updated["Flexibility"])
+	}
+
+	// The interest survives the edit (same ride id).
+	wl := getWithPhone(r, "/api/rides/"+id+"/interests", "5550001")
+	var interests []map[string]interface{}
+	json.Unmarshal(wl.Body.Bytes(), &interests)
+	if len(interests) != 1 {
+		t.Errorf("expected the interest to survive the edit, got %d", len(interests))
+	}
+}
+
+func TestHTTP_UpdateRide_WrongPhone_Returns403(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	id := ride["ID"].(string)
+
+	wu := putJSON(r, "/api/rides/"+id, map[string]interface{}{
+		"phone": "5559999", "origin": "A", "destination": "C",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	if wu.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", wu.Code)
+	}
+}
+
+func TestHTTP_UpdateRide_NotFound_Returns404(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	wu := putJSON(r, "/api/rides/"+uuid.New().String(), map[string]interface{}{
+		"phone": "5550001", "origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	if wu.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", wu.Code)
+	}
+}
+
+func TestHTTP_UpdateRide_DuplicateKey_Returns409(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Two rides by the same driver on different routes.
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Die",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var rideB map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &rideB)
+	idB := rideB["ID"].(string)
+
+	// Editing ride B to exactly match ride A's dedup key conflicts.
+	wu := putJSON(r, "/api/rides/"+idB, map[string]interface{}{
+		"phone": "5550001", "origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	if wu.Code != http.StatusConflict {
+		t.Errorf("expected 409, got %d: %s", wu.Code, wu.Body.String())
 	}
 }
 

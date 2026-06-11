@@ -26,6 +26,22 @@ WHERE phone = sqlc.arg(phone)
   AND departure_at = sqlc.arg(departure_at)
 RETURNING id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm;
 
+-- name: UpdateRideByID :one
+-- In-place edit of a ride the driver owns. Only route, departure time, derived
+-- date/expiry and flexibility change; id, driver_name, phone, posted_at and
+-- feedback_given are preserved, so interests (tied to the ride id) survive. The
+-- generated *_norm columns recompute from the new origin/destination. A clash
+-- with the driver's own uq_rides_dedup key surfaces as a unique violation.
+UPDATE rides SET
+  origin       = sqlc.arg(origin),
+  destination  = sqlc.arg(destination),
+  date         = sqlc.arg(date),
+  departure_at = sqlc.arg(departure_at),
+  flexibility  = sqlc.arg(flexibility),
+  expires_at   = sqlc.arg(expires_at)
+WHERE id = sqlc.arg(id)
+RETURNING id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm;
+
 -- name: GetRideByID :one
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides WHERE id = $1;

@@ -53,12 +53,6 @@ func (uc *PostRide) Execute(ride domain.Ride) (saved domain.Ride, created bool, 
 	if err != nil {
 		return domain.Ride{}, false, err
 	}
-
-	for _, req := range matching {
-		// Enqueue for retry tracking regardless of subscription state
-		_ = uc.notifQueue.Enqueue(saved.ID, req.ID, req.Phone)
-		NotifySearcher(req.Phone, saved, uc.subs, uc.notifier)
-		_ = uc.notifQueue.MarkSentByRideAndRequest(saved.ID, req.ID)
-	}
+	enqueueAndNotifyMatches(saved, matching, uc.notifQueue, uc.subs, uc.notifier)
 	return saved, true, nil
 }

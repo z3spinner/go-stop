@@ -324,6 +324,19 @@ definitions:
           registered).
         type: integer
     type: object
+  handler.UpdateRideBody:
+    properties:
+      departure_at:
+        type: string
+      destination:
+        type: string
+      flexibility:
+        type: integer
+      origin:
+        type: string
+      phone:
+        type: string
+    type: object
   handler.VapidKeyResponse:
     properties:
       publicKey:
@@ -822,6 +835,51 @@ paths:
             $ref: '#/definitions/handler.PublicRide'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
+    put:
+      consumes:
+      - application/json
+      operationId: updateRide
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated ride fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateRideBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Ride'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:

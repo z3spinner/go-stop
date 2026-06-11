@@ -17,6 +17,11 @@ type RideRepository interface {
 	// returns the canonical row with created=false; id, posted_at and
 	// feedback_given are preserved.
 	Save(ride domain.Ride) (saved domain.Ride, created bool, err error)
+	// UpdateByID edits a ride in place by its id (route, departure time,
+	// derived date/expiry, flexibility), preserving driver_name, phone,
+	// posted_at and feedback_given. Returns ErrDuplicateRide if the edit
+	// collides with another of the driver's rides on the dedup key.
+	UpdateByID(ride domain.Ride) (domain.Ride, error)
 	FindByID(id string) (domain.Ride, error)
 	FindAll() ([]domain.Ride, error)
 	FindByPhone(phone string) ([]domain.Ride, error)

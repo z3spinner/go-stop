@@ -53,6 +53,7 @@ func attachInterestCounts(rides []PublicRide, interestRepo repository.InterestRe
 
 type RideHandler struct {
 	postRide            *usecase.PostRide
+	updateRide          *usecase.UpdateRide
 	getRides            *usecase.GetRides
 	getMyRides          *usecase.GetMyRides
 	searchRides         *usecase.SearchRides
@@ -66,6 +67,7 @@ type RideHandler struct {
 
 func NewRideHandler(
 	postRide *usecase.PostRide,
+	updateRide *usecase.UpdateRide,
 	getRides *usecase.GetRides,
 	getMyRides *usecase.GetMyRides,
 	searchRides *usecase.SearchRides,
@@ -78,6 +80,7 @@ func NewRideHandler(
 ) *RideHandler {
 	return &RideHandler{
 		postRide:            postRide,
+		updateRide:          updateRide,
 		getRides:            getRides,
 		getMyRides:          getMyRides,
 		searchRides:         searchRides,
@@ -145,6 +148,65 @@ func (h *RideHandler) Post(c *gin.Context) {
 		go func() { _ = h.statRepo.RecordRide(ride.Origin, ride.Destination) }()
 	}
 	c.JSON(http.StatusCreated, saved)
+}
+
+type updateRideRequest struct {
+	Phone       string `json:"phone" binding:"required"`
+	Origin      string `json:"origin" binding:"required"`
+	Destination string `json:"destination" binding:"required"`
+	DepartureAt string `json:"departure_at" binding:"required"`
+	Flexibility int    `json:"flexibility"`
+}
+
+// Update edits a ride the caller owns in place (route, time, flexibility). Driver
+// name and phone are fixed; phone in the body authorizes the edit. The ride keeps
+// its id, so interests survive.
+// @ID       updateRide
+// @Tags     rides
+// @Accept   json
+// @Produce  json
+// @Param    id    path  string                  true  "Ride ID"
+// @Param    body  body  handler.UpdateRideBody  true  "Updated ride fields"
+// @Success  200  {object}  domain.Ride
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  409  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /rides/{id} [put]
+func (h *RideHandler) Update(c *gin.Context) {
+	var req updateRideRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	dept, err := time.Parse(time.RFC3339, req.DepartureAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid departure_at, use RFC3339"})
+		return
+	}
+	updated, err := h.updateRide.Execute(
+		c.Param("id"),
+		normalizePhone(req.Phone),
+		normalizeLocation(req.Origin),
+		normalizeLocation(req.Destination),
+		dept,
+		domain.Flexibility(req.Flexibility),
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, usecase.ErrNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "ride not found"})
+		case errors.Is(err, usecase.ErrUnauthorized):
+			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+		case errors.Is(err, repository.ErrDuplicateRide):
+			c.JSON(http.StatusConflict, gin.H{"error": "you already have an identical ride"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, updated)
 }
 
 // List returns rides. With an X-Phone header it returns the caller's own rides

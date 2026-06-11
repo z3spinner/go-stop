@@ -34,6 +34,16 @@ type DeleteRideBody struct {
 	Phone string `json:"phone"`
 }
 
+// UpdateRideBody is the body for PUT /rides/{id}. Driver name and phone cannot be
+// changed; phone authorizes the edit.
+type UpdateRideBody struct {
+	Phone       string `json:"phone"`
+	Origin      string `json:"origin"`
+	Destination string `json:"destination"`
+	DepartureAt string `json:"departure_at"`
+	Flexibility int    `json:"flexibility"`
+}
+
 // ExpressInterestBody is the body for POST /rides/{id}/interest.
 type ExpressInterestBody struct {
 	Phone string `json:"phone"`

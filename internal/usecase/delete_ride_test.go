@@ -18,6 +18,7 @@ type mockRideRepoDelete struct {
 }
 
 func (m *mockRideRepoDelete) Save(rd domain.Ride) (domain.Ride, bool, error) { return rd, true, nil }
+func (m *mockRideRepoDelete) UpdateByID(rd domain.Ride) (domain.Ride, error) { return rd, nil }
 func (m *mockRideRepoDelete) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.rides[id]
 	if !ok {
@@ -74,7 +75,7 @@ func (m *mockRequestRepoDelete) DeleteExpired() error { return nil }
 
 type noopNotifQueue struct{}
 
-func (n *noopNotifQueue) Enqueue(string, string, string) error { return nil }
+func (n *noopNotifQueue) Enqueue(string, string, string) (bool, error) { return true, nil }
 func (n *noopNotifQueue) FindPending(time.Time, int) ([]domain.NotificationQueueEntry, error) {
 	return nil, nil
 }

@@ -215,6 +215,14 @@ export interface HandlerTestPushResponse {
   sent?: number;
 }
 
+export interface HandlerUpdateRideBody {
+  departure_at?: string;
+  destination?: string;
+  flexibility?: number;
+  origin?: string;
+  phone?: string;
+}
+
 export interface HandlerVapidKeyResponse {
   publicKey?: string;
 }
@@ -849,6 +857,11 @@ export const listRides = async (params?: ListRidesParams, options?: RequestInit)
 
 
 
+export type createRideResponse200 = {
+  data: DomainRide
+  status: 200
+}
+
 export type createRideResponse201 = {
   data: DomainRide
   status: 201
@@ -864,7 +877,7 @@ export type createRideResponse500 = {
   status: 500
 }
 
-export type createRideResponseSuccess = (createRideResponse201) & {
+export type createRideResponseSuccess = (createRideResponse200 | createRideResponse201) & {
   headers: Headers;
 };
 export type createRideResponseError = (createRideResponse400 | createRideResponse500) & {
@@ -929,6 +942,67 @@ export const getRide = async (id: string, options?: RequestInit): Promise<getRid
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type updateRideResponse200 = {
+  data: DomainRide
+  status: 200
+}
+
+export type updateRideResponse400 = {
+  data: HandlerErrorResponse
+  status: 400
+}
+
+export type updateRideResponse403 = {
+  data: HandlerErrorResponse
+  status: 403
+}
+
+export type updateRideResponse404 = {
+  data: HandlerErrorResponse
+  status: 404
+}
+
+export type updateRideResponse409 = {
+  data: HandlerErrorResponse
+  status: 409
+}
+
+export type updateRideResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type updateRideResponseSuccess = (updateRideResponse200) & {
+  headers: Headers;
+};
+export type updateRideResponseError = (updateRideResponse400 | updateRideResponse403 | updateRideResponse404 | updateRideResponse409 | updateRideResponse500) & {
+  headers: Headers;
+};
+
+export type updateRideResponse = (updateRideResponseSuccess | updateRideResponseError)
+
+export const getUpdateRideUrl = (id: string,) => {
+
+
+
+
+  return `/rides/${id}`
+}
+
+export const updateRide = async (id: string,
+    handlerUpdateRideBody: HandlerUpdateRideBody, options?: RequestInit): Promise<updateRideResponse> => {
+
+  return customFetch<updateRideResponse>(getUpdateRideUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(handlerUpdateRideBody)
   }
 );}
 

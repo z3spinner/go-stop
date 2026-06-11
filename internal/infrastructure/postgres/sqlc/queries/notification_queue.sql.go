@@ -31,7 +31,7 @@ func (q *Queries) DeleteNotificationsForRide(ctx context.Context, rideID pgtype.
 	return err
 }
 
-const enqueueNotification = `-- name: EnqueueNotification :exec
+const enqueueNotification = `-- name: EnqueueNotification :execrows
 INSERT INTO notification_queue (ride_id, request_id, searcher_phone)
 VALUES ($1, $2, $3)
 ON CONFLICT (ride_id, request_id) DO NOTHING
@@ -43,9 +43,14 @@ type EnqueueNotificationParams struct {
 	SearcherPhone string      `db:"searcher_phone"`
 }
 
-func (q *Queries) EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) error {
-	_, err := q.db.Exec(ctx, enqueueNotification, arg.RideID, arg.RequestID, arg.SearcherPhone)
-	return err
+// Returns rows affected: 1 when a new ride↔request pair is inserted, 0 when it
+// already existed. Callers use this to notify only newly-matched searchers.
+func (q *Queries) EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, enqueueNotification, arg.RideID, arg.RequestID, arg.SearcherPhone)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const findPendingNotifications = `-- name: FindPendingNotifications :many
