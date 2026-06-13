@@ -247,8 +247,8 @@
 	.hero {
 		font-family: 'Fraunces', serif;
 		font-weight: 900;
-		font-size: 82px;
-		line-height: 0.94;
+		font-size: 66px;
+		line-height: 0.96;
 		letter-spacing: -0.02em;
 		margin: 42px 0 0;
 	}
