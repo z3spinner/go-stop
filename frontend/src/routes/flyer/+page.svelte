@@ -54,7 +54,7 @@
 
 <div class="flyer-controls no-print">
 	<div class="lang-row">
-		{#each locales as l}
+		{#each locales as l (l)}
 			<button
 				type="button"
 				class="lang-btn"
