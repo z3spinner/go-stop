@@ -203,5 +203,7 @@
 	"flyerPinMe": "pin me up",
 	"flyerPrint": "Print",
 	"flyerMadeIn": "Made in {place}",
-	"flyerAboutLink": "Print a flyer to share locally"
+	"flyerAboutHeading": "Spread the word",
+	"flyerAboutBody": "Help people nearby discover {siteName}. Print a one-page flyer to pin on café and community noticeboards in your area.",
+	"flyerAboutLink": "Open the printable flyer"
 }

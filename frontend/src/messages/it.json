@@ -203,5 +203,7 @@
 	"flyerPinMe": "da appendere",
 	"flyerPrint": "Stampa",
 	"flyerMadeIn": "Fatto a {place}",
-	"flyerAboutLink": "Stampa un volantino da condividere nella tua zona"
+	"flyerAboutHeading": "Spargi la voce",
+	"flyerAboutBody": "Aiuta le persone della tua zona a scoprire {siteName}. Stampa un volantino di una pagina da appendere nei bar e nelle bacheche della tua zona.",
+	"flyerAboutLink": "Apri il volantino stampabile"
 }

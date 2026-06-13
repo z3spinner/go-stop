@@ -18,6 +18,9 @@
 
 <h1 class="mb-3 text-xl font-semibold">{m.aboutTitle()}</h1>
 <div class="modal-body">{@html m.aboutBody({ siteName: $config.siteName })}</div>
-<p class="mt-4">
-	<a class="underline" href="/flyer">{m.flyerAboutLink()}</a>
-</p>
+
+<div class="modal-body mt-6">
+	<h3>{m.flyerAboutHeading()}</h3>
+	<p>{m.flyerAboutBody({ siteName: $config.siteName })}</p>
+	<p><a href="/flyer">{m.flyerAboutLink()} →</a></p>
+</div>

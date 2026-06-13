@@ -91,9 +91,9 @@
 			<span> · </span>
 			<a class="btn-footer-about underline" href="/about">{m.aboutTitle()}</a>
 			<span> · </span>
-			<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
-			<span> · </span>
 			<a class="btn-footer-flyer underline" href="/flyer">{m.flyerMetaTitle()}</a>
+			<span> · </span>
+			<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
 		</footer>
 	{/if}
 </PullToRefresh>

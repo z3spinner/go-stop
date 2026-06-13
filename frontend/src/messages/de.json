@@ -203,5 +203,7 @@
 	"flyerPinMe": "zum Aushängen",
 	"flyerPrint": "Drucken",
 	"flyerMadeIn": "Gemacht in {place}",
-	"flyerAboutLink": "Drucke einen Aushang für deine Umgebung"
+	"flyerAboutHeading": "Sag es weiter",
+	"flyerAboutBody": "Hilf Leuten in deiner Nähe, {siteName} zu entdecken. Drucke einen einseitigen Aushang für Cafés und Schwarze Bretter in deiner Umgebung.",
+	"flyerAboutLink": "Druckbaren Aushang öffnen"
 }

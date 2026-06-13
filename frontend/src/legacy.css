@@ -510,12 +510,12 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .activity-count { font-weight: 600; color: var(--blue); }
 @media (max-width: 360px) { .activity-stats { grid-template-columns: 1fr; } }
 
-/* Footer stats link */
-.btn-footer-stats, .btn-footer-about {
+/* Footer navigation links — share one style with the privacy button above */
+.btn-footer-stats, .btn-footer-about, .btn-footer-flyer {
   background: none; border: none; font-size: 0.8rem; color: var(--gray-600);
   cursor: pointer; padding: 4px 8px; text-decoration: underline; text-decoration-color: var(--gray-300);
 }
-.btn-footer-stats:hover, .btn-footer-about:hover { color: var(--gray-900); }
+.btn-footer-stats:hover, .btn-footer-about:hover, .btn-footer-flyer:hover { color: var(--gray-900); }
 
 /* Interest / contact consent UI */
 .btn-interest {

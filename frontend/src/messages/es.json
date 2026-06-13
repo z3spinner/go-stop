@@ -203,5 +203,7 @@
 	"flyerPinMe": "para colgar",
 	"flyerPrint": "Imprimir",
 	"flyerMadeIn": "Hecho en {place}",
-	"flyerAboutLink": "Imprime un cartel para compartir en tu zona"
+	"flyerAboutHeading": "Corre la voz",
+	"flyerAboutBody": "Ayuda a la gente de tu zona a descubrir {siteName}. Imprime un cartel de una página para colgar en cafés y tablones de anuncios de tu zona.",
+	"flyerAboutLink": "Abrir el cartel imprimible"
 }

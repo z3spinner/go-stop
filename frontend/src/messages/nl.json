@@ -203,5 +203,7 @@
 	"flyerPinMe": "om op te hangen",
 	"flyerPrint": "Afdrukken",
 	"flyerMadeIn": "Gemaakt in {place}",
-	"flyerAboutLink": "Druk een flyer af om in de buurt te delen"
+	"flyerAboutHeading": "Vertel het verder",
+	"flyerAboutBody": "Help mensen in de buurt {siteName} te ontdekken. Druk een flyer van één pagina af om op te hangen in cafés en op prikborden in de buurt.",
+	"flyerAboutLink": "Open de printbare flyer"
 }
