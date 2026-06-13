@@ -200,5 +200,6 @@
 	"flyerBadgeFree": "Free",
 	"flyerPinMe": "pin me up",
 	"flyerPrint": "Print",
+	"flyerMadeIn": "Made in {place}",
 	"flyerAboutLink": "Print a flyer to share locally"
 }

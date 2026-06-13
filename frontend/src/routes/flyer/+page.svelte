@@ -18,6 +18,14 @@
 
 	let host = $derived(origin.replace(/^https?:\/\//, ''));
 
+	// The accolade adapts per community: strip the "Go Stop" brand prefix and any
+	// trailing punctuation from the site name to get the place (e.g.
+	// "Go Stop Saillans!" → "Saillans"). Empty (e.g. the bare "Go-Stop" default)
+	// hides the accolade.
+	let place = $derived(
+		$config.siteName.replace(/^go[\s-]*stop[\s-]*/i, '').replace(/[!.\s]+$/, '').trim()
+	);
+
 	const localeNames: Record<Locale, string> = {
 		fr: 'FR', en: 'EN', es: 'ES', it: 'IT', de: 'DE', nl: 'NL', el: 'EL'
 	};
@@ -130,6 +138,10 @@
 				<span>{m.flyerScan({}, { locale: selected })}</span>
 			</div>
 		</div>
+
+		{#if place}
+			<p class="made-in">♥ {m.flyerMadeIn({ place }, { locale: selected })}</p>
+		{/if}
 
 		<div class="foot">
 			<div class="pillrow">
@@ -343,6 +355,17 @@
 		letter-spacing: 0.16em;
 		color: #6c6a5d;
 		text-transform: uppercase;
+	}
+
+	.made-in {
+		margin: 16px auto 0;
+		text-align: center;
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--green-deep);
+		opacity: 0.85;
 	}
 
 	/* margin-top:auto on the footer pools any slack BELOW the badges, keeping the

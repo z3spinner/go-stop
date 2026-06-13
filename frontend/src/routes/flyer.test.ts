@@ -45,4 +45,17 @@ describe('flyer', () => {
 		await fireEvent.click(getByText('Imprimer'));
 		expect(printSpy).toHaveBeenCalled();
 	});
+
+	it('derives the "Made in" place from the site name', async () => {
+		// beforeEach sets siteName "Go-Stop Saillans" → place "Saillans".
+		const { getByText } = render(Flyer);
+		await fireEvent.click(getByText('EN'));
+		expect(getByText((t) => t.includes('Made in Saillans'))).toBeTruthy();
+	});
+
+	it('hides the accolade when the site name has no place', () => {
+		config.set({ siteName: 'Go-Stop', returnDelayHours: 2 });
+		const { queryByText } = render(Flyer);
+		expect(queryByText((t) => /made in|fait à/i.test(t))).toBeNull();
+	});
 });
