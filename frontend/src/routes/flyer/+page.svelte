@@ -145,10 +145,12 @@
 
 		<div class="foot">
 			<div class="pillrow">
-				<span class="pill">{m.flyerBadgeLocal({}, { locale: selected })}</span>
 				<span class="pill">{m.flyerBadgeNoAds({}, { locale: selected })}</span>
+				<span class="pill">{m.flyerBadgeNoTracking({}, { locale: selected })}</span>
+				<span class="pill">{m.flyerBadgeNoCookies({}, { locale: selected })}</span>
 				<span class="pill">{m.flyerBadgeNoAccount({}, { locale: selected })}</span>
 				<span class="pill">{m.flyerBadgeFree({}, { locale: selected })}</span>
+				<span class="pill">{m.flyerBadgeOrganic({}, { locale: selected })}</span>
 			</div>
 			<span class="tear">♺ {m.flyerPinMe({}, { locale: selected })}</span>
 		</div>
@@ -380,7 +382,7 @@
 		border-radius: 999px;
 		padding: 7px 19px;
 	}
-	.tear { margin-left: auto; font-size: 17px; font-style: italic; font-family: 'Fraunces', serif; color: #9a9685; }
+	.tear { margin-left: auto; white-space: nowrap; font-size: 17px; font-style: italic; font-family: 'Fraunces', serif; color: #9a9685; }
 
 	/* ---- print ---- */
 	@media print {
