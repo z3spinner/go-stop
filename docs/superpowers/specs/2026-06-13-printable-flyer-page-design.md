@@ -143,9 +143,12 @@ architecture.)
 
 ### Discoverability
 
-Recommended: add a small `/flyer` link to the existing footer (alongside
-About · Stats). Low-key; the deployer is the primary audience. Easily changed in
-review if you'd rather leave it unlinked or surface it elsewhere.
+Two entry points (both approved):
+
+- A small `/flyer` link in the existing footer, alongside About · Stats.
+- A link from the **About page** (`src/routes/about/+page.svelte`) — e.g. a
+  closing line inviting people to print/share the flyer. Needs a new message key
+  `flyerAboutLink` (added to all seven locale files alongside the others).
 
 ## Testing
 
@@ -173,7 +176,9 @@ review if you'd rather leave it unlinked or surface it elsewhere.
 - `src/routes/flyer.test.ts` — component test.
 
 **Modify**
-- `src/routes/+layout.svelte` — `isFlyer` branch to drop chrome / full-bleed.
-- `src/messages/{fr,en,es,it,de,nl,el}.json` — flyer message keys.
-- `src/routes/+layout.svelte` footer (or wherever) — optional `/flyer` link.
+- `src/routes/+layout.svelte` — `isFlyer` branch to drop chrome / full-bleed,
+  plus a `/flyer` link in the footer.
+- `src/routes/about/+page.svelte` — a closing line linking to `/flyer`.
+- `src/messages/{fr,en,es,it,de,nl,el}.json` — flyer message keys (incl.
+  `flyerAboutLink`).
 - `package.json` — add `qrcode` dependency.
