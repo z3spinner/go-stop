@@ -32,7 +32,7 @@
 
 	// Shrink the URL's font so the full host always fits on one line — live
 	// domains are longer than the dev host and would otherwise overflow.
-	const URL_BASE_PX = 40;
+	const URL_BASE_PX = 48;
 	let urlEl: HTMLSpanElement | undefined = $state();
 	function fitUrl() {
 		if (!urlEl) return;
@@ -157,10 +157,6 @@
 				<span class="label">{m.flyerCtaLabel({}, { locale: selected })}</span>
 				<span class="url" bind:this={urlEl}>{host}</span>
 			</div>
-			<div class="qr">
-				<div class="qrimg">{@html qrSvg}</div>
-				<span>{m.flyerScan({}, { locale: selected })}</span>
-			</div>
 		</div>
 
 		{#if place}
@@ -176,7 +172,9 @@
 				<span class="pill">{m.flyerBadgeFree({}, { locale: selected })}</span>
 				<span class="pill">{m.flyerBadgeOrganic({}, { locale: selected })}</span>
 			</div>
-			<span class="tear">♺ {m.flyerPinMe({}, { locale: selected })}</span>
+			<div class="qr">
+				<div class="qrimg">{@html qrSvg}</div>
+			</div>
 		</div>
 	</div>
 </div>
@@ -362,25 +360,19 @@
 		white-space: nowrap;
 		/* font-size is auto-shrunk in JS (fitUrl) so the whole host always fits */
 	}
-	.dest .qr {
-		background: #fff;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-		padding: 25px;
+	/* QR lives in the footer (bottom-right), where 'pin me up' used to be, so the
+	   URL card above can use the full poster width. */
+	.foot .qr {
+		margin-left: auto;
 		flex: none;
+		background: #fff;
+		border: 1px solid #e6e1d2;
+		border-radius: 12px;
+		padding: 12px;
+		box-shadow: 0 4px 12px rgba(40, 30, 10, 0.1);
 	}
-	.dest .qrimg { width: 116px; height: 116px; }
-	.dest .qrimg :global(svg) { width: 100%; height: 100%; display: block; }
-	.dest .qr span {
-		font-size: 14px;
-		font-weight: 700;
-		letter-spacing: 0.16em;
-		color: #6c6a5d;
-		text-transform: uppercase;
-	}
+	.foot .qrimg { width: 92px; height: 92px; }
+	.foot .qrimg :global(svg) { width: 100%; height: 100%; display: block; }
 
 	.made-in {
 		margin: 16px auto 0;
@@ -405,7 +397,6 @@
 		border-radius: 999px;
 		padding: 7px 19px;
 	}
-	.tear { margin-left: auto; white-space: nowrap; font-size: 17px; font-style: italic; font-family: 'Fraunces', serif; color: #9a9685; }
 
 	/* ---- print ---- */
 	@media print {
