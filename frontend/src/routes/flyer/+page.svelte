@@ -30,6 +30,28 @@
 		fr: 'FR', en: 'EN', es: 'ES', it: 'IT', de: 'DE', nl: 'NL', el: 'EL'
 	};
 
+	// Shrink the URL's font so the full host always fits on one line — live
+	// domains are longer than the dev host and would otherwise overflow.
+	const URL_BASE_PX = 40;
+	let urlEl: HTMLSpanElement | undefined = $state();
+	function fitUrl() {
+		if (!urlEl) return;
+		urlEl.style.fontSize = URL_BASE_PX + 'px';
+		const ratio = urlEl.scrollWidth / urlEl.clientWidth;
+		if (ratio > 1) urlEl.style.fontSize = Math.max(13, (URL_BASE_PX / ratio) * 0.96) + 'px';
+	}
+
+	// Re-fit whenever the host resolves, and on resize. Run once more after the
+	// monospace font loads so the measurement reflects the real glyph widths.
+	$effect(() => {
+		host; // track
+		fitUrl();
+	});
+	$effect(() => {
+		window.addEventListener('resize', fitUrl);
+		return () => window.removeEventListener('resize', fitUrl);
+	});
+
 	onMount(async () => {
 		selected = getLocale();
 		origin = window.location.origin;
@@ -42,6 +64,8 @@
 		} catch {
 			/* leave QR empty if generation fails */
 		}
+		await document.fonts?.ready;
+		fitUrl();
 	});
 </script>
 
@@ -131,7 +155,7 @@
 		<div class="dest">
 			<div class="main">
 				<span class="label">{m.flyerCtaLabel({}, { locale: selected })}</span>
-				<span class="url">{host}</span>
+				<span class="url" bind:this={urlEl}>{host}</span>
 			</div>
 			<div class="qr">
 				<div class="qrimg">{@html qrSvg}</div>
@@ -336,8 +360,7 @@
 		letter-spacing: -0.03em;
 		line-height: 1.05;
 		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+		/* font-size is auto-shrunk in JS (fitUrl) so the whole host always fits */
 	}
 	.dest .qr {
 		background: #fff;
