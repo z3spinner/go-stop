@@ -30,19 +30,24 @@
 		fr: 'FR', en: 'EN', es: 'ES', it: 'IT', de: 'DE', nl: 'NL', el: 'EL'
 	};
 
-	// Shrink the URL's font so the full host always fits on one line — live
-	// domains are longer than the dev host and would otherwise overflow.
-	const URL_BASE_PX = 48;
+	// Size the URL to fill the card width on a single line: short hosts grow,
+	// long hosts shrink — always edge-to-edge, never wrapping.
+	const URL_MAX_PX = 64;
+	const URL_MIN_PX = 15;
 	let urlEl: HTMLSpanElement | undefined = $state();
 	function fitUrl() {
-		if (!urlEl) return;
-		urlEl.style.fontSize = URL_BASE_PX + 'px';
-		const ratio = urlEl.scrollWidth / urlEl.clientWidth;
-		if (ratio > 1) urlEl.style.fontSize = Math.max(13, (URL_BASE_PX / ratio) * 0.96) + 'px';
+		const el = urlEl;
+		if (!el || !host) return;
+		const REF = 80;
+		el.style.fontSize = REF + 'px';
+		const textW = el.scrollWidth;
+		const availW = el.clientWidth;
+		if (!textW || !availW) return;
+		const fill = (availW / textW) * REF * 0.99;
+		el.style.fontSize = Math.min(URL_MAX_PX, Math.max(URL_MIN_PX, fill)) + 'px';
 	}
 
-	// Re-fit whenever the host resolves, and on resize. Run once more after the
-	// monospace font loads so the measurement reflects the real glyph widths.
+	// Re-fit when the host resolves, on resize, and after the monospace font loads.
 	$effect(() => {
 		host; // track
 		fitUrl();
@@ -354,11 +359,10 @@
 	.dest .url {
 		font-family: 'Space Mono', monospace;
 		font-weight: 700;
-		font-size: 40px;
+		font-size: 50px; /* overridden by fitUrl to fill the card width on one line */
 		letter-spacing: -0.03em;
 		line-height: 1.05;
 		white-space: nowrap;
-		/* font-size is auto-shrunk in JS (fitUrl) so the whole host always fits */
 	}
 	/* QR lives in the footer (bottom-right), where 'pin me up' used to be, so the
 	   URL card above can use the full poster width. */
