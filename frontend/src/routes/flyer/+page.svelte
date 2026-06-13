@@ -100,7 +100,7 @@
 		<h1 class="hero">
 			{m.flyerHeadlineLine1({}, { locale: selected })}<em>{m.flyerHeadlineLine2({}, { locale: selected })}</em>
 		</h1>
-		<p class="sub">{m.flyerSubtitle({}, { locale: selected })}</p>
+		<p class="sub">{m.tagline({}, { locale: selected })}</p>
 
 		<div class="route">
 			<div class="stop">
@@ -134,7 +134,7 @@
 		<div class="foot">
 			<div class="pillrow">
 				<span class="pill">{m.flyerBadgeLocal({}, { locale: selected })}</span>
-				<span class="pill">{m.flyerBadgeNoApp({}, { locale: selected })}</span>
+				<span class="pill">{m.flyerBadgeNoAds({}, { locale: selected })}</span>
 				<span class="pill">{m.flyerBadgeNoAccount({}, { locale: selected })}</span>
 				<span class="pill">{m.flyerBadgeFree({}, { locale: selected })}</span>
 			</div>
@@ -247,8 +247,9 @@
 		font-size: 26px;
 		line-height: 1.35;
 		color: #5b5a4e;
-		margin-top: 24px;
+		margin: 24px auto 0;
 		max-width: 540px;
+		text-align: center;
 	}
 
 	.route { display: flex; justify-content: space-between; position: relative; margin: 44px 6px 0; }
