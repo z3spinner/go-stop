@@ -152,7 +152,9 @@
 	}
 }
 
+/* Flyer-driven: the only printable route today is /flyer. Tight margins so the
+   ~190mm poster fits A4 width; the poster paints its own background. */
 @page {
 	size: A4 portrait;
-	margin: 12mm;
+	margin: 8mm;
 }

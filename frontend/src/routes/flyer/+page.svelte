@@ -181,7 +181,7 @@
 		--green: #1f9d3a; --green-deep: #15772b; --ink: #1f201a; --paper: #fbf6ea;
 		position: relative;
 		width: 720px;
-		height: 1018px;
+		min-height: 1018px;
 		background: var(--paper);
 		color: var(--ink);
 		border-radius: 6px;
@@ -233,8 +233,8 @@
 	.hero {
 		font-family: 'Fraunces', serif;
 		font-weight: 900;
-		font-size: 92px;
-		line-height: 0.92;
+		font-size: 82px;
+		line-height: 0.94;
 		letter-spacing: -0.02em;
 		margin: 42px 0 0;
 	}

@@ -32,9 +32,9 @@ describe('flyer', () => {
 	it('switches flyer language on demand', async () => {
 		const { getByText } = render(Flyer);
 		await fireEvent.click(getByText('EN'));
-		expect(getByText('Need a lift?')).toBeTruthy();
+		expect(getByText('Need a ride?')).toBeTruthy();
 		await fireEvent.click(getByText('FR'));
-		expect(getByText((t) => t.includes("Besoin d'un trajet"))).toBeTruthy();
+		expect(getByText((t) => t.includes("Besoin d'un stop"))).toBeTruthy();
 	});
 
 	it('print button calls window.print', async () => {
