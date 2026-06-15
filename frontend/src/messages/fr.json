@@ -203,5 +203,12 @@
 	"flyerMadeIn": "Fait à {place}",
 	"flyerAboutHeading": "Faites passer le mot",
 	"flyerAboutBody": "Aidez vos voisins à découvrir {siteName}. Imprimez une affiche d'une page à punaiser dans les cafés et sur les panneaux d'affichage près de chez vous.",
-	"flyerAboutLink": "Ouvrir l'affiche imprimable"
+	"flyerAboutLink": "Ouvrir l'affiche imprimable",
+	"repeatLabel": "Répéter",
+	"repeatNone": "Ne pas répéter",
+	"repeatDaily": "Chaque jour",
+	"repeatWeekdays": "En semaine",
+	"repeatWeekly": "Chaque semaine",
+	"repeatCountLabel": "Nombre de trajets",
+	"repeatSummary": "Crée {count} trajets · {first} → {last}"
 }

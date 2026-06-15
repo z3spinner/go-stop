@@ -203,5 +203,12 @@
 	"flyerMadeIn": "Gemaakt in {place}",
 	"flyerAboutHeading": "Vertel het verder",
 	"flyerAboutBody": "Help mensen in de buurt {siteName} te ontdekken. Druk een flyer van één pagina af om op te hangen in cafés en op prikborden in de buurt.",
-	"flyerAboutLink": "Open de printbare flyer"
+	"flyerAboutLink": "Open de printbare flyer",
+	"repeatLabel": "Herhalen",
+	"repeatNone": "Niet herhalen",
+	"repeatDaily": "Dagelijks",
+	"repeatWeekdays": "Doordeweeks",
+	"repeatWeekly": "Wekelijks",
+	"repeatCountLabel": "Aantal ritten",
+	"repeatSummary": "Maakt {count} ritten · {first} → {last}"
 }

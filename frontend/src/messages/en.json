@@ -203,5 +203,12 @@
 	"flyerMadeIn": "Made in {place}",
 	"flyerAboutHeading": "Spread the word",
 	"flyerAboutBody": "Help people nearby discover {siteName}. Print a one-page flyer to pin on café and community noticeboards in your area.",
-	"flyerAboutLink": "Open the printable flyer"
+	"flyerAboutLink": "Open the printable flyer",
+	"repeatLabel": "Repeat",
+	"repeatNone": "Don't repeat",
+	"repeatDaily": "Daily",
+	"repeatWeekdays": "Weekdays",
+	"repeatWeekly": "Weekly",
+	"repeatCountLabel": "Number of rides",
+	"repeatSummary": "Creates {count} rides · {first} → {last}"
 }
