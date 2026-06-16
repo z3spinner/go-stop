@@ -12,6 +12,8 @@
 	import ProfileFields from '$lib/components/ProfileFields.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { Flexibility, PostRequestBody } from '$lib/types';
+	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
+	import FlexibilitySelect from '$lib/components/forms/FlexibilitySelect.svelte';
 
 	let {
 		origin = '', destination = '', departureAt = '', destinations = [], onposted
@@ -59,10 +61,8 @@
 
 <form id="notify-form" onsubmit={submit} class="flex flex-col gap-3">
 	<ProfileFields bind:name={searcher_name} bind:phone nameField="searcher_name" />
-	<label>{m.labelFrom()}<input name="origin" list="dests-from" required bind:value={originV} /></label>
-	<label>{m.labelTo()}<input name="destination" list="dests-to" required bind:value={destinationV} /></label>
-	<datalist id="dests-from">{#each destinations as d}<option value={d}></option>{/each}</datalist>
-	<datalist id="dests-to">{#each destinations as d}<option value={d}></option>{/each}</datalist>
+	<label>{m.labelFrom()}<PlaceCombobox name="origin" required items={destinations} bind:value={originV} /></label>
+	<label>{m.labelTo()}<PlaceCombobox name="destination" required items={destinations} bind:value={destinationV} /></label>
 
 	<div id="alert-mode-btns" class="flex flex-wrap gap-2" role="group">
 		{#each modes as mo}
@@ -77,13 +77,7 @@
 				{#if mode !== 'day'}<label>{m.labelSearchTime()}<input name="alert_time" type="time" bind:value={alert_time} /></label>{/if}
 			</div>
 			{#if mode === 'time' || mode === 'daily'}
-				<label>{m.labelFlex()}
-					<select bind:value={flexibility}>
-						<option value={0}>{m.flexExact()}</option>
-						<option value={30}>{m.flex30()}</option>
-						<option value={60}>{m.flex60()}</option>
-					</select>
-				</label>
+				<label>{m.labelFlex()}<FlexibilitySelect bind:value={flexibility} /></label>
 			{/if}
 		</div>
 	{/if}
