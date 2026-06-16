@@ -118,9 +118,9 @@
 		</fieldset>
 	{/if}
 
-	<label for="repeat-frequency">{m.repeatLabel()}
+	<label>{m.repeatLabel()}
 		<Select.Root type="single" value={frequency} onValueChange={(v) => (frequency = v as typeof frequency)}>
-			<Select.Trigger id="repeat-frequency" class="w-full">
+			<Select.Trigger class="w-full">
 				{frequency === 'none' ? m.repeatNone() : frequency === 'daily' ? m.repeatDaily() : frequency === 'weekdays' ? m.repeatWeekdays() : m.repeatWeekly()}
 			</Select.Trigger>
 			<Select.Content>
@@ -132,7 +132,7 @@
 		</Select.Root>
 	</label>
 	{#if frequency !== 'none'}
-		<label for="repeat-count">{m.repeatCountLabel()}<NumberStepper bind:value={repeatCount} min={1} max={14} /></label>
+		<label>{m.repeatCountLabel()}<NumberStepper bind:value={repeatCount} min={1} max={14} /></label>
 		{#if summary}<p class="text-sm text-gray-600">{summary}</p>{/if}
 	{/if}
 	<button type="submit" class="btn btn-primary">{m.btnPostRide()}</button>
