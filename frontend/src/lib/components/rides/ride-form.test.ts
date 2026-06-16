@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
+import { render, fireEvent, waitFor } from '@testing-library/svelte';
 
 const post = vi.fn(async () => ({}));
 vi.mock('$lib/api', () => ({ api: { rides: { post: (b: unknown) => post(b) } } }));
@@ -27,7 +27,7 @@ describe('RideForm repeat', () => {
 		const { container } = render(RideForm);
 		await fillBase(container);
 		await fireEvent.submit(container.querySelector('#ride-form')!);
-		expect(post).toHaveBeenCalledTimes(1);
+		await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
 	});
 
 	it('daily × 3 posts three rides on consecutive days at the same time', async () => {
@@ -37,7 +37,7 @@ describe('RideForm repeat', () => {
 		await fireEvent.input(container.querySelector('#repeat-count')!, { target: { value: '3' } });
 		await fireEvent.submit(container.querySelector('#ride-form')!);
 
-		expect(post).toHaveBeenCalledTimes(3);
+		await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
 		const days = post.mock.calls.map((c) => new Date((c[0] as { departure_at: string }).departure_at).getDate());
 		expect(days).toEqual([3, 4, 5]);
 		const hours = post.mock.calls.map((c) => new Date((c[0] as { departure_at: string }).departure_at).getHours());
@@ -53,7 +53,7 @@ describe('RideForm repeat', () => {
 		await fireEvent.submit(container.querySelector('#ride-form')!);
 
 		// 2 outbound + 2 return
-		expect(post).toHaveBeenCalledTimes(4);
+		await waitFor(() => expect(post).toHaveBeenCalledTimes(4));
 		const returns = post.mock.calls.filter((c) => (c[0] as { origin: string }).origin === 'Crest');
 		expect(returns).toHaveLength(2);
 	});

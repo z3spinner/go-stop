@@ -74,22 +74,18 @@
 		userName.set(driver_name);
 		userPhone.set(ph);
 		try {
-			const posts = offsets.flatMap((off) => {
-				const legs = [
-					api.rides.post({
-						driver_name, phone: ph, origin, destination,
-						departure_at: shiftDaysIso(departure_at, off), flexibility
-					})
-				];
+			for (const off of offsets) {
+				await api.rides.post({
+					driver_name, phone: ph, origin, destination,
+					departure_at: shiftDaysIso(departure_at, off), flexibility
+				});
 				if (isReturn && return_departure_at) {
-					legs.push(api.rides.post({
+					await api.rides.post({
 						driver_name, phone: ph, origin: destination, destination: origin,
 						departure_at: shiftDaysIso(return_departure_at, off), flexibility: return_flexibility
-					}));
+					});
 				}
-				return legs;
-			});
-			await Promise.all(posts);
+			}
 			onposted?.(ph);
 		} catch (ex) {
 			err = ex instanceof Error ? ex.message : String(ex);
