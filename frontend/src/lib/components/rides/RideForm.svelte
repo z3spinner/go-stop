@@ -47,6 +47,7 @@
 	let offsets = $derived(expandOffsets(new Date(departure_at), frequency, frequency === 'none' ? 1 : count));
 	let summary = $derived.by(() => {
 		if (frequency === 'none' || offsets.length === 0) return '';
+		if (isNaN(new Date(departure_at).getTime())) return '';
 		const first = formatDate(shiftDaysIso(departure_at, offsets[0]));
 		const last = formatDate(shiftDaysIso(departure_at, offsets[offsets.length - 1]));
 		return m.repeatSummary({ count: offsets.length, first, last });
