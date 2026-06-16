@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
 
-const post = vi.fn(async () => ({}));
+const post = vi.fn(async (_body: unknown) => ({}));
 vi.mock('$lib/api', () => ({ api: { rides: { post: (b: unknown) => post(b) } } }));
 
 import RideForm from './RideForm.svelte';
