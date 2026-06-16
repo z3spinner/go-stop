@@ -31,4 +31,12 @@ describe('NumberStepper', () => {
 		await fireEvent.change(input);
 		expect(input.value).toBe('14');
 	});
+
+	it('re-syncs the input when a typed value clamps to the current value', async () => {
+		const { container } = render(NumberStepper, { props: { value: 14, min: 1, max: 14 } });
+		const input = container.querySelector('input') as HTMLInputElement;
+		await fireEvent.input(input, { target: { value: '99' } });
+		await fireEvent.change(input);
+		expect(input.value).toBe('14');
+	});
 });
