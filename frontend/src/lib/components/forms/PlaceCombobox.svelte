@@ -53,8 +53,11 @@
 <Combobox.Root
 	type="single"
 	bind:open
+	{disabled}
 	inputValue={value}
 	onValueChange={(v) => {
+		// Ignore deselect: bits-ui allowDeselect fires onValueChange('') when the
+		// selected item is re-clicked. Keep the last committed text instead of blanking.
 		if (v) value = v;
 	}}
 >
@@ -71,22 +74,24 @@
 			}}
 			class="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 		/>
-		<Combobox.Portal>
-			<Combobox.Content
-				class="z-50 max-h-60 overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-			>
-				<Combobox.Viewport>
-					{#each filtered as item (item)}
-						<Combobox.Item
-							value={item}
-							label={item}
-							class="cursor-pointer rounded px-2 py-1.5 text-sm data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-						>
-							{item}
-						</Combobox.Item>
-					{/each}
-				</Combobox.Viewport>
-			</Combobox.Content>
-		</Combobox.Portal>
+		{#if filtered.length > 0}
+			<Combobox.Portal>
+				<Combobox.Content
+					class="z-50 max-h-60 overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+				>
+					<Combobox.Viewport>
+						{#each filtered as item (item)}
+							<Combobox.Item
+								value={item}
+								label={item}
+								class="cursor-pointer rounded px-2 py-1.5 text-sm data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+							>
+								{item}
+							</Combobox.Item>
+						{/each}
+					</Combobox.Viewport>
+				</Combobox.Content>
+			</Combobox.Portal>
+		{/if}
 	</div>
 </Combobox.Root>
