@@ -9,10 +9,11 @@
 	import { api } from '$lib/api';
 	import { userName, userPhone } from '$lib/stores';
 	import { config } from '$lib/config';
-	import { defaultDeparture, normalizePhone } from '$lib/utils';
+	import { defaultDeparture, normalizePhone, formatDate } from '$lib/utils';
 	import ProfileFields from '$lib/components/ProfileFields.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { Flexibility } from '$lib/types';
+	import { expandOffsets, shiftDaysIso, type Frequency } from '$lib/recurrence';
 
 	// origin/destination/departureAt seed the form (e.g. "I can drive this" from a
 	// requested ride). departureAt is a datetime-local string; falls back to default.
@@ -40,6 +41,16 @@
 	let isReturn = $state(false);
 	let return_departure_at = $state('');
 	let return_flexibility = $state<Flexibility>(30);
+	let frequency = $state<Frequency>('none');
+	let repeatCount = $state(4);
+	let count = $derived(Math.min(14, Math.max(1, Math.floor(Number(repeatCount) || 1))));
+	let offsets = $derived(expandOffsets(new Date(departure_at), frequency, frequency === 'none' ? 1 : count));
+	let summary = $derived.by(() => {
+		if (frequency === 'none' || offsets.length === 0) return '';
+		const first = formatDate(shiftDaysIso(departure_at, offsets[0]));
+		const last = formatDate(shiftDaysIso(departure_at, offsets[offsets.length - 1]));
+		return m.repeatSummary({ count: offsets.length, first, last });
+	});
 	let err = $state('');
 
 	function toggleReturn(on: boolean) {
@@ -63,16 +74,22 @@
 		userName.set(driver_name);
 		userPhone.set(ph);
 		try {
-			await api.rides.post({
-				driver_name, phone: ph, origin, destination,
-				departure_at: new Date(departure_at).toISOString(), flexibility
+			const posts = offsets.flatMap((off) => {
+				const legs = [
+					api.rides.post({
+						driver_name, phone: ph, origin, destination,
+						departure_at: shiftDaysIso(departure_at, off), flexibility
+					})
+				];
+				if (isReturn && return_departure_at) {
+					legs.push(api.rides.post({
+						driver_name, phone: ph, origin: destination, destination: origin,
+						departure_at: shiftDaysIso(return_departure_at, off), flexibility: return_flexibility
+					}));
+				}
+				return legs;
 			});
-			if (isReturn && return_departure_at) {
-				await api.rides.post({
-					driver_name, phone: ph, origin: destination, destination: origin,
-					departure_at: new Date(return_departure_at).toISOString(), flexibility: return_flexibility
-				});
-			}
+			await Promise.all(posts);
 			onposted?.(ph);
 		} catch (ex) {
 			err = ex instanceof Error ? ex.message : String(ex);
@@ -114,6 +131,20 @@
 		</fieldset>
 	{/if}
 
+	<label for="repeat-frequency">{m.repeatLabel()}
+		<select id="repeat-frequency" bind:value={frequency}>
+			<option value="none">{m.repeatNone()}</option>
+			<option value="daily">{m.repeatDaily()}</option>
+			<option value="weekdays">{m.repeatWeekdays()}</option>
+			<option value="weekly">{m.repeatWeekly()}</option>
+		</select>
+	</label>
+	{#if frequency !== 'none'}
+		<label for="repeat-count">{m.repeatCountLabel()}
+			<input id="repeat-count" type="number" min="1" max="14" bind:value={repeatCount} />
+		</label>
+		{#if summary}<p class="text-sm text-gray-600">{summary}</p>{/if}
+	{/if}
 	<button type="submit" class="btn btn-primary">{m.btnPostRide()}</button>
 	{#if err}<div id="err" class="text-red-600">{err}</div>{/if}
 </form>
