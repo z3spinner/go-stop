@@ -203,5 +203,12 @@
 	"flyerMadeIn": "Fatto a {place}",
 	"flyerAboutHeading": "Spargi la voce",
 	"flyerAboutBody": "Aiuta le persone della tua zona a scoprire {siteName}. Stampa un volantino di una pagina da appendere nei bar e nelle bacheche della tua zona.",
-	"flyerAboutLink": "Apri il volantino stampabile"
+	"flyerAboutLink": "Apri il volantino stampabile",
+	"repeatLabel": "Ripeti",
+	"repeatNone": "Non ripetere",
+	"repeatDaily": "Ogni giorno",
+	"repeatWeekdays": "Giorni feriali",
+	"repeatWeekly": "Ogni settimana",
+	"repeatCountLabel": "Numero di viaggi",
+	"repeatSummary": "Crea {count} viaggi · {first} → {last}"
 }

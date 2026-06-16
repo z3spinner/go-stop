@@ -213,5 +213,12 @@
 	"flyerMadeIn": "Φτιαγμένο στο {place}",
 	"flyerAboutHeading": "Διάδωσέ το",
 	"flyerAboutBody": "Βοήθησε τους γύρω σου να ανακαλύψουν το {siteName}. Τύπωσε μια αφίσα μίας σελίδας για καφετέριες και πίνακες ανακοινώσεων στην περιοχή σου.",
-	"flyerAboutLink": "Άνοιξε την εκτυπώσιμη αφίσα"
+	"flyerAboutLink": "Άνοιξε την εκτυπώσιμη αφίσα",
+	"repeatLabel": "Επανάληψη",
+	"repeatNone": "Χωρίς επανάληψη",
+	"repeatDaily": "Καθημερινά",
+	"repeatWeekdays": "Καθημερινές",
+	"repeatWeekly": "Εβδομαδιαία",
+	"repeatCountLabel": "Αριθμός διαδρομών",
+	"repeatSummary": "Δημιουργεί {count} διαδρομές · {first} → {last}"
 }

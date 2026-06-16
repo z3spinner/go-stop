@@ -203,5 +203,12 @@
 	"flyerMadeIn": "Gemacht in {place}",
 	"flyerAboutHeading": "Sag es weiter",
 	"flyerAboutBody": "Hilf Leuten in deiner Nähe, {siteName} zu entdecken. Drucke einen einseitigen Aushang für Cafés und Schwarze Bretter in deiner Umgebung.",
-	"flyerAboutLink": "Druckbaren Aushang öffnen"
+	"flyerAboutLink": "Druckbaren Aushang öffnen",
+	"repeatLabel": "Wiederholen",
+	"repeatNone": "Nicht wiederholen",
+	"repeatDaily": "Täglich",
+	"repeatWeekdays": "Wochentags",
+	"repeatWeekly": "Wöchentlich",
+	"repeatCountLabel": "Anzahl der Fahrten",
+	"repeatSummary": "Erstellt {count} Fahrten · {first} → {last}"
 }

@@ -203,5 +203,12 @@
 	"flyerMadeIn": "Hecho en {place}",
 	"flyerAboutHeading": "Corre la voz",
 	"flyerAboutBody": "Ayuda a la gente de tu zona a descubrir {siteName}. Imprime un cartel de una página para colgar en cafés y tablones de anuncios de tu zona.",
-	"flyerAboutLink": "Abrir el cartel imprimible"
+	"flyerAboutLink": "Abrir el cartel imprimible",
+	"repeatLabel": "Repetir",
+	"repeatNone": "No repetir",
+	"repeatDaily": "Cada día",
+	"repeatWeekdays": "Días laborables",
+	"repeatWeekly": "Cada semana",
+	"repeatCountLabel": "Número de viajes",
+	"repeatSummary": "Crea {count} viajes · {first} → {last}"
 }
