@@ -32,4 +32,17 @@ describe('RideForm repeat', () => {
 		expect(body.origin).toBe('Saillans');
 		expect(body.destination).toBe('Crest');
 	});
+
+	it('posts an outbound and a swapped return leg when Return is selected', async () => {
+		const { container } = render(RideForm);
+		await fillBase(container);
+		await fireEvent.click(container.querySelector('#btn-return')!);
+		await fireEvent.input(container.querySelector('input[name=return_departure_at]')!, {
+			target: { value: '2030-06-03T18:00' }
+		});
+		await fireEvent.submit(container.querySelector('#ride-form')!);
+		await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+		const legs = post.mock.calls.map((c) => (c[0] as { origin: string }).origin);
+		expect(legs).toEqual(['Saillans', 'Crest']); // outbound, then swapped return
+	});
 });
