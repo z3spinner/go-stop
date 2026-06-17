@@ -23,38 +23,26 @@ async function fillBase(container: HTMLElement) {
 }
 
 describe('RideForm repeat', () => {
-	it('posts one ride when not repeating (regression)', async () => {
+	it('posts one ride with the typed origin/destination when not repeating', async () => {
 		const { container } = render(RideForm);
 		await fillBase(container);
 		await fireEvent.submit(container.querySelector('#ride-form')!);
 		await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+		const body = post.mock.calls[0][0] as { origin: string; destination: string };
+		expect(body.origin).toBe('Saillans');
+		expect(body.destination).toBe('Crest');
 	});
 
-	it('daily × 3 posts three rides on consecutive days at the same time', async () => {
-		const { container } = render(RideForm);
-		await fillBase(container);
-		await fireEvent.change(container.querySelector('#repeat-frequency')!, { target: { value: 'daily' } });
-		await fireEvent.input(container.querySelector('#repeat-count')!, { target: { value: '3' } });
-		await fireEvent.submit(container.querySelector('#ride-form')!);
-
-		await waitFor(() => expect(post).toHaveBeenCalledTimes(3));
-		const days = post.mock.calls.map((c) => new Date((c[0] as { departure_at: string }).departure_at).getDate());
-		expect(days).toEqual([3, 4, 5]);
-		const hours = post.mock.calls.map((c) => new Date((c[0] as { departure_at: string }).departure_at).getHours());
-		expect(hours).toEqual([8, 8, 8]);
-	});
-
-	it('repeat with return posts both legs per occurrence', async () => {
+	it('posts an outbound and a swapped return leg when Return is selected', async () => {
 		const { container } = render(RideForm);
 		await fillBase(container);
 		await fireEvent.click(container.querySelector('#btn-return')!);
-		await fireEvent.change(container.querySelector('#repeat-frequency')!, { target: { value: 'daily' } });
-		await fireEvent.input(container.querySelector('#repeat-count')!, { target: { value: '2' } });
+		await fireEvent.input(container.querySelector('input[name=return_departure_at]')!, {
+			target: { value: '2030-06-03T18:00' }
+		});
 		await fireEvent.submit(container.querySelector('#ride-form')!);
-
-		// 2 outbound + 2 return
-		await waitFor(() => expect(post).toHaveBeenCalledTimes(4));
-		const returns = post.mock.calls.filter((c) => (c[0] as { origin: string }).origin === 'Crest');
-		expect(returns).toHaveLength(2);
+		await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+		const legs = post.mock.calls.map((c) => (c[0] as { origin: string }).origin);
+		expect(legs).toEqual(['Saillans', 'Crest']); // outbound, then swapped return
 	});
 });

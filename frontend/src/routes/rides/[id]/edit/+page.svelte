@@ -12,6 +12,8 @@
 	import { userPhone } from '$lib/stores';
 	import { m } from '$lib/paraglide/messages';
 	import type { Flexibility } from '$lib/types';
+	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
+	import FlexibilitySelect from '$lib/components/forms/FlexibilitySelect.svelte';
 
 	const id = page.params.id!;
 	let destinations = $state<string[]>([]);
@@ -65,18 +67,10 @@
 
 {#if loaded}
 	<form id="edit-ride-form" onsubmit={submit} class="flex flex-col gap-3">
-		<label>{m.labelFrom()}<input name="origin" list="dests-from" required bind:value={origin} /></label>
-		<label>{m.labelTo()}<input name="destination" list="dests-to" required bind:value={destination} /></label>
-		<datalist id="dests-from">{#each destinations as d}<option value={d}></option>{/each}</datalist>
-		<datalist id="dests-to">{#each destinations as d}<option value={d}></option>{/each}</datalist>
+		<label>{m.labelFrom()}<PlaceCombobox name="origin" required items={destinations} bind:value={origin} /></label>
+		<label>{m.labelTo()}<PlaceCombobox name="destination" required items={destinations} bind:value={destination} /></label>
 		<label>{m.labelDatetime()}<input name="departure_at" type="datetime-local" step="300" required bind:value={departure_at} /></label>
-		<label>{m.labelFlex()}
-			<select bind:value={flexibility}>
-				<option value={0}>{m.flexExact()}</option>
-				<option value={30}>{m.flex30()}</option>
-				<option value={60}>{m.flex60()}</option>
-			</select>
-		</label>
+		<label>{m.labelFlex()}<FlexibilitySelect bind:value={flexibility} /></label>
 		<button type="submit" class="btn btn-primary">{m.btnSaveChanges()}</button>
 		{#if err}<div id="err" class="text-red-600">{err}</div>{/if}
 	</form>

@@ -14,6 +14,10 @@
 	import { m } from '$lib/paraglide/messages';
 	import type { Flexibility } from '$lib/types';
 	import { expandOffsets, shiftDaysIso, type Frequency } from '$lib/recurrence';
+	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
+	import FlexibilitySelect from '$lib/components/forms/FlexibilitySelect.svelte';
+	import NumberStepper from '$lib/components/ui/number-stepper/NumberStepper.svelte';
+	import * as Select from '$lib/components/ui/select';
 
 	// origin/destination/departureAt seed the form (e.g. "I can drive this" from a
 	// requested ride). departureAt is a datetime-local string; falls back to default.
@@ -96,18 +100,10 @@
 
 <form id="ride-form" onsubmit={submit} class="flex flex-col gap-3">
 	<ProfileFields bind:name={driver_name} bind:phone nameField="driver_name" />
-	<label>{m.labelFrom()}<input name="origin" list="dests-from" required bind:value={origin} /></label>
-	<label>{m.labelTo()}<input name="destination" list="dests-to" required bind:value={destination} /></label>
-	<datalist id="dests-from">{#each destinations as d}<option value={d}></option>{/each}</datalist>
-	<datalist id="dests-to">{#each destinations as d}<option value={d}></option>{/each}</datalist>
+	<label>{m.labelFrom()}<PlaceCombobox name="origin" required items={destinations} bind:value={origin} /></label>
+	<label>{m.labelTo()}<PlaceCombobox name="destination" required items={destinations} bind:value={destination} /></label>
 	<label>{m.labelDatetime()}<input name="departure_at" type="datetime-local" step="300" required bind:value={departure_at} /></label>
-	<label>{m.labelFlex()}
-		<select bind:value={flexibility}>
-			<option value={0}>{m.flexExact()}</option>
-			<option value={30}>{m.flex30()}</option>
-			<option value={60}>{m.flex60()}</option>
-		</select>
-	</label>
+	<label>{m.labelFlex()}<FlexibilitySelect bind:value={flexibility} /></label>
 
 	<div class="trip-type-toggle" role="group" aria-label={m.tripTypeLabel()}>
 		<button id="btn-oneway" type="button" class="trip-type-btn" class:active={!isReturn} onclick={() => toggleReturn(false)}>{m.tripOneWay()}</button>
@@ -118,28 +114,25 @@
 		<fieldset id="return-section" class="return-section flex flex-col gap-2 rounded border p-2">
 			<legend>{m.returnSection()}</legend>
 			<label>{m.labelReturnTime()}<input name="return_departure_at" type="datetime-local" step="300" bind:value={return_departure_at} required={isReturn} /></label>
-			<label>{m.labelReturnFlex()}
-				<select bind:value={return_flexibility}>
-					<option value={0}>{m.flexExact()}</option>
-					<option value={30}>{m.flex30()}</option>
-					<option value={60}>{m.flex60()}</option>
-				</select>
-			</label>
+			<label>{m.labelReturnFlex()}<FlexibilitySelect bind:value={return_flexibility} /></label>
 		</fieldset>
 	{/if}
 
-	<label for="repeat-frequency">{m.repeatLabel()}
-		<select id="repeat-frequency" bind:value={frequency}>
-			<option value="none">{m.repeatNone()}</option>
-			<option value="daily">{m.repeatDaily()}</option>
-			<option value="weekdays">{m.repeatWeekdays()}</option>
-			<option value="weekly">{m.repeatWeekly()}</option>
-		</select>
+	<label>{m.repeatLabel()}
+		<Select.Root type="single" value={frequency} onValueChange={(v) => (frequency = v as typeof frequency)}>
+			<Select.Trigger class="w-full">
+				{frequency === 'none' ? m.repeatNone() : frequency === 'daily' ? m.repeatDaily() : frequency === 'weekdays' ? m.repeatWeekdays() : m.repeatWeekly()}
+			</Select.Trigger>
+			<Select.Content>
+				<Select.Item value="none" label={m.repeatNone()}>{m.repeatNone()}</Select.Item>
+				<Select.Item value="daily" label={m.repeatDaily()}>{m.repeatDaily()}</Select.Item>
+				<Select.Item value="weekdays" label={m.repeatWeekdays()}>{m.repeatWeekdays()}</Select.Item>
+				<Select.Item value="weekly" label={m.repeatWeekly()}>{m.repeatWeekly()}</Select.Item>
+			</Select.Content>
+		</Select.Root>
 	</label>
 	{#if frequency !== 'none'}
-		<label for="repeat-count">{m.repeatCountLabel()}
-			<input id="repeat-count" type="number" min="1" max="14" bind:value={repeatCount} />
-		</label>
+		<label>{m.repeatCountLabel()}<NumberStepper bind:value={repeatCount} min={1} max={14} /></label>
 		{#if summary}<p class="text-sm text-gray-600">{summary}</p>{/if}
 	{/if}
 	<button type="submit" class="btn btn-primary">{m.btnPostRide()}</button>

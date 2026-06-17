@@ -15,6 +15,7 @@
 	import RideCard from '$lib/components/rides/RideCard.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import type { PublicRide, RideSearchParams } from '$lib/types';
+	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
 
 	let destinations = $state<string[]>([]);
 	let origin = $state('');
@@ -94,10 +95,8 @@
 
 <h2 class="mb-3 text-xl font-semibold">{m.findTitle()}</h2>
 <form id="search-form" onsubmit={submit} class="flex flex-col gap-3">
-	<label>{m.labelFrom()}<input name="origin" list="dests-from" required bind:value={origin} /></label>
-	<label>{m.labelTo()}<input name="destination" list="dests-to" required bind:value={destination} /></label>
-	<datalist id="dests-from">{#each destinations as d}<option value={d}></option>{/each}</datalist>
-	<datalist id="dests-to">{#each destinations as d}<option value={d}></option>{/each}</datalist>
+	<label>{m.labelFrom()}<PlaceCombobox name="origin" required items={destinations} bind:value={origin} /></label>
+	<label>{m.labelTo()}<PlaceCombobox name="destination" required items={destinations} bind:value={destination} /></label>
 	<div class="search-datetime-row flex gap-2">
 		<label>{m.labelSearchDate()}<input name="search_date" type="date" bind:value={search_date} /></label>
 		<label>{m.labelSearchTime()}<input name="search_time" type="time" bind:value={search_time} /></label>
