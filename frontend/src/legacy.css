@@ -669,3 +669,49 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-ping-searcher:disabled { opacity: 0.5; cursor: default; }
 .btn-me-icon { background:none; border:none; border-radius:50%; width:28px; height:28px; padding:0; cursor:pointer; color:var(--gray-600); display:flex; align-items:center; justify-content:center; }
 .btn-me-icon:hover { background:var(--gray-100); color:var(--gray-900); }
+
+/* --- Make shadcn Select / Combobox / NumberStepper match the native input look ---
+   These are unlayered, so they win over the components' Tailwind utility classes
+   (same mechanism used for the feed tabs and flyer). */
+[data-slot='select-trigger'] {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  background: white;
+  color: var(--gray-900);
+  box-shadow: none;
+}
+[data-slot='select-trigger']:focus-visible {
+  outline: 2px solid var(--blue);
+  border-color: transparent;
+  box-shadow: none;
+}
+[data-slot='select-trigger'] > svg { color: var(--gray-600); }
+
+/* Combobox input is a real <input>, already covered by the global input rule,
+   but the dropdown content/items get the app's surface + brand-green highlight. */
+[data-slot='select-content'] {
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  background: white;
+  font-size: 1rem;
+}
+[data-slot='select-item'][data-highlighted] {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.number-stepper {
+  height: 44px;
+  border-color: var(--gray-300);
+  border-radius: var(--radius);
+}
+.number-stepper input { font-size: 1rem; }
+.number-stepper button:not(:disabled):hover { background: var(--gray-100); }
