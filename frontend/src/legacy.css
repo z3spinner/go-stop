@@ -713,5 +713,7 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   border-color: var(--gray-300);
   border-radius: var(--radius);
 }
-.number-stepper input { font-size: 1rem; }
+/* Keep the stepper compact: the global `input { width:100% }` rule would
+   otherwise stretch the value field across the whole row. */
+.number-stepper input { width: 3.25rem; font-size: 1rem; }
 .number-stepper button:not(:disabled):hover { background: var(--gray-100); }
