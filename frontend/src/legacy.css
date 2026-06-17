@@ -709,6 +709,11 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 }
 
 .number-stepper {
+  /* Sit on its own line under the label (compact), like every other field,
+     instead of running inline next to the label text. */
+  display: flex;
+  width: max-content;
+  margin-top: 4px;
   height: 44px;
   border-color: var(--gray-300);
   border-radius: var(--radius);
