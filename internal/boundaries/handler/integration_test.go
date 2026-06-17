@@ -75,8 +75,8 @@ func setupRouter() *gin.Engine {
 	destRepo := postgres.NewDestinationRepo(handlerPool)
 	n := &noopNotifier{}
 
-	postRide := usecase.NewPostRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n)
-	updateRide := usecase.NewUpdateRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n)
+	postRide := usecase.NewPostRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n, 60)
+	updateRide := usecase.NewUpdateRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n, 60)
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)

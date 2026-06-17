@@ -17,6 +17,7 @@ type UpdateRide struct {
 	subs       repository.SubscriptionRepository
 	notifQueue repository.NotificationQueueRepository
 	notifier   notification.Notifier
+	graceMins  int
 }
 
 func NewUpdateRide(
@@ -25,8 +26,9 @@ func NewUpdateRide(
 	subs repository.SubscriptionRepository,
 	notifQueue repository.NotificationQueueRepository,
 	notifier notification.Notifier,
+	graceMins int,
 ) *UpdateRide {
-	return &UpdateRide{rides: rides, requests: requests, subs: subs, notifQueue: notifQueue, notifier: notifier}
+	return &UpdateRide{rides: rides, requests: requests, subs: subs, notifQueue: notifQueue, notifier: notifier, graceMins: graceMins}
 }
 
 // Execute edits a ride the caller owns in place. Only origin, destination,
@@ -48,8 +50,8 @@ func (uc *UpdateRide) Execute(id, phone, origin, destination string, departureAt
 	ride.Destination = destination
 	ride.DepartureAt = departureAt
 	ride.Flexibility = flexibility
-	ride.Date = time.Date(departureAt.Year(), departureAt.Month(), departureAt.Day(), 0, 0, 0, 0, departureAt.Location())
-	ride.ExpiresAt = time.Date(departureAt.Year(), departureAt.Month(), departureAt.Day()+1, 0, 0, 0, 0, departureAt.Location())
+	ride.Date = rideDate(departureAt)
+	ride.ExpiresAt = rideExpiry(departureAt, flexibility, uc.graceMins)
 
 	updated, err := uc.rides.UpdateByID(ride)
 	if err != nil {

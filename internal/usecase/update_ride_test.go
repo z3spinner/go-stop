@@ -62,7 +62,7 @@ func seededRide(id string) domain.Ride {
 
 func TestUpdateRide_UpdatesFieldsAndPreservesIdentity(t *testing.T) {
 	rides := &mockRideRepo{byID: map[string]domain.Ride{"ride-1": seededRide("ride-1")}}
-	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{})
+	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{}, 60)
 
 	newDeparture := time.Date(2030, 7, 2, 17, 30, 0, 0, time.UTC)
 	got, err := uc.Execute("ride-1", "555-0001", "New Origin", "New Dest", newDeparture, domain.Approximate)
@@ -101,7 +101,7 @@ func TestUpdateRide_UpdatesFieldsAndPreservesIdentity(t *testing.T) {
 
 func TestUpdateRide_NotFound(t *testing.T) {
 	rides := &mockRideRepo{byID: map[string]domain.Ride{}}
-	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{})
+	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{}, 60)
 	_, err := uc.Execute("nope", "555-0001", "A", "B", time.Now(), domain.Exact)
 	if !errors.Is(err, usecase.ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %v", err)
@@ -110,7 +110,7 @@ func TestUpdateRide_NotFound(t *testing.T) {
 
 func TestUpdateRide_WrongPhoneRejected(t *testing.T) {
 	rides := &mockRideRepo{byID: map[string]domain.Ride{"ride-1": seededRide("ride-1")}}
-	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{})
+	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{}, 60)
 	_, err := uc.Execute("ride-1", "555-9999", "A", "B", time.Now(), domain.Exact)
 	if !errors.Is(err, usecase.ErrUnauthorized) {
 		t.Errorf("expected ErrUnauthorized, got %v", err)
@@ -122,7 +122,7 @@ func TestUpdateRide_DuplicateKeyConflict(t *testing.T) {
 		byID:      map[string]domain.Ride{"ride-1": seededRide("ride-1")},
 		updateErr: repository.ErrDuplicateRide,
 	}
-	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{})
+	uc := usecase.NewUpdateRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{}, 60)
 	_, err := uc.Execute("ride-1", "555-0001", "A", "B", time.Now(), domain.Exact)
 	if !errors.Is(err, repository.ErrDuplicateRide) {
 		t.Errorf("expected ErrDuplicateRide, got %v", err)
@@ -136,7 +136,7 @@ func TestUpdateRide_NotifiesOnlyNewlyMatchingSearchers(t *testing.T) {
 		{ID: "reqB", Phone: "555-0003"}, // newly matching after the edit
 	}}
 	queue := &editNotifQueue{existing: map[string]bool{nqKey("ride-1", "reqA"): true}}
-	uc := usecase.NewUpdateRide(rides, reqs, &mockSubRepo{}, queue, &mockNotifier{})
+	uc := usecase.NewUpdateRide(rides, reqs, &mockSubRepo{}, queue, &mockNotifier{}, 60)
 
 	if _, err := uc.Execute("ride-1", "555-0001", "New Origin", "New Dest",
 		time.Date(2030, 6, 1, 17, 0, 0, 0, time.UTC), domain.Approximate); err != nil {
