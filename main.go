@@ -57,8 +57,8 @@ func main() {
 	notifQueueRepo := postgres.NewNotificationQueueRepo(pool)
 	feedbackQueueRepo := postgres.NewFeedbackQueueRepo(pool)
 
-	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier)
-	updateRide := usecase.NewUpdateRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier)
+	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier, graceMins)
+	updateRide := usecase.NewUpdateRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier, graceMins)
 	postRequest := usecase.NewPostRequest(requestRepo, rideRepo, subRepo, notifier)
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
