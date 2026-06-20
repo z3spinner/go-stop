@@ -25,7 +25,7 @@ func NewGetRequestContactOffers(
 func (uc *GetRequestContactOffers) Execute(requestID, requesterPhone string) ([]domain.ContactOffer, error) {
 	req, err := uc.requests.FindByID(requestID)
 	if err != nil {
-		return nil, err
+		return nil, ErrNotFound
 	}
 	if req.Phone != requesterPhone {
 		return nil, ErrUnauthorized

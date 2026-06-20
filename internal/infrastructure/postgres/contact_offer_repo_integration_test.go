@@ -7,7 +7,6 @@ package postgres_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -120,14 +119,12 @@ func TestContactOfferRepo_ListByRequest_MultipleOfferers(t *testing.T) {
 	repo := postgres.NewContactOfferRepo(testPool)
 
 	requestID := uuid.New().String()
-	now := time.Now()
 
 	for _, o := range []domain.ContactOffer{
 		{ID: uuid.New().String(), RequestID: requestID, OffererPhone: "0611000001", OffererName: "Alice"},
 		{ID: uuid.New().String(), RequestID: requestID, OffererPhone: "0622000002", OffererName: "Bob"},
 		{ID: uuid.New().String(), RequestID: requestID, OffererPhone: "0633000003", OffererName: "Carol"},
 	} {
-		_ = now // suppress unused-variable warning
 		if err := repo.Save(o); err != nil {
 			t.Fatalf("Save: %v", err)
 		}

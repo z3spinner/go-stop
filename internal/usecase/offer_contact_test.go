@@ -47,15 +47,6 @@ func (m *mockContactOfferRepo) ListByRequest(requestID string) ([]domain.Contact
 // ── OfferContact tests ────────────────────────────────────────────────────────
 
 func TestOfferContact_CreatesOfferAndNotifiesSearcher(t *testing.T) {
-	requests := &mockRequestRepo{}
-	requests.saved = append(requests.saved, domain.Request{
-		ID:          "req-1",
-		Phone:       "555-searcher",
-		SearcherName: "Bob",
-		Origin:      "Saillans",
-		Destination: "Crest",
-	})
-	// Override FindByID to return the saved request.
 	reqRepo := &mockRequestRepoByID{
 		byID: map[string]domain.Request{
 			"req-1": {
@@ -141,8 +132,8 @@ func TestOfferContact_ReturnsErrorIfRequestNotFound(t *testing.T) {
 	uc := usecase.NewOfferContact(reqRepo, offers, subs, n)
 	_, err := uc.Execute("nonexistent", "555-offerer", "Alice")
 
-	if err == nil {
-		t.Error("expected error for missing request")
+	if !errors.Is(err, usecase.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }
 
@@ -224,8 +215,8 @@ func TestGetRequestContactOffers_ReturnsErrorIfRequestNotFound(t *testing.T) {
 	uc := usecase.NewGetRequestContactOffers(reqRepo, offers)
 	_, err := uc.Execute("nonexistent", "555-owner")
 
-	if err == nil {
-		t.Error("expected error for missing request")
+	if !errors.Is(err, usecase.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }
 

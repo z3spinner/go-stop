@@ -300,7 +300,7 @@ func (h *RequestHandler) OfferContact(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
 		case errors.Is(err, usecase.ErrNameRequired):
 			c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
-		case err.Error() == "request not found":
+		case errors.Is(err, usecase.ErrNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "request not found"})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -334,7 +334,11 @@ func (h *RequestHandler) ListContactOffers(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
 			return
 		}
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, usecase.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "request not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	out := make([]ContactOfferItem, len(offers))

@@ -4,7 +4,6 @@
 package usecase
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -42,7 +41,7 @@ func (uc *OfferContact) Execute(requestID, offererPhone, offererName string) (cr
 
 	req, err := uc.requests.FindByID(requestID)
 	if err != nil {
-		return false, errors.New("request not found")
+		return false, ErrNotFound
 	}
 	if req.Phone == offererPhone {
 		return false, ErrUnauthorized // searcher cannot offer contact to themselves

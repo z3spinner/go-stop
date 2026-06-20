@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 	// a fresh tmpfs container, so we poll until the tables actually exist.
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-	_, err = testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
+		_, err = testPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions`)
 		if err == nil {
 			break
 		}
