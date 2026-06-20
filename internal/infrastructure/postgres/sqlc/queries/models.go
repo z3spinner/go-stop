@@ -19,6 +19,14 @@ type ConnectionEvent struct {
 	ConnectedAt pgtype.Timestamptz `db:"connected_at"`
 }
 
+type ContactOffer struct {
+	ID           pgtype.UUID        `db:"id"`
+	RequestID    pgtype.UUID        `db:"request_id"`
+	OffererPhone string             `db:"offerer_phone"`
+	OffererName  string             `db:"offerer_name"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at"`
+}
+
 type FeedbackQueue struct {
 	ID          pgtype.UUID        `db:"id"`
 	RideID      pgtype.UUID        `db:"ride_id"`

@@ -131,6 +131,15 @@ definitions:
       role:
         type: string
     type: object
+  handler.ContactOfferItem:
+    properties:
+      id:
+        type: string
+      offerer_name:
+        type: string
+      offerer_phone:
+        type: string
+    type: object
   handler.DeleteRequestBody:
     properties:
       phone:
@@ -211,6 +220,13 @@ definitions:
         type: string
       sent_count:
         type: integer
+    type: object
+  handler.OfferContactBody:
+    properties:
+      name:
+        type: string
+      phone:
+        type: string
     type: object
   handler.PingRequestBody:
     properties:
@@ -651,6 +667,83 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Request'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+  /requests/{id}/offer-contact:
+    post:
+      consumes:
+      - application/json
+      operationId: offerContact
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Offerer phone and name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.OfferContactBody'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+  /requests/{id}/offers:
+    get:
+      operationId: listContactOffers
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request owner phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.ContactOfferItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
         "403":
           description: Forbidden
           schema:

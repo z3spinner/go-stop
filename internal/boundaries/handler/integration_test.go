@@ -97,12 +97,15 @@ func setupRouter() *gin.Engine {
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, n)
 	getActiveRequests := usecase.NewGetActiveRequests(reqRepo)
+	contactOfferRepo := postgres.NewContactOfferRepo(handlerPool)
+	offerContact := usecase.NewOfferContact(reqRepo, contactOfferRepo, subRepo, n)
+	getRequestContactOffers := usecase.NewGetRequestContactOffers(reqRepo, contactOfferRepo)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo, statRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), offerContact, getRequestContactOffers, reqRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
 
@@ -124,6 +127,8 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/requests/:id", reqH.Get)
 	r.DELETE("/api/requests/:id", reqH.Delete)
 	r.POST("/api/requests/:id/ping", reqH.Ping)
+	r.POST("/api/requests/:id/offer-contact", reqH.OfferContact)
+	r.GET("/api/requests/:id/offers", reqH.ListContactOffers)
 	r.GET("/api/destinations", destH.List)
 	r.POST("/api/subscriptions", subH.Subscribe)
 	r.DELETE("/api/subscriptions/:phone", subH.Unsubscribe)
@@ -134,7 +139,7 @@ func setupRouter() *gin.Engine {
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue`); err != nil {
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }

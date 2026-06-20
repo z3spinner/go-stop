@@ -53,6 +53,7 @@ type Querier interface {
 	FindRidesMatchingDayRequest(ctx context.Context, arg FindRidesMatchingDayRequestParams) ([]Ride, error)
 	FindRidesMatchingTimeRequest(ctx context.Context, arg FindRidesMatchingTimeRequestParams) ([]Ride, error)
 	GetConnectionEventCounts(ctx context.Context) (GetConnectionEventCountsRow, error)
+	GetContactOfferByRequestAndOfferer(ctx context.Context, arg GetContactOfferByRequestAndOffererParams) (ContactOffer, error)
 	GetFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (FeedbackQueue, error)
 	GetInterestByID(ctx context.Context, id pgtype.UUID) (Interest, error)
 	GetInterestByRideAndSearcher(ctx context.Context, arg GetInterestByRideAndSearcherParams) (Interest, error)
@@ -71,6 +72,7 @@ type Querier interface {
 	// when the request was made.
 	GetUnansweredCounts(ctx context.Context) (GetUnansweredCountsRow, error)
 	InsertConnectionEvent(ctx context.Context) error
+	InsertContactOffer(ctx context.Context, arg InsertContactOfferParams) error
 	InsertInterest(ctx context.Context, arg InsertInterestParams) error
 	InsertRequest(ctx context.Context, arg InsertRequestParams) error
 	// Idempotent insert. ON CONFLICT on the dedup key (phone + normalized driver
@@ -92,6 +94,7 @@ type Querier interface {
 	// A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
 	// marks a concrete one-off. Newest breaks ties.
 	ListActiveRequests(ctx context.Context, graceMinutes int32) ([]Request, error)
+	ListContactOffersByRequest(ctx context.Context, requestID pgtype.UUID) ([]ContactOffer, error)
 	// Returns known locations sorted by popularity. Combines active rides/requests
 	// with historical ride_stats so locations persist after rides expire.
 	ListDestinations(ctx context.Context) ([]string, error)

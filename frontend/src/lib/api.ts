@@ -25,6 +25,7 @@ import type {
 	InterestListItem,
 	MyInterest,
 	ContactInfo,
+	ContactOffer,
 	ExpressInterestResponse,
 	AcceptInterestResponse,
 	NotificationItem,
@@ -92,7 +93,11 @@ export const api = {
 		post: (body: PostRequestBody) => unwrap<Request>(gen.createRequest(body)),
 		del: (id: string, phone: string) => unwrap<null>(gen.deleteRequest(id, { phone })),
 		ping: (id: string, rideId: string, phone: string) =>
-			unwrap<null>(gen.pingRequest(id, { ride_id: rideId }, phoneHeader(phone)))
+			unwrap<null>(gen.pingRequest(id, { ride_id: rideId }, phoneHeader(phone))),
+		offerContact: (id: string, phone: string, name: string) =>
+			unwrap<null>(gen.offerContact(id, { phone, name })),
+		listOffers: (id: string, phone: string) =>
+			unwrap<ContactOffer[]>(gen.listContactOffers(id, phoneHeader(phone)))
 	},
 	interests: {
 		express: (rideId: string, phone: string, name?: string) =>

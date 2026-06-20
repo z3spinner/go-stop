@@ -56,6 +56,7 @@ func main() {
 
 	notifQueueRepo := postgres.NewNotificationQueueRepo(pool)
 	feedbackQueueRepo := postgres.NewFeedbackQueueRepo(pool)
+	contactOfferRepo := postgres.NewContactOfferRepo(pool)
 
 	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier, graceMins)
 	updateRide := usecase.NewUpdateRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier, graceMins)
@@ -85,6 +86,8 @@ func main() {
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, notifier)
+	offerContact := usecase.NewOfferContact(requestRepo, contactOfferRepo, subRepo, notifier)
+	getRequestContactOffers := usecase.NewGetRequestContactOffers(requestRepo, contactOfferRepo)
 
 	serviceTZ := time.UTC
 	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
@@ -98,7 +101,7 @@ func main() {
 
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
-	requestH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, requestRepo, statRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getRequestContactOffers, requestRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
@@ -183,11 +186,13 @@ func main() {
 		api.GET("/interests", interestH.ListMyRequests)
 		api.GET("/interests/:id/contact", interestH.GetContact)
 
-		api.POST("/requests", requestH.Post)
-		api.GET("/requests", requestH.List)
-		api.GET("/requests/:id", requestH.Get)
-		api.DELETE("/requests/:id", requestH.Delete)
-		api.POST("/requests/:id/ping", requestH.Ping)
+		api.POST("/requests", reqH.Post)
+		api.GET("/requests", reqH.List)
+		api.GET("/requests/:id", reqH.Get)
+		api.DELETE("/requests/:id", reqH.Delete)
+		api.POST("/requests/:id/ping", reqH.Ping)
+		api.POST("/requests/:id/offer-contact", reqH.OfferContact)
+		api.GET("/requests/:id/offers", reqH.ListContactOffers)
 
 		api.GET("/destinations", destH.List)
 

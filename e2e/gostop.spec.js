@@ -1052,3 +1052,120 @@ test('Me page values pre-fill the post-ride form', async ({ page }) => {
   await expect(page.locator('input[name=driver_name]')).toHaveValue('Sophie');
   await expect(page.locator('input[name=phone]')).toHaveValue('0666000003');
 });
+
+// ── 16. Contact offer flow ─────────────────────────────────────────────────────
+test('offerer can share contact with a request and duplicate is silently ignored', async ({ page }) => {
+  await page.goto(BASE);
+
+  // Seed a request as SEARCHER via API.
+  const origin = `OfferA${Date.now()}`, dest = `OfferB${Date.now()}`;
+  const requestId = await page.evaluate(async ({ s, o, d }) => {
+    const res = await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: s.name, phone: s.phone, origin: o, destination: d }),
+    });
+    const data = await res.json();
+    return data.ID;
+  }, { s: SEARCHER, o: origin, d: dest });
+  expect(requestId).toBeTruthy();
+
+  // Offer contact as DRIVER via API (first offer: created).
+  const first = await page.evaluate(async ({ reqId, driver }) => {
+    const res = await fetch(`/api/requests/${reqId}/offer-contact`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: driver.phone, name: driver.name }),
+    });
+    return { status: res.status };
+  }, { reqId: requestId, driver: DRIVER });
+  expect(first.status).toBe(204);
+
+  // Second offer with same phone is a no-op (204, not an error).
+  const second = await page.evaluate(async ({ reqId, driver }) => {
+    const res = await fetch(`/api/requests/${reqId}/offer-contact`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: driver.phone, name: driver.name }),
+    });
+    return { status: res.status };
+  }, { reqId: requestId, driver: DRIVER });
+  expect(second.status).toBe(204);
+
+  // Searcher retrieves their offers — sees the offerer exactly once.
+  const offers = await page.evaluate(async ({ reqId, searcher }) => {
+    const res = await fetch(`/api/requests/${reqId}/offers`, {
+      headers: { 'X-Phone': searcher.phone },
+    });
+    return res.json();
+  }, { reqId: requestId, searcher: SEARCHER });
+  expect(Array.isArray(offers)).toBe(true);
+  expect(offers.length).toBe(1);
+  expect(offers[0].offerer_name).toBe(DRIVER.name);
+  expect(offers[0].offerer_phone).toBe(DRIVER.phone);
+});
+
+test('non-owner cannot list contact offers (403)', async ({ page }) => {
+  await page.goto(BASE);
+
+  const origin = `OfferC${Date.now()}`, dest = `OfferD${Date.now()}`;
+  const requestId = await page.evaluate(async ({ s, o, d }) => {
+    const res = await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: s.name, phone: s.phone, origin: o, destination: d }),
+    });
+    const data = await res.json();
+    return data.ID;
+  }, { s: SEARCHER, o: origin, d: dest });
+
+  // DRIVER (not the request owner) tries to list offers.
+  const status = await page.evaluate(async ({ reqId, driver }) => {
+    const res = await fetch(`/api/requests/${reqId}/offers`, {
+      headers: { 'X-Phone': driver.phone },
+    });
+    return res.status;
+  }, { reqId: requestId, driver: DRIVER });
+  expect(status).toBe(403);
+});
+
+test('searcher cannot offer contact to their own request (403)', async ({ page }) => {
+  await page.goto(BASE);
+
+  const origin = `OfferE${Date.now()}`, dest = `OfferF${Date.now()}`;
+  const requestId = await page.evaluate(async ({ s, o, d }) => {
+    const res = await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: s.name, phone: s.phone, origin: o, destination: d }),
+    });
+    const data = await res.json();
+    return data.ID;
+  }, { s: SEARCHER, o: origin, d: dest });
+
+  // Searcher tries to offer contact to their own request.
+  const status = await page.evaluate(async ({ reqId, searcher }) => {
+    const res = await fetch(`/api/requests/${reqId}/offer-contact`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: searcher.phone, name: searcher.name }),
+    });
+    return res.status;
+  }, { reqId: requestId, searcher: SEARCHER });
+  expect(status).toBe(403);
+});
+
+test('home requested-rides feed shows share-contact button and UI flow works', async ({ page }) => {
+  await setProfile(page, DRIVER);
+
+  // Seed a request as SEARCHER.
+  await page.evaluate(async ({ s }) => {
+    await fetch('/api/requests', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ searcher_name: s.name, phone: s.phone, origin: 'ShareUI', destination: 'Target' }),
+    });
+  }, { s: SEARCHER });
+
+  await setFr(page);
+  await page.goto(BASE);
+
+  // Switch to the "Requested" tab.
+  await page.locator('[data-slot="tabs-trigger"]').nth(1).click();
+
+  // The share-contact button should be visible on request cards.
+  await expect(page.locator('.btn-share-contact').first()).toBeVisible();
+});
