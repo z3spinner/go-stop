@@ -46,6 +46,10 @@
 			} catch (e) {
 				if (statusToken !== token || syncedPhone !== phone) return;
 				offered = false;
+				// A 403 means this is the searcher's own request; a 404 means the card
+				// went stale while the feed was open. In both cases the right fallback is
+				// to leave the secondary CTA available without surfacing a misleading
+				// inline error for a passive background refresh.
 				if (e instanceof ApiError && (e.status === 403 || e.status === 404)) return;
 				offerError = e instanceof Error ? e.message : String(e);
 			}
