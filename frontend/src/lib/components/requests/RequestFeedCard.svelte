@@ -4,6 +4,7 @@
 -->
 
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
@@ -24,7 +25,17 @@
 	const isDaily = $derived(hasTime && request.DepartureAt.slice(0, 10) === '1970-01-01');
 
 	let busy = $state(false);
+	let offered = $state(false);
 	let offerMsg = $state('');
+	const currentPhone = $derived(normalizePhone($userPhone));
+
+	function offerKey(phone: string) {
+		return `contact_offer_${phone}_${request.ID}`;
+	}
+
+	$effect(() => {
+		offered = browser && currentPhone !== '' && localStorage.getItem(offerKey(currentPhone)) === '1';
+	});
 
 	function drive() {
 		const u = new URLSearchParams({ origin: request.Origin, destination: request.Destination });
@@ -35,7 +46,7 @@
 	}
 
 	async function shareContact() {
-		if (busy) return;
+		if (busy || offered) return;
 		const name = get(userName).trim();
 		const phone = normalizePhone(get(userPhone));
 		if (!name || !phone) {
@@ -46,7 +57,8 @@
 		offerMsg = '';
 		try {
 			await api.requests.offerContact(request.ID, phone, name);
-			offerMsg = m.contactOfferSent();
+			if (browser) localStorage.setItem(offerKey(phone), '1');
+			offered = true;
 		} catch (e) {
 			offerMsg = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -73,7 +85,7 @@
 	</div>
 	<div class="req-actions mt-1.5 flex flex-wrap gap-2">
 		<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
-		<button type="button" class="btn-share-contact" data-request-id={request.ID} disabled={busy} onclick={shareContact}>{m.btnShareContact()}</button>
+		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} disabled={busy || offered} onclick={shareContact}>{offered ? m.contactOfferSent() : m.btnShareContact()}</button>
 	</div>
 	{#if offerMsg}<span class="offer-state mt-1 text-sm text-gray-600">{offerMsg}</span>{/if}
 </div>
@@ -105,6 +117,10 @@
 		cursor: pointer;
 	}
 	.btn-share-contact:hover:not(:disabled) {
+		border-color: var(--blue, #28a836);
+		color: var(--blue, #28a836);
+	}
+	.btn-share-contact.shared {
 		border-color: var(--blue, #28a836);
 		color: var(--blue, #28a836);
 	}

@@ -4,10 +4,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
+import { userName, userPhone } from '$lib/stores';
 import RequestFeedCard from './RequestFeedCard.svelte';
 import type { PublicRequest } from '$lib/types';
 
+const offerContact = vi.hoisted(() => vi.fn(async () => null));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('$lib/api', () => ({ api: { requests: { offerContact } } }));
+vi.mock('$lib/profileModal', () => ({ openProfileModal: vi.fn() }));
+vi.mock('$lib/paraglide/messages', () => ({
+	m: {
+		alertAnytimeLabel: () => 'Anytime',
+		at: () => 'at',
+		btnDriveThis: () => 'I can drive this',
+		btnShareContact: () => 'Share my contact',
+		contactOfferSent: () => 'Contact shared ✓',
+		flexLabel30: () => '±30 min',
+		flexLabel60: () => '±60 min',
+		flexLabelExact: () => 'Exact'
+	}
+}));
 const gotoMock = vi.mocked(goto);
 
 const ZERO = '0001-01-01T00:00:00Z';
@@ -16,7 +32,13 @@ const base: PublicRequest = {
 	Date: ZERO, DepartureAt: ZERO, Flexibility: 0
 };
 
-beforeEach(() => gotoMock.mockClear());
+beforeEach(() => {
+	gotoMock.mockClear();
+	offerContact.mockClear();
+	localStorage.clear();
+	userName.set('Alice');
+	userPhone.set('06 11 00 00 01');
+});
 
 describe('RequestFeedCard', () => {
 	it('renders an anytime request with the anytime label', () => {
@@ -57,5 +79,23 @@ describe('RequestFeedCard', () => {
 		});
 		await fireEvent.click(container.querySelector('.btn-drive-this')!);
 		expect(gotoMock.mock.calls[0][0] as string).toContain('departure_at=');
+	});
+
+	it('marks a request as already shared after offering contact', async () => {
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		await fireEvent.click(shareButton);
+		expect(offerContact).toHaveBeenCalledWith('rq1', '0611000001', 'Alice');
+		expect(shareButton).toBeDisabled();
+		expect(shareButton.textContent).toMatch(/Contact shared|Contact partagé/);
+		expect(localStorage.getItem('contact_offer_0611000001_rq1')).toBe('1');
+	});
+
+	it('restores the shared state from localStorage for the current phone', () => {
+		localStorage.setItem('contact_offer_0611000001_rq1', '1');
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		expect(shareButton).toBeDisabled();
+		expect(shareButton.textContent).toMatch(/Contact shared|Contact partagé/);
 	});
 });
