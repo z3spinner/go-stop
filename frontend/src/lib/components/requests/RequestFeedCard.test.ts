@@ -88,7 +88,7 @@ describe('RequestFeedCard', () => {
 		expect(offerContact).toHaveBeenCalledWith('rq1', '0611000001', 'Alice');
 		expect(shareButton).toBeDisabled();
 		expect(shareButton.textContent).toContain('Contact shared ✓');
-		expect(localStorage.getItem('contact_offer_0611000001_rq1')).toBe('1');
+		expect(localStorage.getItem('contact_offer_0611000001::rq1')).toBe('1');
 	});
 
 	it('shows an error and keeps sharing available when the offer fails', async () => {
@@ -99,11 +99,11 @@ describe('RequestFeedCard', () => {
 		expect(await screen.findByText('Share failed')).toBeInTheDocument();
 		expect(shareButton).not.toBeDisabled();
 		expect(shareButton.textContent).toContain('Share my contact');
-		expect(localStorage.getItem('contact_offer_0611000001_rq1')).toBeNull();
+		expect(localStorage.getItem('contact_offer_0611000001::rq1')).toBeNull();
 	});
 
 	it('restores the shared state from localStorage for the current phone', () => {
-		localStorage.setItem('contact_offer_0611000001_rq1', '1');
+		localStorage.setItem('contact_offer_0611000001::rq1', '1');
 		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
 		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
 		expect(shareButton).toBeDisabled();
@@ -111,7 +111,7 @@ describe('RequestFeedCard', () => {
 	});
 
 	it('ignores stored shared state for a different phone', () => {
-		localStorage.setItem('contact_offer_0611000002_rq1', '1');
+		localStorage.setItem('contact_offer_0611000002::rq1', '1');
 		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
 		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
 		expect(shareButton).not.toBeDisabled();

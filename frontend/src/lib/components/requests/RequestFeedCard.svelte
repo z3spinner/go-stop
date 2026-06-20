@@ -32,7 +32,7 @@
 	const shareButtonText = $derived(offered ? m.contactOfferSent() : m.btnShareContact());
 
 	function offerKey(phone: string) {
-		return `contact_offer_${phone}_${request.ID}`;
+		return `contact_offer_${encodeURIComponent(phone)}::${encodeURIComponent(request.ID)}`;
 	}
 
 	$effect(() => {
@@ -120,10 +120,7 @@
 		color: var(--gray-600, #4b5563);
 		cursor: pointer;
 	}
-	.btn-share-contact:hover:not(:disabled) {
-		border-color: var(--blue, #28a836);
-		color: var(--blue, #28a836);
-	}
+	.btn-share-contact:hover:not(:disabled),
 	.btn-share-contact.shared {
 		border-color: var(--blue, #28a836);
 		color: var(--blue, #28a836);
