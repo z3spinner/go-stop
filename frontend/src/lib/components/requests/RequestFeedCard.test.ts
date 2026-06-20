@@ -87,7 +87,7 @@ describe('RequestFeedCard', () => {
 		await fireEvent.click(shareButton);
 		expect(offerContact).toHaveBeenCalledWith('rq1', '0611000001', 'Alice');
 		expect(shareButton).toBeDisabled();
-		expect(shareButton.textContent).toMatch(/Contact shared|Contact partagé/);
+		expect(shareButton.textContent).toContain('Contact shared ✓');
 		expect(localStorage.getItem('contact_offer_0611000001_rq1')).toBe('1');
 	});
 
@@ -96,6 +96,6 @@ describe('RequestFeedCard', () => {
 		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
 		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
 		expect(shareButton).toBeDisabled();
-		expect(shareButton.textContent).toMatch(/Contact shared|Contact partagé/);
+		expect(shareButton.textContent).toContain('Contact shared ✓');
 	});
 });

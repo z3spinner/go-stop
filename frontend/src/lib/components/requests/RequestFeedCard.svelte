@@ -28,13 +28,16 @@
 	let offered = $state(false);
 	let offerMsg = $state('');
 	const currentPhone = $derived(normalizePhone($userPhone));
+	const shareButtonText = $derived(offered ? m.contactOfferSent() : m.btnShareContact());
 
 	function offerKey(phone: string) {
 		return `contact_offer_${phone}_${request.ID}`;
 	}
 
 	$effect(() => {
-		offered = browser && currentPhone !== '' && localStorage.getItem(offerKey(currentPhone)) === '1';
+		offered = browser && currentPhone !== ''
+			? localStorage.getItem(offerKey(currentPhone)) === '1'
+			: false;
 	});
 
 	function drive() {
@@ -85,7 +88,7 @@
 	</div>
 	<div class="req-actions mt-1.5 flex flex-wrap gap-2">
 		<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
-		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} disabled={busy || offered} onclick={shareContact}>{offered ? m.contactOfferSent() : m.btnShareContact()}</button>
+		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} disabled={busy || offered} onclick={shareContact}>{shareButtonText}</button>
 	</div>
 	{#if offerMsg}<span class="offer-state mt-1 text-sm text-gray-600">{offerMsg}</span>{/if}
 </div>
