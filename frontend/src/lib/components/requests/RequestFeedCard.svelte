@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
+	import { api, ApiError } from '$lib/api';
 	import { userName, userPhone } from '$lib/stores';
 	import { openProfileModal } from '$lib/profileModal';
 	import { normalizePhone } from '$lib/utils';
@@ -24,7 +24,37 @@
 	const isDaily = $derived(hasTime && request.DepartureAt.slice(0, 10) === '1970-01-01');
 
 	let busy = $state(false);
-	let offerMsg = $state('');
+	let offered = $state(false);
+	let offerError = $state('');
+	let syncedPhone = $state('');
+	let statusToken = $state('');
+	const currentPhone = $derived(normalizePhone($userPhone));
+	const shareButtonText = $derived(offered ? m.contactOfferSent() : m.btnShareContact());
+
+	$effect(() => {
+		const phone = currentPhone;
+		const token = `${request.ID}:${phone}`;
+		if (statusToken === token) return;
+		statusToken = token;
+		syncedPhone = phone;
+		offered = false;
+		if (phone === '') return;
+		void (async () => {
+			try {
+				const status = await api.requests.getOfferStatus(request.ID, phone);
+				if (statusToken === token && syncedPhone === phone) offered = status.offered;
+			} catch (e) {
+				if (statusToken !== token || syncedPhone !== phone) return;
+				offered = false;
+				// A 403 means this is the searcher's own request; a 404 means the card
+				// went stale while the feed was open. In both cases the right fallback is
+				// to leave the secondary CTA available without surfacing a misleading
+				// inline error for a passive background refresh.
+				if (e instanceof ApiError && (e.status === 403 || e.status === 404)) return;
+				offerError = e instanceof Error ? e.message : String(e);
+			}
+		})();
+	});
 
 	function drive() {
 		const u = new URLSearchParams({ origin: request.Origin, destination: request.Destination });
@@ -35,7 +65,7 @@
 	}
 
 	async function shareContact() {
-		if (busy) return;
+		if (busy || offered) return;
 		const name = get(userName).trim();
 		const phone = normalizePhone(get(userPhone));
 		if (!name || !phone) {
@@ -43,12 +73,12 @@
 			return;
 		}
 		busy = true;
-		offerMsg = '';
+		offerError = '';
 		try {
 			await api.requests.offerContact(request.ID, phone, name);
-			offerMsg = m.contactOfferSent();
+			offered = true;
 		} catch (e) {
-			offerMsg = e instanceof Error ? e.message : String(e);
+			offerError = e instanceof Error ? e.message : String(e);
 		} finally {
 			busy = false;
 		}
@@ -73,9 +103,9 @@
 	</div>
 	<div class="req-actions mt-1.5 flex flex-wrap gap-2">
 		<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
-		<button type="button" class="btn-share-contact" data-request-id={request.ID} disabled={busy} onclick={shareContact}>{m.btnShareContact()}</button>
+		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} aria-label={shareButtonText} title={shareButtonText} disabled={busy || offered} onclick={shareContact}>{shareButtonText}</button>
 	</div>
-	{#if offerMsg}<span class="offer-state mt-1 text-sm text-gray-600">{offerMsg}</span>{/if}
+	{#if offerError}<span class="offer-state mt-1 text-sm text-gray-600">{offerError}</span>{/if}
 </div>
 
 <style>
@@ -104,7 +134,8 @@
 		color: var(--gray-600, #4b5563);
 		cursor: pointer;
 	}
-	.btn-share-contact:hover:not(:disabled) {
+	.btn-share-contact:hover:not(:disabled),
+	.btn-share-contact.shared {
 		border-color: var(--blue, #28a836);
 		color: var(--blue, #28a836);
 	}

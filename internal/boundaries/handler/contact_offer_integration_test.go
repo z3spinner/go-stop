@@ -210,6 +210,71 @@ func TestOfferContact_DuplicateOfferIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestGetContactOfferStatus_ReturnsOfferedStateForDriver(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob",
+		"phone":         "0622000099",
+		"origin":        "Saillans",
+		"destination":   "Crest",
+	})
+	var created map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&created)
+	requestID := created["ID"].(string)
+
+	postJSON(r, "/api/requests/"+requestID+"/offer-contact", map[string]interface{}{
+		"phone": "0611000001",
+		"name":  "Alice",
+	})
+
+	w2 := getWithPhone(r, "/api/requests/"+requestID+"/offer-contact-status", "0611000001")
+	if w2.Code != http.StatusOK {
+		t.Fatalf("GET /offer-contact-status expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var status map[string]bool
+	json.NewDecoder(w2.Body).Decode(&status)
+	if !status["offered"] {
+		t.Fatal("expected offered=true")
+	}
+}
+
+func TestGetContactOfferStatus_ReturnsFalseWhenOfferMissing(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob",
+		"phone":         "0622000099",
+		"origin":        "Saillans",
+		"destination":   "Crest",
+	})
+	var created map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&created)
+	requestID := created["ID"].(string)
+
+	w2 := getWithPhone(r, "/api/requests/"+requestID+"/offer-contact-status", "0611000001")
+	if w2.Code != http.StatusOK {
+		t.Fatalf("GET /offer-contact-status expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var status map[string]bool
+	json.NewDecoder(w2.Body).Decode(&status)
+	if status["offered"] {
+		t.Fatal("expected offered=false")
+	}
+}
+
+func TestGetContactOfferStatus_RequiresXPhone(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	w := getReq(r, "/api/requests/some-id/offer-contact-status")
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 when X-Phone missing, got %d", w.Code)
+	}
+}
+
 func TestListContactOffers_RequiresXPhone(t *testing.T) {
 	r := setupRouter()
 	truncateAll(t)

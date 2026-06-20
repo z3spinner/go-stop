@@ -96,6 +96,8 @@ export const api = {
 			unwrap<null>(gen.pingRequest(id, { ride_id: rideId }, phoneHeader(phone))),
 		offerContact: (id: string, phone: string, name: string) =>
 			unwrap<null>(gen.offerContact(id, { phone, name })),
+		getOfferStatus: (id: string, phone: string) =>
+			unwrap<{ offered: boolean }>(gen.getContactOfferStatus(id, phoneHeader(phone))),
 		listOffers: (id: string, phone: string) =>
 			unwrap<ContactOffer[]>(gen.listContactOffers(id, phoneHeader(phone)))
 	},

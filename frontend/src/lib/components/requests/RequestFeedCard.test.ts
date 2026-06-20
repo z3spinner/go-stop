@@ -2,12 +2,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
+import { tick } from 'svelte';
+import { render, fireEvent, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
+import { userName, userPhone } from '$lib/stores';
 import RequestFeedCard from './RequestFeedCard.svelte';
 import type { PublicRequest } from '$lib/types';
 
+const offerContact = vi.hoisted(() => vi.fn(async () => null));
+const getOfferStatus = vi.hoisted(() => vi.fn(async () => ({ offered: false })));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+vi.mock('$lib/api', () => ({ api: { requests: { offerContact, getOfferStatus } } }));
+vi.mock('$lib/profileModal', () => ({ openProfileModal: vi.fn() }));
+vi.mock('$lib/paraglide/messages', () => ({
+	m: {
+		alertAnytimeLabel: () => 'Anytime',
+		at: () => 'at',
+		btnDriveThis: () => 'I can drive this',
+		btnShareContact: () => 'Share my contact',
+		contactOfferSent: () => 'Contact shared ✓',
+		flexLabel30: () => '±30 min',
+		flexLabel60: () => '±60 min',
+		flexLabelExact: () => 'Exact'
+	}
+}));
 const gotoMock = vi.mocked(goto);
 
 const ZERO = '0001-01-01T00:00:00Z';
@@ -16,7 +34,14 @@ const base: PublicRequest = {
 	Date: ZERO, DepartureAt: ZERO, Flexibility: 0
 };
 
-beforeEach(() => gotoMock.mockClear());
+beforeEach(() => {
+	gotoMock.mockClear();
+	offerContact.mockClear();
+	getOfferStatus.mockClear();
+	getOfferStatus.mockResolvedValue({ offered: false });
+	userName.set('Alice');
+	userPhone.set('06 11 00 00 01');
+});
 
 describe('RequestFeedCard', () => {
 	it('renders an anytime request with the anytime label', () => {
@@ -57,5 +82,42 @@ describe('RequestFeedCard', () => {
 		});
 		await fireEvent.click(container.querySelector('.btn-drive-this')!);
 		expect(gotoMock.mock.calls[0][0] as string).toContain('departure_at=');
+	});
+
+	it('marks a request as already shared after offering contact', async () => {
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		await fireEvent.click(shareButton);
+		expect(offerContact).toHaveBeenCalledWith('rq1', '0611000001', 'Alice');
+		expect(shareButton).toBeDisabled();
+		expect(shareButton.textContent).toContain('Contact shared ✓');
+	});
+
+	it('shows an error and keeps sharing available when the offer fails', async () => {
+		offerContact.mockImplementationOnce(async () => { throw new Error('Share failed'); });
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		await fireEvent.click(shareButton);
+		expect(await screen.findByText('Share failed')).toBeInTheDocument();
+		expect(shareButton).not.toBeDisabled();
+		expect(shareButton.textContent).toContain('Share my contact');
+	});
+
+	it('restores the shared state from the API for the current phone', async () => {
+		getOfferStatus.mockResolvedValueOnce({ offered: true });
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		await vi.waitFor(() => expect(getOfferStatus).toHaveBeenCalledWith('rq1', '0611000001'));
+		await tick();
+		expect(shareButton).toBeDisabled();
+		expect(shareButton.textContent).toContain('Contact shared ✓');
+	});
+
+	it('requests status for the current normalized phone only', async () => {
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		await vi.waitFor(() => expect(getOfferStatus).toHaveBeenCalledWith('rq1', '0611000001'));
+		expect(shareButton).not.toBeDisabled();
+		expect(shareButton.textContent).toContain('Share my contact');
 	});
 });

@@ -21,6 +21,7 @@ type RequestHandler struct {
 	deleteRequest           *usecase.DeleteRequest
 	pingSearcher            *usecase.PingSearcher
 	offerContact            *usecase.OfferContact
+	getContactOfferStatus   *usecase.GetRequestContactOfferStatus
 	getRequestContactOffers *usecase.GetRequestContactOffers
 	requestRepo             repository.RequestRepository
 	statRepo                repository.StatRepository
@@ -33,6 +34,7 @@ func NewRequestHandler(
 	deleteRequest *usecase.DeleteRequest,
 	pingSearcher *usecase.PingSearcher,
 	offerContact *usecase.OfferContact,
+	getContactOfferStatus *usecase.GetRequestContactOfferStatus,
 	getRequestContactOffers *usecase.GetRequestContactOffers,
 	requestRepo repository.RequestRepository,
 	statRepo repository.StatRepository,
@@ -44,6 +46,7 @@ func NewRequestHandler(
 		deleteRequest:           deleteRequest,
 		pingSearcher:            pingSearcher,
 		offerContact:            offerContact,
+		getContactOfferStatus:   getContactOfferStatus,
 		getRequestContactOffers: getRequestContactOffers,
 		requestRepo:             requestRepo,
 		statRepo:                statRepo,
@@ -308,6 +311,41 @@ func (h *RequestHandler) OfferContact(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// GetContactOfferStatus reports whether the caller already offered their contact
+// on the request.
+// @ID       getContactOfferStatus
+// @Tags     requests
+// @Produce  json
+// @Param    id       path    string  true  "Request ID"
+// @Param    X-Phone  header  string  true  "Offerer phone"
+// @Success  200  {object}  handler.ContactOfferStatusResponse
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /requests/{id}/offer-contact-status [get]
+func (h *RequestHandler) GetContactOfferStatus(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	offered, err := h.getContactOfferStatus.Execute(c.Param("id"), phone)
+	if err != nil {
+		if errors.Is(err, usecase.ErrUnauthorized) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+			return
+		}
+		if errors.Is(err, usecase.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "request not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, ContactOfferStatusResponse{Offered: offered})
 }
 
 // ListContactOffers returns contact offers made for a request.
