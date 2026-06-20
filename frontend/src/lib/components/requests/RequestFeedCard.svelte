@@ -27,6 +27,7 @@
 	let busy = $state(false);
 	let offered = $state(false);
 	let offerError = $state('');
+	let syncedPhone = $state('');
 	const currentPhone = $derived(normalizePhone($userPhone));
 	const shareButtonText = $derived(offered ? m.contactOfferSent() : m.btnShareContact());
 
@@ -35,9 +36,9 @@
 	}
 
 	$effect(() => {
-		offered = browser && currentPhone !== ''
-			? localStorage.getItem(offerKey(currentPhone)) === '1'
-			: false;
+		if (!browser || syncedPhone === currentPhone) return;
+		syncedPhone = currentPhone;
+		offered = currentPhone !== '' && localStorage.getItem(offerKey(currentPhone)) === '1';
 	});
 
 	function drive() {
@@ -88,7 +89,7 @@
 	</div>
 	<div class="req-actions mt-1.5 flex flex-wrap gap-2">
 		<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
-		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} disabled={busy || offered} onclick={shareContact}>{shareButtonText}</button>
+		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} aria-label={shareButtonText} title={shareButtonText} disabled={busy || offered} onclick={shareContact}>{shareButtonText}</button>
 	</div>
 	{#if offerError}<span class="offer-state mt-1 text-sm text-gray-600">{offerError}</span>{/if}
 </div>

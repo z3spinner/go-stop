@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
+import { render, fireEvent, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 import { userName, userPhone } from '$lib/stores';
 import RequestFeedCard from './RequestFeedCard.svelte';
@@ -89,6 +89,17 @@ describe('RequestFeedCard', () => {
 		expect(shareButton).toBeDisabled();
 		expect(shareButton.textContent).toContain('Contact shared ✓');
 		expect(localStorage.getItem('contact_offer_0611000001_rq1')).toBe('1');
+	});
+
+	it('shows an error and keeps sharing available when the offer fails', async () => {
+		offerContact.mockImplementationOnce(async () => { throw new Error('Share failed'); });
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		await fireEvent.click(shareButton);
+		expect(await screen.findByText('Share failed')).toBeInTheDocument();
+		expect(shareButton).not.toBeDisabled();
+		expect(shareButton.textContent).toContain('Share my contact');
+		expect(localStorage.getItem('contact_offer_0611000001_rq1')).toBeNull();
 	});
 
 	it('restores the shared state from localStorage for the current phone', () => {
