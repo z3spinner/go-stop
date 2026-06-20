@@ -9,8 +9,9 @@ import RequestFeedCard from './RequestFeedCard.svelte';
 import type { PublicRequest } from '$lib/types';
 
 const offerContact = vi.hoisted(() => vi.fn(async () => null));
+const getOfferStatus = vi.hoisted(() => vi.fn(async () => ({ offered: false })));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
-vi.mock('$lib/api', () => ({ api: { requests: { offerContact } } }));
+vi.mock('$lib/api', () => ({ api: { requests: { offerContact, getOfferStatus } } }));
 vi.mock('$lib/profileModal', () => ({ openProfileModal: vi.fn() }));
 vi.mock('$lib/paraglide/messages', () => ({
 	m: {
@@ -35,7 +36,8 @@ const base: PublicRequest = {
 beforeEach(() => {
 	gotoMock.mockClear();
 	offerContact.mockClear();
-	localStorage.clear();
+	getOfferStatus.mockClear();
+	getOfferStatus.mockResolvedValue({ offered: false });
 	userName.set('Alice');
 	userPhone.set('06 11 00 00 01');
 });
@@ -88,7 +90,6 @@ describe('RequestFeedCard', () => {
 		expect(offerContact).toHaveBeenCalledWith('rq1', '0611000001', 'Alice');
 		expect(shareButton).toBeDisabled();
 		expect(shareButton.textContent).toContain('Contact shared ✓');
-		expect(localStorage.getItem('contact_offer_0611000001::rq1')).toBe('1');
 	});
 
 	it('shows an error and keeps sharing available when the offer fails', async () => {
@@ -99,21 +100,23 @@ describe('RequestFeedCard', () => {
 		expect(await screen.findByText('Share failed')).toBeInTheDocument();
 		expect(shareButton).not.toBeDisabled();
 		expect(shareButton.textContent).toContain('Share my contact');
-		expect(localStorage.getItem('contact_offer_0611000001::rq1')).toBeNull();
 	});
 
-	it('restores the shared state from localStorage for the current phone', () => {
-		localStorage.setItem('contact_offer_0611000001::rq1', '1');
+	it('restores the shared state from the API for the current phone', async () => {
+		getOfferStatus.mockResolvedValueOnce({ offered: true });
 		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
 		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
-		expect(shareButton).toBeDisabled();
-		expect(shareButton.textContent).toContain('Contact shared ✓');
+		await vi.waitFor(() => {
+			expect(getOfferStatus).toHaveBeenCalledWith('rq1', '0611000001');
+			expect(shareButton).toBeDisabled();
+			expect(shareButton.textContent).toContain('Contact shared ✓');
+		});
 	});
 
-	it('ignores stored shared state for a different phone', () => {
-		localStorage.setItem('contact_offer_0611000002::rq1', '1');
+	it('requests status for the current normalized phone only', async () => {
 		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
 		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		await vi.waitFor(() => expect(getOfferStatus).toHaveBeenCalledWith('rq1', '0611000001'));
 		expect(shareButton).not.toBeDisabled();
 		expect(shareButton.textContent).toContain('Share my contact');
 	});

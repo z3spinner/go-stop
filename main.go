@@ -87,6 +87,7 @@ func main() {
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, notifier)
 	offerContact := usecase.NewOfferContact(requestRepo, contactOfferRepo, subRepo, notifier)
+	getContactOfferStatus := usecase.NewGetRequestContactOfferStatus(requestRepo, contactOfferRepo)
 	getRequestContactOffers := usecase.NewGetRequestContactOffers(requestRepo, contactOfferRepo)
 
 	serviceTZ := time.UTC
@@ -101,7 +102,7 @@ func main() {
 
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getRequestContactOffers, requestRepo, statRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getContactOfferStatus, getRequestContactOffers, requestRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
@@ -192,6 +193,7 @@ func main() {
 		api.DELETE("/requests/:id", reqH.Delete)
 		api.POST("/requests/:id/ping", reqH.Ping)
 		api.POST("/requests/:id/offer-contact", reqH.OfferContact)
+		api.GET("/requests/:id/offer-contact-status", reqH.GetContactOfferStatus)
 		api.GET("/requests/:id/offers", reqH.ListContactOffers)
 
 		api.GET("/destinations", destH.List)

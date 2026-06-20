@@ -95,6 +95,10 @@ export interface HandlerContactOfferItem {
   offerer_phone?: string;
 }
 
+export interface HandlerContactOfferStatusResponse {
+  offered?: boolean;
+}
+
 export interface HandlerDeleteRequestBody {
   phone?: string;
 }
@@ -816,6 +820,61 @@ export const offerContact = async (id: string,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(handlerOfferContactBody)
+  }
+);}
+
+
+
+export type getContactOfferStatusResponse200 = {
+  data: HandlerContactOfferStatusResponse
+  status: 200
+}
+
+export type getContactOfferStatusResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type getContactOfferStatusResponse403 = {
+  data: HandlerErrorResponse
+  status: 403
+}
+
+export type getContactOfferStatusResponse404 = {
+  data: HandlerErrorResponse
+  status: 404
+}
+
+export type getContactOfferStatusResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type getContactOfferStatusResponseSuccess = (getContactOfferStatusResponse200) & {
+  headers: Headers;
+};
+export type getContactOfferStatusResponseError = (getContactOfferStatusResponse401 | getContactOfferStatusResponse403 | getContactOfferStatusResponse404 | getContactOfferStatusResponse500) & {
+  headers: Headers;
+};
+
+export type getContactOfferStatusResponse = (getContactOfferStatusResponseSuccess | getContactOfferStatusResponseError)
+
+export const getGetContactOfferStatusUrl = (id: string,) => {
+
+
+
+
+  return `/requests/${id}/offer-contact-status`
+}
+
+export const getContactOfferStatus = async (id: string, options?: RequestInit): Promise<getContactOfferStatusResponse> => {
+
+  return customFetch<getContactOfferStatusResponse>(getGetContactOfferStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

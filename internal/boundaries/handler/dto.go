@@ -96,6 +96,12 @@ type ContactOfferItem struct {
 	OffererPhone string `json:"offerer_phone"`
 }
 
+// ContactOfferStatusResponse reports whether the caller already offered contact
+// on a request.
+type ContactOfferStatusResponse struct {
+	Offered bool `json:"offered"`
+}
+
 // SubscriptionBody is the body for POST /subscriptions.
 type SubscriptionBody struct {
 	Phone    string `json:"phone"`

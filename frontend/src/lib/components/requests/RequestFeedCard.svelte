@@ -4,7 +4,6 @@
 -->
 
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
@@ -28,17 +27,26 @@
 	let offered = $state(false);
 	let offerError = $state('');
 	let syncedPhone = $state('');
+	let statusToken = $state('');
 	const currentPhone = $derived(normalizePhone($userPhone));
 	const shareButtonText = $derived(offered ? m.contactOfferSent() : m.btnShareContact());
 
-	function offerKey(phone: string) {
-		return `contact_offer_${encodeURIComponent(phone)}::${encodeURIComponent(request.ID)}`;
-	}
-
 	$effect(() => {
-		if (!browser || syncedPhone === currentPhone) return;
-		syncedPhone = currentPhone;
-		offered = currentPhone !== '' && localStorage.getItem(offerKey(currentPhone)) === '1';
+		const phone = currentPhone;
+		const token = `${request.ID}:${phone}`;
+		if (statusToken === token) return;
+		statusToken = token;
+		syncedPhone = phone;
+		offered = false;
+		if (phone === '') return;
+		void (async () => {
+			try {
+				const status = await api.requests.getOfferStatus(request.ID, phone);
+				if (statusToken === token && syncedPhone === phone) offered = status.offered;
+			} catch {
+				if (statusToken === token && syncedPhone === phone) offered = false;
+			}
+		})();
 	});
 
 	function drive() {
@@ -61,7 +69,6 @@
 		offerError = '';
 		try {
 			await api.requests.offerContact(request.ID, phone, name);
-			if (browser) localStorage.setItem(offerKey(phone), '1');
 			offered = true;
 		} catch (e) {
 			offerError = e instanceof Error ? e.message : String(e);
