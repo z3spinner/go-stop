@@ -83,6 +83,19 @@ type PingRequestBody struct {
 	RideID string `json:"ride_id"`
 }
 
+// OfferContactBody is the body for POST /requests/{id}/offer-contact.
+type OfferContactBody struct {
+	Phone string `json:"phone"`
+	Name  string `json:"name"`
+}
+
+// ContactOfferItem is one entry of GET /requests/{id}/offers.
+type ContactOfferItem struct {
+	ID           string `json:"id"`
+	OffererName  string `json:"offerer_name"`
+	OffererPhone string `json:"offerer_phone"`
+}
+
 // SubscriptionBody is the body for POST /subscriptions.
 type SubscriptionBody struct {
 	Phone    string `json:"phone"`

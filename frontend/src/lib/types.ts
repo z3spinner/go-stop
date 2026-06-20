@@ -83,3 +83,10 @@ export type VapidKey = DeepRequired<HandlerVapidKeyResponse>;
 // are `omitempty` on the server and may genuinely be absent.
 export type InterestListItem = DeepRequired<Pick<HandlerInterestListItem, 'id' | 'status'>> &
 	Pick<HandlerInterestListItem, 'searcher_name' | 'searcher_phone'>;
+
+// ContactOffer is one entry of GET /requests/{id}/offers.
+export type ContactOffer = {
+	id: string;
+	offerer_name: string;
+	offerer_phone: string;
+};

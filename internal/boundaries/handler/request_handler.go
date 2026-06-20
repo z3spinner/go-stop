@@ -15,13 +15,15 @@ import (
 )
 
 type RequestHandler struct {
-	postRequest       *usecase.PostRequest
-	getMyRequests     *usecase.GetMyRequests
-	getActiveRequests *usecase.GetActiveRequests
-	deleteRequest     *usecase.DeleteRequest
-	pingSearcher      *usecase.PingSearcher
-	requestRepo       repository.RequestRepository
-	statRepo          repository.StatRepository
+	postRequest              *usecase.PostRequest
+	getMyRequests            *usecase.GetMyRequests
+	getActiveRequests        *usecase.GetActiveRequests
+	deleteRequest            *usecase.DeleteRequest
+	pingSearcher             *usecase.PingSearcher
+	offerContact             *usecase.OfferContact
+	getRequestContactOffers  *usecase.GetRequestContactOffers
+	requestRepo              repository.RequestRepository
+	statRepo                 repository.StatRepository
 }
 
 func NewRequestHandler(
@@ -30,17 +32,21 @@ func NewRequestHandler(
 	getActiveRequests *usecase.GetActiveRequests,
 	deleteRequest *usecase.DeleteRequest,
 	pingSearcher *usecase.PingSearcher,
+	offerContact *usecase.OfferContact,
+	getRequestContactOffers *usecase.GetRequestContactOffers,
 	requestRepo repository.RequestRepository,
 	statRepo repository.StatRepository,
 ) *RequestHandler {
 	return &RequestHandler{
-		postRequest:       postRequest,
-		getMyRequests:     getMyRequests,
-		getActiveRequests: getActiveRequests,
-		deleteRequest:     deleteRequest,
-		pingSearcher:      pingSearcher,
-		requestRepo:       requestRepo,
-		statRepo:          statRepo,
+		postRequest:             postRequest,
+		getMyRequests:           getMyRequests,
+		getActiveRequests:       getActiveRequests,
+		deleteRequest:           deleteRequest,
+		pingSearcher:            pingSearcher,
+		offerContact:            offerContact,
+		getRequestContactOffers: getRequestContactOffers,
+		requestRepo:             requestRepo,
+		statRepo:                statRepo,
 	}
 }
 
@@ -261,4 +267,83 @@ func (h *RequestHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+type offerContactBody struct {
+	Phone string `json:"phone" binding:"required"`
+	Name  string `json:"name"`
+}
+
+// OfferContact lets anyone share their contact with a searcher, even without a posted ride.
+// @ID       offerContact
+// @Tags     requests
+// @Accept   json
+// @Produce  json
+// @Param    id    path  string                    true  "Request ID"
+// @Param    body  body  handler.OfferContactBody  true  "Offerer phone and name"
+// @Success  204
+// @Failure  400  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /requests/{id}/offer-contact [post]
+func (h *RequestHandler) OfferContact(c *gin.Context) {
+	var body offerContactBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	_, err := h.offerContact.Execute(c.Param("id"), normalizePhone(body.Phone), body.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, usecase.ErrUnauthorized):
+			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+		case errors.Is(err, usecase.ErrNameRequired):
+			c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		case err.Error() == "request not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": "request not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ListContactOffers returns contact offers made for a request.
+// Only the request owner (X-Phone) may retrieve this list.
+// @ID       listContactOffers
+// @Tags     requests
+// @Produce  json
+// @Param    id       path    string  true  "Request ID"
+// @Param    X-Phone  header  string  true  "Request owner phone"
+// @Success  200  {array}   handler.ContactOfferItem
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Router   /requests/{id}/offers [get]
+func (h *RequestHandler) ListContactOffers(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	offers, err := h.getRequestContactOffers.Execute(c.Param("id"), phone)
+	if err != nil {
+		if errors.Is(err, usecase.ErrUnauthorized) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	out := make([]ContactOfferItem, len(offers))
+	for i, o := range offers {
+		out[i] = ContactOfferItem{
+			ID:           o.ID,
+			OffererName:  o.OffererName,
+			OffererPhone: o.OffererPhone,
+		}
+	}
+	c.JSON(http.StatusOK, out)
 }
