@@ -98,4 +98,12 @@ describe('RequestFeedCard', () => {
 		expect(shareButton).toBeDisabled();
 		expect(shareButton.textContent).toContain('Contact shared ✓');
 	});
+
+	it('ignores stored shared state for a different phone', () => {
+		localStorage.setItem('contact_offer_0611000002_rq1', '1');
+		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
+		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
+		expect(shareButton).not.toBeDisabled();
+		expect(shareButton.textContent).toContain('Share my contact');
+	});
 });
