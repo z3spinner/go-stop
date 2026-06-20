@@ -65,8 +65,8 @@ func (uc *OfferContact) Execute(requestID, offererPhone, offererName string) (cr
 
 	// Notify the searcher on all their devices (best-effort).
 	sendToAll(req.Phone, domain.Message{
-		Title:       fmt.Sprintf("%s peut vous aider", offererName),
-		Body:        fmt.Sprintf("%s → %s — partagez votre contact", req.Origin, req.Destination),
+		Title:       fmt.Sprintf("%s can help you!", offererName),
+		Body:        fmt.Sprintf("%s → %s — they shared their contact", req.Origin, req.Destination),
 		URL:         "/my-searches",
 		ContactName: offererName,
 		Phone:       offererPhone,
