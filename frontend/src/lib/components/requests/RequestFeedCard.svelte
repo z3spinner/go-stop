@@ -26,7 +26,7 @@
 
 	let busy = $state(false);
 	let offered = $state(false);
-	let offerMsg = $state('');
+	let offerError = $state('');
 	const currentPhone = $derived(normalizePhone($userPhone));
 	const shareButtonText = $derived(offered ? m.contactOfferSent() : m.btnShareContact());
 
@@ -57,13 +57,13 @@
 			return;
 		}
 		busy = true;
-		offerMsg = '';
+		offerError = '';
 		try {
 			await api.requests.offerContact(request.ID, phone, name);
 			if (browser) localStorage.setItem(offerKey(phone), '1');
 			offered = true;
 		} catch (e) {
-			offerMsg = e instanceof Error ? e.message : String(e);
+			offerError = e instanceof Error ? e.message : String(e);
 		} finally {
 			busy = false;
 		}
@@ -90,7 +90,7 @@
 		<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
 		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} disabled={busy || offered} onclick={shareContact}>{shareButtonText}</button>
 	</div>
-	{#if offerMsg}<span class="offer-state mt-1 text-sm text-gray-600">{offerMsg}</span>{/if}
+	{#if offerError}<span class="offer-state mt-1 text-sm text-gray-600">{offerError}</span>{/if}
 </div>
 
 <style>
