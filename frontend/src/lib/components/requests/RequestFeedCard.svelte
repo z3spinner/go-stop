@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
+	import { api, ApiError } from '$lib/api';
 	import { userName, userPhone } from '$lib/stores';
 	import { openProfileModal } from '$lib/profileModal';
 	import { normalizePhone } from '$lib/utils';
@@ -43,8 +43,11 @@
 			try {
 				const status = await api.requests.getOfferStatus(request.ID, phone);
 				if (statusToken === token && syncedPhone === phone) offered = status.offered;
-			} catch {
-				if (statusToken === token && syncedPhone === phone) offered = false;
+			} catch (e) {
+				if (statusToken !== token || syncedPhone !== phone) return;
+				offered = false;
+				if (e instanceof ApiError && (e.status === 403 || e.status === 404)) return;
+				offerError = e instanceof Error ? e.message : String(e);
 			}
 		})();
 	});

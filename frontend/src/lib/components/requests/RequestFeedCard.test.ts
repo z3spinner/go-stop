@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { tick } from 'svelte';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 import { userName, userPhone } from '$lib/stores';
@@ -106,11 +107,10 @@ describe('RequestFeedCard', () => {
 		getOfferStatus.mockResolvedValueOnce({ offered: true });
 		const { container } = render(RequestFeedCard, { props: { request: { ...base } } });
 		const shareButton = container.querySelector('.btn-share-contact') as HTMLButtonElement;
-		await vi.waitFor(() => {
-			expect(getOfferStatus).toHaveBeenCalledWith('rq1', '0611000001');
-			expect(shareButton).toBeDisabled();
-			expect(shareButton.textContent).toContain('Contact shared ✓');
-		});
+		await vi.waitFor(() => expect(getOfferStatus).toHaveBeenCalledWith('rq1', '0611000001'));
+		await tick();
+		expect(shareButton).toBeDisabled();
+		expect(shareButton.textContent).toContain('Contact shared ✓');
 	});
 
 	it('requests status for the current normalized phone only', async () => {
