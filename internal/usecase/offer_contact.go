@@ -17,10 +17,10 @@ import (
 // without a posted ride. The offerer consents by initiating, so the searcher
 // immediately receives the contact details via push notification.
 type OfferContact struct {
-	requests     repository.RequestRepository
+	requests      repository.RequestRepository
 	contactOffers repository.ContactOfferRepository
-	subs         repository.SubscriptionRepository
-	notifier     notification.Notifier
+	subs          repository.SubscriptionRepository
+	notifier      notification.Notifier
 }
 
 func NewOfferContact(
@@ -47,10 +47,10 @@ func (uc *OfferContact) Execute(requestID, offererPhone, offererName string) (cr
 		return false, ErrUnauthorized // searcher cannot offer contact to themselves
 	}
 
-	offer, findErr := uc.contactOffers.FindByRequestAndOfferer(requestID, offererPhone)
+	_, findErr := uc.contactOffers.FindByRequestAndOfferer(requestID, offererPhone)
 	if findErr != nil {
 		// No existing offer — create a new one.
-		offer = domain.ContactOffer{
+		offer := domain.ContactOffer{
 			ID:           uuid.New().String(),
 			RequestID:    requestID,
 			OffererPhone: offererPhone,

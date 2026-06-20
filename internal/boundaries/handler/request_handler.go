@@ -15,15 +15,15 @@ import (
 )
 
 type RequestHandler struct {
-	postRequest              *usecase.PostRequest
-	getMyRequests            *usecase.GetMyRequests
-	getActiveRequests        *usecase.GetActiveRequests
-	deleteRequest            *usecase.DeleteRequest
-	pingSearcher             *usecase.PingSearcher
-	offerContact             *usecase.OfferContact
-	getRequestContactOffers  *usecase.GetRequestContactOffers
-	requestRepo              repository.RequestRepository
-	statRepo                 repository.StatRepository
+	postRequest             *usecase.PostRequest
+	getMyRequests           *usecase.GetMyRequests
+	getActiveRequests       *usecase.GetActiveRequests
+	deleteRequest           *usecase.DeleteRequest
+	pingSearcher            *usecase.PingSearcher
+	offerContact            *usecase.OfferContact
+	getRequestContactOffers *usecase.GetRequestContactOffers
+	requestRepo             repository.RequestRepository
+	statRepo                repository.StatRepository
 }
 
 func NewRequestHandler(
