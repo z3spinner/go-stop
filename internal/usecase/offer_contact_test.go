@@ -50,11 +50,11 @@ func TestOfferContact_CreatesOfferAndNotifiesSearcher(t *testing.T) {
 	reqRepo := &mockRequestRepoByID{
 		byID: map[string]domain.Request{
 			"req-1": {
-				ID:          "req-1",
-				Phone:       "555-searcher",
+				ID:           "req-1",
+				Phone:        "555-searcher",
 				SearcherName: "Bob",
-				Origin:      "Saillans",
-				Destination: "Crest",
+				Origin:       "Saillans",
+				Destination:  "Crest",
 			},
 		},
 	}
