@@ -31,6 +31,7 @@ func (m *mockRideRepoFeedback) FindByID(id string) (domain.Ride, error) {
 	return r, nil
 }
 func (m *mockRideRepoFeedback) FindAll() ([]domain.Ride, error)           { return nil, nil }
+func (m *mockRideRepoFeedback) CountAvailable() (int, error)              { return 0, nil }
 func (m *mockRideRepoFeedback) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoFeedback) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil

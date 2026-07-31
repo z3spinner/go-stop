@@ -27,6 +27,7 @@ func (m *mockRideRepoDelete) FindByID(id string) (domain.Ride, error) {
 	return r, nil
 }
 func (m *mockRideRepoDelete) FindAll() ([]domain.Ride, error)           { return nil, nil }
+func (m *mockRideRepoDelete) CountAvailable() (int, error)              { return 0, nil }
 func (m *mockRideRepoDelete) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoDelete) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil

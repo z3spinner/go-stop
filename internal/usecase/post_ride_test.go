@@ -54,6 +54,7 @@ func (m *mockRideRepo) FindByID(id string) (domain.Ride, error) {
 	return r, nil
 }
 func (m *mockRideRepo) FindAll() ([]domain.Ride, error)           { return m.saved, nil }
+func (m *mockRideRepo) CountAvailable() (int, error)              { return len(m.saved), nil }
 func (m *mockRideRepo) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return nil, nil
@@ -121,6 +122,13 @@ func (m *mockSubRepo) FindByPhone(phone string) ([]domain.Subscription, error) {
 		return []domain.Subscription{s}, nil
 	}
 	return nil, errors.New("not found")
+}
+func (m *mockSubRepo) FindAll() ([]domain.Subscription, error) {
+	out := make([]domain.Subscription, 0, len(m.subs))
+	for _, s := range m.subs {
+		out = append(out, s)
+	}
+	return out, nil
 }
 func (m *mockSubRepo) DeleteByEndpoint(string) error { return nil }
 func (m *mockSubRepo) Delete(phone string) error     { delete(m.subs, phone); return nil }

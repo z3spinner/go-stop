@@ -35,8 +35,9 @@ func (m *mockSubRepoNotify) FindByPhone(string) ([]domain.Subscription, error) {
 	}
 	return m.subs, nil
 }
-func (m *mockSubRepoNotify) Delete(string) error           { return nil }
-func (m *mockSubRepoNotify) DeleteByEndpoint(string) error { return nil }
+func (m *mockSubRepoNotify) FindAll() ([]domain.Subscription, error) { return m.subs, nil }
+func (m *mockSubRepoNotify) Delete(string) error                     { return nil }
+func (m *mockSubRepoNotify) DeleteByEndpoint(string) error           { return nil }
 
 func TestNotifySearcher_SendsToAllDevices(t *testing.T) {
 	sub1 := domain.Subscription{Phone: "555-0001", Endpoint: "https://fcm.example/1"}
@@ -97,7 +98,8 @@ func (r *trackingSubRepo) Save(domain.Subscription) error { return nil }
 func (r *trackingSubRepo) FindByPhone(string) ([]domain.Subscription, error) {
 	return r.subs, nil
 }
-func (r *trackingSubRepo) Delete(string) error { return nil }
+func (r *trackingSubRepo) FindAll() ([]domain.Subscription, error) { return r.subs, nil }
+func (r *trackingSubRepo) Delete(string) error                     { return nil }
 func (r *trackingSubRepo) DeleteByEndpoint(string) error {
 	r.deleted = true
 	return nil

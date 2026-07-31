@@ -8,6 +8,9 @@ ON CONFLICT (phone, endpoint) DO UPDATE SET p256dh = $3, auth = $4;
 SELECT id, phone, endpoint, p256dh, auth
 FROM subscriptions WHERE phone = $1;
 
+-- name: ListAllSubscriptions :many
+SELECT id, phone, endpoint, p256dh, auth FROM subscriptions;
+
 -- name: DeleteSubscription :exec
 DELETE FROM subscriptions WHERE phone = $1;
 

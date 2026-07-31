@@ -24,6 +24,7 @@ func (m *mockRideRepoWithMatch) FindByID(string) (domain.Ride, error) {
 	return domain.Ride{}, errors.New("not found")
 }
 func (m *mockRideRepoWithMatch) FindAll() ([]domain.Ride, error)           { return nil, nil }
+func (m *mockRideRepoWithMatch) CountAvailable() (int, error)              { return 0, nil }
 func (m *mockRideRepoWithMatch) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoWithMatch) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil

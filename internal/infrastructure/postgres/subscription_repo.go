@@ -27,6 +27,18 @@ func (r *SubscriptionRepo) Save(sub domain.Subscription) error {
 	})
 }
 
+func (r *SubscriptionRepo) FindAll() ([]domain.Subscription, error) {
+	rows, err := r.q.ListAllSubscriptions(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.Subscription, len(rows))
+	for i, row := range rows {
+		out[i] = subscriptionFromRow(row)
+	}
+	return out, nil
+}
+
 func (r *SubscriptionRepo) FindByPhone(phone string) ([]domain.Subscription, error) {
 	rows, err := r.q.ListSubscriptionsByPhone(context.Background(), phone)
 	if err != nil {

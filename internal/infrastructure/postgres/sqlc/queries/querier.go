@@ -15,6 +15,8 @@ type Querier interface {
 	ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
+	// Returns the count of currently active rides using the same window as ListRidesActive.
+	CountRidesActive(ctx context.Context, graceMinutes int32) (int64, error)
 	DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error
 	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
@@ -94,6 +96,7 @@ type Querier interface {
 	// A daily alert carries a 1970-01-01 sentinel departure_at, so any later year
 	// marks a concrete one-off. Newest breaks ties.
 	ListActiveRequests(ctx context.Context, graceMinutes int32) ([]Request, error)
+	ListAllSubscriptions(ctx context.Context) ([]Subscription, error)
 	ListContactOffersByRequest(ctx context.Context, requestID pgtype.UUID) ([]ContactOffer, error)
 	// Returns known locations sorted by popularity. Combines active rides/requests
 	// with historical ride_stats so locations persist after rides expire.

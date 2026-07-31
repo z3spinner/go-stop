@@ -24,6 +24,10 @@ type RideRepository interface {
 	UpdateByID(ride domain.Ride) (domain.Ride, error)
 	FindByID(id string) (domain.Ride, error)
 	FindAll() ([]domain.Ride, error)
+	// CountAvailable returns the number of currently active rides using the
+	// same grace window as FindAll. Prefer this over FindAll when only a count
+	// is needed (avoids loading all ride data into memory).
+	CountAvailable() (int, error)
 	FindByPhone(phone string) ([]domain.Ride, error)
 	FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error)
 	// FindByOriginAndDestinationFuzzy is a trigram-based fallback for typos and
