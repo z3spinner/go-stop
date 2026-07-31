@@ -104,11 +104,10 @@ func (uc *SendEngagementReminder) Execute() error {
 		return nil
 	}
 
-	rides, err := uc.rides.FindAll()
+	count, err := uc.rides.CountAvailable()
 	if err != nil {
 		return fmt.Errorf("engagement reminder: count rides: %w", err)
 	}
-	count := len(rides)
 	log.Printf("engagement reminder: available rides=%d threshold=%d", count, engagementThreshold)
 
 	if count >= engagementThreshold {

@@ -19,6 +19,7 @@ func (r *expiringRideRepo) Save(rd domain.Ride) (domain.Ride, bool, error) { ret
 func (r *expiringRideRepo) UpdateByID(rd domain.Ride) (domain.Ride, error) { return rd, nil }
 func (r *expiringRideRepo) FindByID(string) (domain.Ride, error)           { return domain.Ride{}, nil }
 func (r *expiringRideRepo) FindAll() ([]domain.Ride, error)                { return nil, nil }
+func (r *expiringRideRepo) CountAvailable() (int, error)                   { return 0, nil }
 func (r *expiringRideRepo) FindByPhone(string) ([]domain.Ride, error)      { return nil, nil }
 func (r *expiringRideRepo) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil

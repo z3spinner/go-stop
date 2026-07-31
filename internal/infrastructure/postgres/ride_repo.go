@@ -107,6 +107,11 @@ func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 	return ridesFromRows(rows), nil
 }
 
+func (r *RideRepo) CountAvailable() (int, error) {
+	n, err := r.q.CountRidesActive(context.Background(), r.graceMins)
+	return int(n), err
+}
+
 func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
 	rows, err := r.q.ListRidesByPhone(context.Background(), phone)
 	if err != nil {

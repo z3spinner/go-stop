@@ -54,6 +54,13 @@ WHERE expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
 ORDER BY departure_at ASC;
 
+-- name: CountRidesActive :one
+-- Returns the count of currently active rides using the same window as ListRidesActive.
+SELECT COUNT(*) AS count
+FROM rides
+WHERE expires_at > NOW()
+  AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW();
+
 -- name: ListRidesByPhone :many
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides WHERE phone = $1 AND expires_at > NOW()

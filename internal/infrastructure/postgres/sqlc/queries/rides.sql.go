@@ -23,6 +23,21 @@ func (q *Queries) ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64,
 	return result.RowsAffected(), nil
 }
 
+const countRidesActive = `-- name: CountRidesActive :one
+SELECT COUNT(*) AS count
+FROM rides
+WHERE expires_at > NOW()
+  AND departure_at + (flexibility * interval '1 minute') + ($1::int * interval '1 minute') > NOW()
+`
+
+// Returns the count of currently active rides using the same window as ListRidesActive.
+func (q *Queries) CountRidesActive(ctx context.Context, graceMinutes int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countRidesActive, graceMinutes)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteExpiredRides = `-- name: DeleteExpiredRides :exec
 DELETE FROM rides WHERE expires_at < NOW()
 `
