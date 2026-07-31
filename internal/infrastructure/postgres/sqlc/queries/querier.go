@@ -108,6 +108,7 @@ type Querier interface {
 	// grace_minutes: hides rides whose flex window ended more than N minutes ago
 	ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ride, error)
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)
+	ListAllSubscriptions(ctx context.Context) ([]Subscription, error)
 	ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error)
 	MarkFeedbackSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error

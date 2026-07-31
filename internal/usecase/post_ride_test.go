@@ -122,6 +122,13 @@ func (m *mockSubRepo) FindByPhone(phone string) ([]domain.Subscription, error) {
 	}
 	return nil, errors.New("not found")
 }
+func (m *mockSubRepo) FindAll() ([]domain.Subscription, error) {
+	out := make([]domain.Subscription, 0, len(m.subs))
+	for _, s := range m.subs {
+		out = append(out, s)
+	}
+	return out, nil
+}
 func (m *mockSubRepo) DeleteByEndpoint(string) error { return nil }
 func (m *mockSubRepo) Delete(phone string) error     { delete(m.subs, phone); return nil }
 

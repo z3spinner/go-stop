@@ -100,6 +100,9 @@ func main() {
 		}
 	}
 
+	settingsRepo := postgres.NewSettingsRepo(pool)
+	sendEngagementReminder := usecase.NewSendEngagementReminder(rideRepo, subRepo, settingsRepo, notifier, serviceTZ)
+
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getContactOfferStatus, getRequestContactOffers, requestRepo, statRepo)
@@ -142,6 +145,9 @@ func main() {
 			}
 			if err := retryNotifications.Execute(); err != nil {
 				log.Printf("retry notifications: %v", err)
+			}
+			if err := sendEngagementReminder.Execute(); err != nil {
+				log.Printf("engagement reminder: %v", err)
 			}
 		}
 		runCronCycle() // tick at startup — don't wait an hour for the first cycle
