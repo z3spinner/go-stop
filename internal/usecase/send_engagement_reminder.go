@@ -22,6 +22,27 @@ const engagementThreshold = 10
 // engagementSettingPrefix is prepended to "YYYY-MM" to form the idempotency key.
 const engagementSettingPrefix = "engagement_reminder:"
 
+// engagementTitles and engagementBodies hold the localised push text. French is
+// the app's primary language and the fallback (via pick) when the subscriber's
+// language cannot be determined.
+var engagementTitles = map[string]string{
+	"fr": "Proposez un trajet ce mois-ci ! 🚗",
+	"en": "Share a ride this month! 🚗",
+	"de": "Biete diese Monat eine Mitfahrt an! 🚗",
+	"es": "¡Comparte un viaje este mes! 🚗",
+	"it": "Condividi un viaggio questo mese! 🚗",
+	"nl": "Deel een rit deze maand! 🚗",
+}
+
+var engagementBodies = map[string]string{
+	"fr": "Le tableau est presque vide — soyez le premier à poster un trajet et aidez vos voisins à se déplacer.",
+	"en": "The board is almost empty — be the first to post a ride and help your neighbours get moving.",
+	"de": "Das Brett ist fast leer — sei der Erste, der eine Fahrt anbietet, und hilf deinen Nachbarn.",
+	"es": "El tablón está casi vacío — sé el primero en publicar un trayecto y ayuda a tus vecinos a moverse.",
+	"it": "La bacheca è quasi vuota — sii il primo a pubblicare un viaggio e aiuta i tuoi vicini a spostarsi.",
+	"nl": "Het bord is bijna leeg — wees de eerste die een rit plaatst en help je buren op weg.",
+}
+
 // SendEngagementReminder is a monthly scheduled job that sends a motivational
 // push notification to all subscribers when available rides fall below the
 // threshold. It is idempotent: once the notification is sent for a given month,
@@ -105,9 +126,12 @@ func (uc *SendEngagementReminder) Execute() error {
 		return uc.settings.InsertIfAbsent(ctx, monthKey, "sent")
 	}
 
+	// Subscriptions carry no language preference, so fall back to French —
+	// the app's primary language. pick() returns the French value when the
+	// key is absent or empty, so this is safe for all future callers too.
 	msg := domain.Message{
-		Title: "Share a ride this month! 🚗",
-		Body:  "The board is almost empty — be the first to post a ride and help your neighbours get moving.",
+		Title: pick(engagementTitles, "fr"),
+		Body:  pick(engagementBodies, "fr"),
 		URL:   "/",
 	}
 
