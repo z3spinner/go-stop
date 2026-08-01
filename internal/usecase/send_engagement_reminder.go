@@ -16,22 +16,22 @@ import (
 )
 
 // engagementThreshold is the minimum number of available rides required to skip
-// the monthly motivational push notification.
+// the weekly motivational push notification.
 const engagementThreshold = 10
 
-// engagementSettingPrefix is prepended to "YYYY-MM" to form the idempotency key.
+// engagementSettingPrefix is prepended to "YYYY-WNN" (ISO year + week) to form the idempotency key.
 const engagementSettingPrefix = "engagement_reminder:"
 
 // engagementTitles and engagementBodies hold the localised push text. French is
 // the app's primary language and the fallback (via pick) when the subscriber's
 // language cannot be determined.
 var engagementTitles = map[string]string{
-	"fr": "Proposez un trajet ce mois-ci ! 🚗",
-	"en": "Share a ride this month! 🚗",
-	"de": "Biete diese Monat eine Mitfahrt an! 🚗",
-	"es": "¡Comparte un viaje este mes! 🚗",
-	"it": "Condividi un viaggio questo mese! 🚗",
-	"nl": "Deel een rit deze maand! 🚗",
+	"fr": "Proposez un trajet cette semaine ! 🚗",
+	"en": "Share a ride this week! 🚗",
+	"de": "Biete diese Woche eine Mitfahrt an! 🚗",
+	"es": "¡Comparte un viaje esta semana! 🚗",
+	"it": "Condividi un viaggio questa settimana! 🚗",
+	"nl": "Deel een rit deze week! 🚗",
 }
 
 var engagementBodies = map[string]string{
@@ -43,10 +43,11 @@ var engagementBodies = map[string]string{
 	"nl": "Het bord is bijna leeg — wees de eerste die een rit plaatst en help je buren op weg.",
 }
 
-// SendEngagementReminder is a monthly scheduled job that sends a motivational
+// SendEngagementReminder is a weekly scheduled job that sends a motivational
 // push notification to all subscribers when available rides fall below the
-// threshold. It is idempotent: once the notification is sent for a given month,
-// subsequent runs within that month are a no-op.
+// threshold. It fires on Mondays at or after 08:00 in the service timezone and
+// is idempotent: once the notification is sent for a given ISO week, subsequent
+// runs within that week are a no-op.
 type SendEngagementReminder struct {
 	rides    repository.RideRepository
 	subs     repository.SubscriptionRepository
@@ -77,30 +78,31 @@ func NewSendEngagementReminder(
 	}
 }
 
-// Execute checks whether it is the beginning of a new month and, if so, sends
-// a motivational push notification to all subscribers when fewer than
-// engagementThreshold rides are currently available. The run is skipped when the
-// notification has already been sent for the current month.
+// Execute checks whether it is Monday at or after 08:00 in the service timezone
+// and, if so, sends a motivational push notification to all subscribers when
+// fewer than engagementThreshold rides are currently available. The run is
+// skipped when the notification has already been sent for the current ISO week.
 func (uc *SendEngagementReminder) Execute() error {
 	now := uc.Clock().In(uc.loc)
-	log.Printf("engagement reminder: running (day=%d month=%s)", now.Day(), now.Format("2006-01"))
+	isoYear, isoWeek := now.ISOWeek()
+	log.Printf("engagement reminder: running (weekday=%s week=%04d-W%02d)", now.Weekday(), isoYear, isoWeek)
 
-	// Only act during the first 3 days of the month so the job fires even when
-	// the server restarts after day 1.
-	if now.Day() > 3 {
-		log.Printf("engagement reminder: skipped (day %d is outside window)", now.Day())
+	// Only act on Mondays at or after 08:00 so the job fires on the intended
+	// day even when the server restarts later in the morning.
+	if now.Weekday() != time.Monday || now.Hour() < 8 {
+		log.Printf("engagement reminder: skipped (not Monday ≥ 08:00, weekday=%s hour=%d)", now.Weekday(), now.Hour())
 		return nil
 	}
 
-	monthKey := engagementSettingPrefix + now.Format("2006-01")
+	weekKey := fmt.Sprintf("%s%04d-W%02d", engagementSettingPrefix, isoYear, isoWeek)
 	ctx := context.Background()
 
-	_, alreadySent, err := uc.settings.Get(ctx, monthKey)
+	_, alreadySent, err := uc.settings.Get(ctx, weekKey)
 	if err != nil {
 		return fmt.Errorf("engagement reminder: check idempotency key: %w", err)
 	}
 	if alreadySent {
-		log.Printf("engagement reminder: already sent for %s, skipping", now.Format("2006-01"))
+		log.Printf("engagement reminder: already sent for %04d-W%02d, skipping", isoYear, isoWeek)
 		return nil
 	}
 
@@ -122,7 +124,7 @@ func (uc *SendEngagementReminder) Execute() error {
 	if len(subs) == 0 {
 		log.Printf("engagement reminder: no subscribers, skipping push")
 		// Still mark as sent so we don't log repeatedly.
-		return uc.settings.InsertIfAbsent(ctx, monthKey, "sent")
+		return uc.settings.InsertIfAbsent(ctx, weekKey, "sent")
 	}
 
 	// Subscriptions carry no language preference, so fall back to French —
@@ -147,8 +149,8 @@ func (uc *SendEngagementReminder) Execute() error {
 	}
 	log.Printf("engagement reminder: push sent to %d/%d subscribers", sent, len(subs))
 
-	// Record that we have sent the reminder for this month. InsertIfAbsent is
+	// Record that we have sent the reminder for this week. InsertIfAbsent is
 	// race-safe: a concurrent call (unlikely in single-instance but possible)
 	// that reaches this point will simply lose the race and be a no-op.
-	return uc.settings.InsertIfAbsent(ctx, monthKey, "sent")
+	return uc.settings.InsertIfAbsent(ctx, weekKey, "sent")
 }

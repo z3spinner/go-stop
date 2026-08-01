@@ -68,8 +68,12 @@ func (m *mockSubRepoAll) DeleteByEndpoint(ep string) error {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-func firstOfMonth(year int, month time.Month, loc *time.Location) time.Time {
-	return time.Date(year, month, 1, 8, 0, 0, 0, loc)
+func mondayAt8(year int, month time.Month, day int, loc *time.Location) time.Time {
+	t := time.Date(year, month, day, 8, 0, 0, 0, loc)
+	if t.Weekday() != time.Monday {
+		panic("mondayAt8: provided date is not a Monday")
+	}
+	return t
 }
 
 func makeUC(rides []domain.Ride, subs []domain.Subscription, settings *mockSettingsRepo, notifier *mockNotifier, now time.Time) *usecase.SendEngagementReminder {
@@ -92,7 +96,7 @@ func TestSendEngagementReminder_SendsWhenRidesLow(t *testing.T) {
 	// 5 rides — below threshold of 10
 	rides := make([]domain.Ride, 5)
 
-	uc := makeUC(rides, subs, settings, n, firstOfMonth(2030, 1, time.UTC))
+	uc := makeUC(rides, subs, settings, n, mondayAt8(2030, 1, 7, time.UTC))
 	if err := uc.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -113,7 +117,7 @@ func TestSendEngagementReminder_SkipsWhenRidesEnough(t *testing.T) {
 	// 10 rides — at threshold, no push needed
 	rides := make([]domain.Ride, 10)
 
-	uc := makeUC(rides, subs, settings, n, firstOfMonth(2030, 1, time.UTC))
+	uc := makeUC(rides, subs, settings, n, mondayAt8(2030, 1, 7, time.UTC))
 	if err := uc.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -122,10 +126,10 @@ func TestSendEngagementReminder_SkipsWhenRidesEnough(t *testing.T) {
 	}
 }
 
-func TestSendEngagementReminder_IdempotentWithinMonth(t *testing.T) {
+func TestSendEngagementReminder_IdempotentWithinWeek(t *testing.T) {
 	settings := newMockSettings()
-	// Pre-populate the idempotency key for 2030-01
-	settings.data["engagement_reminder:2030-01"] = "sent"
+	// Pre-populate the idempotency key for 2030-W02
+	settings.data["engagement_reminder:2030-W02"] = "sent"
 
 	n := &mockNotifier{}
 	subs := []domain.Subscription{
@@ -133,12 +137,12 @@ func TestSendEngagementReminder_IdempotentWithinMonth(t *testing.T) {
 	}
 	rides := make([]domain.Ride, 2) // would trigger send if key absent
 
-	uc := makeUC(rides, subs, settings, n, firstOfMonth(2030, 1, time.UTC))
+	uc := makeUC(rides, subs, settings, n, mondayAt8(2030, 1, 7, time.UTC))
 	if err := uc.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n.called {
-		t.Error("expected no push when already sent this month")
+		t.Error("expected no push when already sent this week")
 	}
 }
 
@@ -148,14 +152,24 @@ func TestSendEngagementReminder_SkipsOutsideWindow(t *testing.T) {
 	subs := []domain.Subscription{{Phone: "555-0001", Endpoint: "https://push.example.com/1"}}
 	rides := make([]domain.Ride, 0) // empty — would fire if in window
 
-	// Day 10 — outside the 1-3 day window
-	midMonth := time.Date(2030, 1, 10, 8, 0, 0, 0, time.UTC)
-	uc := makeUC(rides, subs, settings, n, midMonth)
+	// Tuesday — not a Monday
+	tuesday := time.Date(2030, 1, 8, 8, 0, 0, 0, time.UTC)
+	uc := makeUC(rides, subs, settings, n, tuesday)
 	if err := uc.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if n.called {
-		t.Error("expected no push outside month-start window (day > 3)")
+		t.Error("expected no push on a non-Monday")
+	}
+
+	// Monday before 08:00
+	mondayBefore8 := time.Date(2030, 1, 7, 7, 59, 0, 0, time.UTC)
+	uc2 := makeUC(rides, subs, settings, n, mondayBefore8)
+	if err := uc2.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if n.called {
+		t.Error("expected no push on Monday before 08:00")
 	}
 }
 
@@ -164,7 +178,7 @@ func TestSendEngagementReminder_NoSubscribers_StillMarks(t *testing.T) {
 	n := &mockNotifier{}
 	rides := make([]domain.Ride, 3) // low enough to trigger
 
-	uc := makeUC(rides, []domain.Subscription{}, settings, n, firstOfMonth(2030, 2, time.UTC))
+	uc := makeUC(rides, []domain.Subscription{}, settings, n, mondayAt8(2030, 2, 4, time.UTC))
 	if err := uc.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -187,7 +201,7 @@ func TestSendEngagementReminder_Removes410GoneSubscription(t *testing.T) {
 	rideRepo := &mockRideRepo{saved: rides}
 
 	uc := usecase.NewSendEngagementReminder(rideRepo, subRepo, settings, gone, time.UTC)
-	uc.Clock = func() time.Time { return firstOfMonth(2030, 3, time.UTC) }
+	uc.Clock = func() time.Time { return mondayAt8(2030, 3, 4, time.UTC) }
 	if err := uc.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -201,7 +215,7 @@ func TestSendEngagementReminder_SettingsGetError(t *testing.T) {
 	settings.getErr = errors.New("db error")
 	n := &mockNotifier{}
 
-	uc := makeUC(nil, nil, settings, n, firstOfMonth(2030, 1, time.UTC))
+	uc := makeUC(nil, nil, settings, n, mondayAt8(2030, 1, 7, time.UTC))
 	err := uc.Execute()
 	if err == nil {
 		t.Error("expected error when settings.Get fails")
