@@ -32,6 +32,11 @@ type Querier interface {
 	// :execrows returns the number of rows deleted, used as the "claim" signal in
 	// RecordFeedback: only the caller that actually deletes the row records the stat.
 	DeleteFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (int64, error)
+	// Removes items about rides/requests that no longer exist — expired (deleted
+	// by the hourly expiry job) or deleted by their owner — so a post's details
+	// don't outlive it in other people's inboxes. Feedback reminders are kept:
+	// they are sent after the ride is over, on purpose.
+	DeleteInboxForGonePosts(ctx context.Context) (int64, error)
 	DeleteInboxForRequest(ctx context.Context, requestID pgtype.UUID) error
 	DeleteInboxForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteInterest(ctx context.Context, id pgtype.UUID) error

@@ -97,6 +97,10 @@ func (r *InboxRepo) DeleteForRequest(requestID string) error {
 	return r.q.DeleteInboxForRequest(context.Background(), u)
 }
 
+func (r *InboxRepo) DeleteForGonePosts() (int64, error) {
+	return r.q.DeleteInboxForGonePosts(context.Background())
+}
+
 func (r *InboxRepo) DeleteOlderThan(cutoff time.Time) (int64, error) {
 	return r.q.DeleteNotificationsOlderThan(context.Background(), tsFrom(cutoff))
 }

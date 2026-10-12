@@ -30,7 +30,8 @@ func (uc *DeleteRequest) Execute(id, phone string) error {
 		return err
 	}
 	// Remove copies of this request (the searcher's name and route) from other
-	// people's inboxes, as the privacy notice promises. Best-effort.
+	// people's inboxes right away, as the privacy notice promises. (Expired
+	// requests are cleaned by the hourly PurgeInbox.) Best-effort.
 	if err := uc.inbox.DeleteForRequest(id); err != nil {
 		log.Printf("delete request: inbox cleanup: %v", err)
 	}

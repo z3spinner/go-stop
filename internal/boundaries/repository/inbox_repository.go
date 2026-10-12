@@ -34,6 +34,11 @@ type InboxRepository interface {
 	DeleteForRide(rideID string) error
 	DeleteForRequest(requestID string) error
 
+	// DeleteForGonePosts removes items about rides/requests that no longer
+	// exist (expired or deleted), except feedback reminders, and returns how
+	// many.
+	DeleteForGonePosts() (int64, error)
+
 	// DeleteOlderThan removes items created before cutoff and returns how many.
 	DeleteOlderThan(cutoff time.Time) (int64, error)
 }

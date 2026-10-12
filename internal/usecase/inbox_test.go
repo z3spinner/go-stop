@@ -53,6 +53,7 @@ type mockInboxRepo struct {
 	deletedRequests  []string
 	deleteCutoff     time.Time
 	deleted          int64
+	goneCalled       bool
 	deleteForRideErr error
 }
 
@@ -86,6 +87,10 @@ func (m *mockInboxRepo) DeleteForRide(id string) error {
 func (m *mockInboxRepo) DeleteForRequest(id string) error {
 	m.deletedRequests = append(m.deletedRequests, id)
 	return nil
+}
+func (m *mockInboxRepo) DeleteForGonePosts() (int64, error) {
+	m.goneCalled = true
+	return 0, nil
 }
 func (m *mockInboxRepo) DeleteOlderThan(cutoff time.Time) (int64, error) {
 	m.deleteCutoff = cutoff
@@ -381,6 +386,9 @@ func TestPurgeInbox_DeletesOlderThanRetention(t *testing.T) {
 		}
 		if !inbox.deleteCutoff.Before(before) {
 			t.Errorf("days=%d: cutoff must be in the past", tc.days)
+		}
+		if !inbox.goneCalled {
+			t.Errorf("days=%d: items about expired/deleted posts must be purged too", tc.days)
 		}
 	}
 }

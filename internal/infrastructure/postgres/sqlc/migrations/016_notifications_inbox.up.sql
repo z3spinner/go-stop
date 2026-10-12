@@ -1,8 +1,8 @@
 -- Persistent per-user copy of every notification (the in-app inbox), so a
 -- missed or swiped-away Web Push can still be read in the app. Also covers
 -- users with no push subscription at all (e.g. iOS without the installed PWA).
--- Rows are garbage-collected after NOTIFICATION_RETENTION_DAYS (default 30),
--- and deleted early when the owner deletes the ride/request they are about.
+-- Rows are deleted when the ride/request they are about expires or is deleted
+-- by its owner, and in any case after NOTIFICATION_RETENTION_DAYS (default 30).
 --
 -- Stores the notification kind plus the few parameters the client needs to
 -- render it in the reader's language. The other party's phone number is

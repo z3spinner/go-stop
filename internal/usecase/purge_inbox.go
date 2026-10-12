@@ -37,20 +37,25 @@ type PurgeInbox struct {
 	retention time.Duration
 }
 
-// NewPurgeInbox deletes inbox items older than retentionDays (clamped, see
-// ClampInboxRetentionDays).
+// NewPurgeInbox deletes inbox items about rides/requests that have expired or
+// been deleted, and anything older than retentionDays (clamped, see
+// ClampInboxRetentionDays). Runs in the hourly cron after the expiry jobs.
 func NewPurgeInbox(inbox repository.InboxRepository, retentionDays int) *PurgeInbox {
 	days := ClampInboxRetentionDays(retentionDays)
 	return &PurgeInbox{inbox: inbox, retention: time.Duration(days) * 24 * time.Hour}
 }
 
 func (uc *PurgeInbox) Execute() error {
-	n, err := uc.inbox.DeleteOlderThan(time.Now().Add(-uc.retention))
+	gone, err := uc.inbox.DeleteForGonePosts()
 	if err != nil {
 		return err
 	}
-	if n > 0 {
-		log.Printf("purge inbox: %d old notifications deleted", n)
+	old, err := uc.inbox.DeleteOlderThan(time.Now().Add(-uc.retention))
+	if err != nil {
+		return err
+	}
+	if gone > 0 || old > 0 {
+		log.Printf("purge inbox: %d about expired/deleted posts, %d past retention", gone, old)
 	}
 	return nil
 }

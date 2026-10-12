@@ -38,8 +38,8 @@ func (uc *DeleteRide) Execute(id, phone string) error {
 	// that post-ride feedback is still wanted. Best-effort.
 	_, _ = uc.feedbackQueue.DeleteByRideID(id)
 	// The driver deleted their post: remove the copies of it (their name, route,
-	// time) from other people's inboxes too, as the privacy notice promises.
-	// Expired rides keep them until the retention period ends. Best-effort.
+	// time) from other people's inboxes right away, as the privacy notice
+	// promises. (Expired rides are cleaned by the hourly PurgeInbox.) Best-effort.
 	if err := uc.inbox.DeleteForRide(id); err != nil {
 		log.Printf("delete ride: inbox cleanup: %v", err)
 	}

@@ -7,8 +7,11 @@ package postgres_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
@@ -175,5 +178,75 @@ func TestInboxRepo_DeleteForRideAndRequest(t *testing.T) {
 	items, _ := repo.ListByPhone("0611", 10)
 	if len(items) != 1 || items[0].RideID != rideB || items[0].RequestID != "" {
 		t.Errorf("round-trip of ride/request ids failed: %+v", items)
+	}
+}
+
+// Items about a ride/request disappear once it expires (the expiry job deletes
+// the row), except the driver's own feedback reminder, which is sent after the
+// trip on purpose. Live posts and unlinked items are untouched.
+func TestInboxRepo_DeleteForGonePosts(t *testing.T) {
+	truncate(t)
+	inbox := postgres.NewInboxRepo(testPool)
+	rides := postgres.NewRideRepo(testPool, 60)
+	requests := postgres.NewRequestRepo(testPool, 60)
+
+	past := time.Now().Add(-48 * time.Hour).UTC().Truncate(time.Second)
+	future := time.Now().Add(48 * time.Hour).UTC().Truncate(time.Second)
+	expiredRide, liveRide := uuid.New().String(), uuid.New().String()
+	expiredReq, liveReq := uuid.New().String(), uuid.New().String()
+	for _, rd := range []domain.Ride{
+		{ID: expiredRide, DriverName: "Old", Phone: "0601", Origin: "A", Destination: "B", Date: past, DepartureAt: past, PostedAt: past, ExpiresAt: past},
+		{ID: liveRide, DriverName: "New", Phone: "0602", Origin: "A", Destination: "C", Date: future, DepartureAt: future, PostedAt: past, ExpiresAt: future},
+	} {
+		if _, _, err := rides.Save(rd); err != nil {
+			t.Fatalf("save ride: %v", err)
+		}
+	}
+	for _, rq := range []domain.Request{
+		{ID: expiredReq, SearcherName: "Old", Phone: "0603", Origin: "A", Destination: "B", Date: past, DepartureAt: past, PostedAt: past, ExpiresAt: past},
+		{ID: liveReq, SearcherName: "New", Phone: "0604", Origin: "A", Destination: "C", Date: future, DepartureAt: future, PostedAt: past, ExpiresAt: future},
+	} {
+		if err := requests.Save(rq); err != nil {
+			t.Fatalf("save request: %v", err)
+		}
+	}
+	for _, it := range []domain.InboxItem{
+		{Phone: "0611", Kind: domain.KindRideMatch, RideID: expiredRide, DedupKey: "gone-ride"},
+		{Phone: "0601", Kind: domain.KindFeedbackReminder, RideID: expiredRide, DedupKey: "keep-feedback"},
+		{Phone: "0611", Kind: domain.KindRideMatch, RideID: liveRide, DedupKey: "keep-ride"},
+		{Phone: "0612", Kind: domain.KindContactOffered, RequestID: expiredReq, DedupKey: "gone-request"},
+		{Phone: "0612", Kind: domain.KindRequestMatch, RequestID: liveReq, DedupKey: "keep-request"},
+		{Phone: "0613", Kind: domain.KindInterestReceived, DedupKey: "keep-unlinked"},
+	} {
+		if err := inbox.Add(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// What the hourly cron does: expiry jobs first, then the inbox purge.
+	if err := rides.DeleteExpired(); err != nil {
+		t.Fatal(err)
+	}
+	if err := requests.DeleteExpired(); err != nil {
+		t.Fatal(err)
+	}
+	n, err := inbox.DeleteForGonePosts()
+	if err != nil {
+		t.Fatalf("DeleteForGonePosts: %v", err)
+	}
+	if n != 2 {
+		t.Errorf("expected 2 deleted, got %d", n)
+	}
+	var left []string
+	rows, _ := testPool.Query(context.Background(), `SELECT dedup_key FROM notifications ORDER BY dedup_key`)
+	for rows.Next() {
+		var k string
+		_ = rows.Scan(&k)
+		left = append(left, k)
+	}
+	rows.Close()
+	want := []string{"keep-feedback", "keep-request", "keep-ride", "keep-unlinked"}
+	if strings.Join(left, ",") != strings.Join(want, ",") {
+		t.Errorf("remaining = %v, want %v", left, want)
 	}
 }
