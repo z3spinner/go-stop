@@ -13,14 +13,18 @@ import (
 type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
 	// Records one inbox entry. A repeat of the same logical event (same phone and
-	// dedup_key, e.g. a push retry) is ignored.
+	// dedup_key: a push retry, a repeat ping or offer) is ignored, so it neither
+	// duplicates nor resurfaces as unread, and the first recorded details (e.g. a
+	// ride's time before an edit) are kept. Deliberate: one entry per event.
 	AddNotification(ctx context.Context, arg AddNotificationParams) error
 	ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
 	// Returns the count of currently active rides using the same window as ListRidesActive.
 	CountRidesActive(ctx context.Context, graceMinutes int32) (int64, error)
-	CountUnreadNotifications(ctx context.Context, phone string) (int32, error)
+	// Counts over the same newest-N window ListNotificationsByPhone returns, so
+	// the badge never counts items the inbox can't show.
+	CountUnreadNotifications(ctx context.Context, arg CountUnreadNotificationsParams) (int32, error)
 	DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error
 	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
@@ -28,6 +32,8 @@ type Querier interface {
 	// :execrows returns the number of rows deleted, used as the "claim" signal in
 	// RecordFeedback: only the caller that actually deletes the row records the stat.
 	DeleteFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (int64, error)
+	DeleteInboxForRequest(ctx context.Context, requestID pgtype.UUID) error
+	DeleteInboxForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteInterest(ctx context.Context, id pgtype.UUID) error
 	DeleteNotificationsForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteNotificationsOlderThan(ctx context.Context, createdAt pgtype.Timestamptz) (int64, error)

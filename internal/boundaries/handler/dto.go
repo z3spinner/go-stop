@@ -229,9 +229,11 @@ type InboxResponse struct {
 	Unread int         `json:"unread"`
 }
 
-// MarkInboxReadBody is the body for POST /inbox/read. Empty ids = mark all.
+// MarkInboxReadBody is the body for POST /inbox/read: mark the given ids, or
+// every item when all is true. Empty ids without all marks nothing.
 type MarkInboxReadBody struct {
 	IDs []string `json:"ids"`
+	All bool     `json:"all"`
 }
 
 // ConfigResponse is returned by GET /config.

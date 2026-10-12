@@ -34,6 +34,8 @@ type InboxItem struct {
 	Title       string // server-rendered fallback for clients that don't know Kind
 	Body        string
 	DedupKey    string // "" = never deduplicated
+	RideID      string // post this item is about ("" = none); deleting it deletes the item
+	RequestID   string
 	CreatedAt   time.Time
 	ReadAt      time.Time // zero = unread
 }

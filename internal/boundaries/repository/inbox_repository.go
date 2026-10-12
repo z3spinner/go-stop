@@ -18,12 +18,21 @@ type InboxRepository interface {
 	// ListByPhone returns the newest items first, at most limit of them.
 	ListByPhone(phone string, limit int) ([]domain.InboxItem, error)
 
-	// CountUnread returns how many of phone's items have no ReadAt.
-	CountUnread(phone string) (int, error)
+	// CountUnread counts unread items among phone's newest limit items (the
+	// same window ListByPhone returns).
+	CountUnread(phone string, limit int) (int, error)
 
-	// MarkRead marks phone's items as read: the given ids, or all of them when
-	// ids is empty. Ids belonging to another phone are ignored.
+	// MarkRead marks the given items of phone as read. Ids belonging to another
+	// phone or that are malformed are ignored; an empty list does nothing.
 	MarkRead(phone string, ids []string) error
+
+	// MarkAllRead marks every item of phone as read.
+	MarkAllRead(phone string) error
+
+	// DeleteForRide / DeleteForRequest remove every item about that post, in
+	// anyone's inbox (used when the owner deletes the post).
+	DeleteForRide(rideID string) error
+	DeleteForRequest(requestID string) error
 
 	// DeleteOlderThan removes items created before cutoff and returns how many.
 	DeleteOlderThan(cutoff time.Time) (int64, error)

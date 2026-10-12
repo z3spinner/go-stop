@@ -58,8 +58,8 @@ func main() {
 	notifier := usecase.NewInboxNotifier(webpush.New(vapidKeys.Public, vapidKeys.Private, vapidKeys.Email), inboxRepo)
 	inboxRetentionDays := usecase.DefaultInboxRetentionDays
 	if v := os.Getenv("NOTIFICATION_RETENTION_DAYS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			inboxRetentionDays = n
+		if n, err := strconv.Atoi(v); err == nil {
+			inboxRetentionDays = usecase.ClampInboxRetentionDays(n)
 		}
 	}
 	getInbox := usecase.NewGetInbox(inboxRepo)
@@ -80,8 +80,8 @@ func main() {
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	sendTestPush := usecase.NewSendTestPush(subRepo, notifier)
-	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo, feedbackQueueRepo)
-	deleteRequest := usecase.NewDeleteRequest(requestRepo)
+	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo, feedbackQueueRepo, inboxRepo)
+	deleteRequest := usecase.NewDeleteRequest(requestRepo, inboxRepo)
 	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, interestRepo, subRepo, notifier)
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	getActiveRequests := usecase.NewGetActiveRequests(requestRepo)

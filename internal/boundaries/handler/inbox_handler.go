@@ -63,12 +63,13 @@ func (h *InboxHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
-// MarkRead marks inbox items as read: the given ids, or all when ids is empty.
+// MarkRead marks inbox items as read: the given ids, or every item when all
+// is true. Empty ids without all marks nothing.
 // @ID       markInboxRead
 // @Tags     notifications
 // @Accept   json
 // @Param    X-Phone  header  string                    true  "Recipient phone"
-// @Param    body     body    handler.MarkInboxReadBody  true  "Item ids (empty = all)"
+// @Param    body     body    handler.MarkInboxReadBody  true  "Item ids, or all=true"
 // @Success  204
 // @Failure  400  {object}  handler.ErrorResponse
 // @Failure  401  {object}  handler.ErrorResponse
@@ -85,7 +86,7 @@ func (h *InboxHandler) MarkRead(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.markRead.Execute(phone, body.IDs); err != nil {
+	if err := h.markRead.Execute(phone, body.IDs, body.All); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

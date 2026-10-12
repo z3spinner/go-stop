@@ -81,7 +81,7 @@ func TestPostRequest_NotifiesMatchingDrivers(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRequest(reqs, ridesWithMatch, subs, n)
-	_, err := uc.Execute(domain.Request{
+	saved, err := uc.Execute(domain.Request{
 		SearcherName: "Bob",
 		DepartureAt:  time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
 	})
@@ -92,6 +92,10 @@ func TestPostRequest_NotifiesMatchingDrivers(t *testing.T) {
 	if !n.called {
 		t.Error("expected notification to be sent to driver")
 	}
+	assertInbox(t, n, "555-0001", domain.Message{
+		Kind: domain.KindRequestMatch, DedupKey: "request_match:" + saved.ID,
+		ContactName: "Bob", RequestID: saved.ID,
+	})
 }
 
 func TestPostRequest_ReturnsErrorIfSaveFails(t *testing.T) {

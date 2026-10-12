@@ -37,6 +37,9 @@ func TestSendFeedbackReminders_SendsPushToDriver(t *testing.T) {
 	if !queue.deleteExhaustedOK {
 		t.Error("expected DeleteExhausted to be called")
 	}
+	assertInbox(t, n, "555-0001", domain.Message{
+		Kind: domain.KindFeedbackReminder, DedupKey: "feedback_reminder:ride-1", RideID: "ride-1",
+	})
 }
 
 func TestSendFeedbackReminders_SkipsIfNoSubscription(t *testing.T) {

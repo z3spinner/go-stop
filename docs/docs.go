@@ -120,7 +120,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Item ids (empty = all)",
+                        "description": "Item ids, or all=true",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -1858,6 +1858,9 @@ const docTemplate = `{
         "handler.MarkInboxReadBody": {
             "type": "object",
             "properties": {
+                "all": {
+                    "type": "boolean"
+                },
                 "ids": {
                     "type": "array",
                     "items": {

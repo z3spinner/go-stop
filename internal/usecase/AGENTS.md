@@ -38,9 +38,13 @@ Rules:
 - `match.go` — `WindowsOverlap(ride, req)`: symmetric time-window overlap; each
   side widens its `DepartureAt` by its own `Flexibility` minutes. Pure function,
   the heart of matching.
-- `notify.go` — `sendToAll`, `NotifySearcher`, `NotifyDriver`: best-effort push
-  fan-out to a phone's devices; prunes subscriptions that return `410 Gone`.
-  Reuse these instead of calling `notifier.Send` directly from a new use case.
+- `notify.go` — `sendToAll`, `NotifySearcher`, `NotifyDriver`: records the
+  message in the recipient's inbox, then best-effort push fan-out to their
+  devices; prunes subscriptions that return `410 Gone`. Reuse these instead of
+  calling `notifier.Send` directly from a new use case. Give every new message a
+  `Kind` (domain/inbox.go), a `DedupKey` for one logical event, and the
+  `RideID`/`RequestID` it is about (so deleting the post cleans inboxes); a
+  message without a `Kind` is push-only.
 
 Authorization is done **inside** the use case (e.g. `DeleteRide`/`AcceptInterest`
 compare the caller's phone to the ride's `Phone` and return `ErrUnauthorized`),

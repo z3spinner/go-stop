@@ -61,6 +61,8 @@ type Notification struct {
 	Url         string             `db:"url"`
 	Title       string             `db:"title"`
 	Body        string             `db:"body"`
+	RideID      pgtype.UUID        `db:"ride_id"`
+	RequestID   pgtype.UUID        `db:"request_id"`
 	DedupKey    pgtype.Text        `db:"dedup_key"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at"`
 	ReadAt      pgtype.Timestamptz `db:"read_at"`

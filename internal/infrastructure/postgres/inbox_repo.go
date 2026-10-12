@@ -30,6 +30,8 @@ func (r *InboxRepo) Add(item domain.InboxItem) error {
 		Url:         item.URL,
 		Title:       item.Title,
 		Body:        item.Body,
+		RideID:      uuidFrom(item.RideID), // "" → NULL
+		RequestID:   uuidFrom(item.RequestID),
 		DedupKey:    pgtype.Text{String: item.DedupKey, Valid: item.DedupKey != ""},
 	})
 }
@@ -49,15 +51,21 @@ func (r *InboxRepo) ListByPhone(phone string, limit int) ([]domain.InboxItem, er
 	return out, nil
 }
 
-func (r *InboxRepo) CountUnread(phone string) (int, error) {
-	n, err := r.q.CountUnreadNotifications(context.Background(), phone)
+func (r *InboxRepo) CountUnread(phone string, limit int) (int, error) {
+	n, err := r.q.CountUnreadNotifications(context.Background(), queries.CountUnreadNotificationsParams{
+		Phone:    phone,
+		MaxItems: int32(limit),
+	})
 	return int(n), err
 }
 
+func (r *InboxRepo) MarkAllRead(phone string) error {
+	return r.q.MarkAllNotificationsRead(context.Background(), phone)
+}
+
+// MarkRead marks only the given ids. An empty or all-malformed list does
+// nothing — it never falls back to "mark all".
 func (r *InboxRepo) MarkRead(phone string, ids []string) error {
-	if len(ids) == 0 {
-		return r.q.MarkAllNotificationsRead(context.Background(), phone)
-	}
 	uuids := make([]pgtype.UUID, 0, len(ids))
 	for _, id := range ids {
 		if u := uuidFrom(id); u.Valid {
@@ -65,12 +73,28 @@ func (r *InboxRepo) MarkRead(phone string, ids []string) error {
 		}
 	}
 	if len(uuids) == 0 {
-		return nil // only malformed ids: nothing to mark (never "mark all")
+		return nil
 	}
 	return r.q.MarkNotificationsRead(context.Background(), queries.MarkNotificationsReadParams{
 		Phone: phone,
 		Ids:   uuids,
 	})
+}
+
+func (r *InboxRepo) DeleteForRide(rideID string) error {
+	u := uuidFrom(rideID)
+	if !u.Valid {
+		return nil
+	}
+	return r.q.DeleteInboxForRide(context.Background(), u)
+}
+
+func (r *InboxRepo) DeleteForRequest(requestID string) error {
+	u := uuidFrom(requestID)
+	if !u.Valid {
+		return nil
+	}
+	return r.q.DeleteInboxForRequest(context.Background(), u)
 }
 
 func (r *InboxRepo) DeleteOlderThan(cutoff time.Time) (int64, error) {

@@ -60,6 +60,7 @@ func (uc *AcceptInterest) Execute(interestID, driverPhone string) (searcherPhone
 		DepartureAt: ride.DepartureAt,
 		Kind:        domain.KindInterestAccepted,
 		DedupKey:    domain.KindInterestAccepted + ":" + interestID,
+		RideID:      ride.ID,
 	}, uc.subs, uc.notifier)
 	return interest.SearcherPhone, connected, nil
 }

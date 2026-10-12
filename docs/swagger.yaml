@@ -233,6 +233,8 @@ definitions:
     type: object
   handler.MarkInboxReadBody:
     properties:
+      all:
+        type: boolean
       ids:
         items:
           type: string
@@ -482,7 +484,7 @@ paths:
         name: X-Phone
         required: true
         type: string
-      - description: Item ids (empty = all)
+      - description: Item ids, or all=true
         in: body
         name: body
         required: true

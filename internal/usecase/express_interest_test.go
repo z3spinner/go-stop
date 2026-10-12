@@ -113,6 +113,10 @@ func TestExpressInterest_CreatesInterestAndNotifiesDriver(t *testing.T) {
 	if n.lastMsg.URL == "" {
 		t.Error("expected notification URL to be set")
 	}
+	assertInbox(t, n, "555-driver", domain.Message{
+		Kind: domain.KindInterestReceived, DedupKey: "interest_received:" + interest.ID,
+		ContactName: "Bob", RideID: "ride-1",
+	})
 }
 
 func TestExpressInterest_SkipsPushIfDriverHasNoSubscription(t *testing.T) {

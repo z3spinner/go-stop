@@ -16,7 +16,7 @@ Each file declares one interface over domain types, e.g.:
 
 ```go
 // notification/notifier.go
-type Notifier interface {
+type Pusher interface {
     Send(subscription domain.Subscription, message domain.Message) error
 }
 ```

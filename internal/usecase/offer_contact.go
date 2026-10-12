@@ -75,7 +75,8 @@ func (uc *OfferContact) Execute(requestID, offererPhone, offererName string) (cr
 		Destination: req.Destination,
 		Kind:        domain.KindContactOffered,
 		// A repeat offer re-pushes but stays one inbox entry.
-		DedupKey: domain.KindContactOffered + ":" + offerID,
+		DedupKey:  domain.KindContactOffered + ":" + offerID,
+		RequestID: req.ID,
 	}, uc.subs, uc.notifier)
 
 	return created, nil

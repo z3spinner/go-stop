@@ -69,6 +69,7 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone, searcherName string) (
 		DepartureAt: ride.DepartureAt,
 		Kind:        domain.KindInterestReceived,
 		DedupKey:    domain.KindInterestReceived + ":" + interest.ID,
+		RideID:      ride.ID,
 	}, uc.subs, uc.notifier)
 
 	return interest, nil

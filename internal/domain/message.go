@@ -20,4 +20,8 @@ type Message struct {
 	// DedupKey identifies one logical event so retries of the same push don't
 	// create duplicate inbox entries. Server-side only.
 	DedupKey string `json:"-"`
+	// RideID / RequestID name the post this message is about, so the inbox
+	// copies can be deleted when its owner deletes the post. Server-side only.
+	RideID    string `json:"-"`
+	RequestID string `json:"-"`
 }

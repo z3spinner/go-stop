@@ -164,6 +164,14 @@ func TestOfferContact_DuplicateOfferRenotifiesButReturnsCreatedFalse(t *testing.
 	if len(offers.saved) != 1 {
 		t.Errorf("expected only 1 saved offer after duplicate, got %d", len(offers.saved))
 	}
+	// Both pushes go out, but they share one dedup key → one inbox entry.
+	if len(n.recorded) != 2 || n.recorded[0].msg.DedupKey != n.recorded[1].msg.DedupKey {
+		t.Fatalf("expected 2 records sharing a dedup key, got %+v", n.recorded)
+	}
+	assertInboxMsg(t, n.recorded[0], "555-searcher", domain.Message{
+		Kind: domain.KindContactOffered, DedupKey: "contact_offered:" + offers.saved[0].ID,
+		ContactName: "Alice", RequestID: "req-1",
+	})
 }
 
 // ── GetRequestContactOffers tests ─────────────────────────────────────────────

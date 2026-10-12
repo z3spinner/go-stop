@@ -89,6 +89,14 @@ func TestInbox_OfferContactLandsInSearcherInbox(t *testing.T) {
 		t.Errorf("another phone must not mark it read; unread=%d", got.Unread)
 	}
 
+	// Empty ids without all=true marks nothing.
+	if w := postWithPhone(r, "/api/inbox/read", "0622000099", map[string]interface{}{"ids": []string{}}); w.Code != http.StatusNoContent {
+		t.Fatalf("empty mark read expected 204, got %d", w.Code)
+	}
+	if got := getInbox(t, r, "0622000099"); got.Unread != 1 {
+		t.Errorf("empty ids must not mark anything read; unread=%d", got.Unread)
+	}
+
 	// The owner marks it read by id.
 	if w := postWithPhone(r, "/api/inbox/read", "0622000099", map[string]interface{}{"ids": []string{it.ID}}); w.Code != http.StatusNoContent {
 		t.Fatalf("mark read expected 204, got %d", w.Code)
@@ -116,7 +124,7 @@ func TestInbox_MarkAllRead(t *testing.T) {
 	if got := getInbox(t, r, "0622000099"); got.Unread != 2 {
 		t.Fatalf("expected 2 unread, got %d", got.Unread)
 	}
-	if w := postWithPhone(r, "/api/inbox/read", "0622000099", map[string]interface{}{}); w.Code != http.StatusNoContent {
+	if w := postWithPhone(r, "/api/inbox/read", "0622000099", map[string]interface{}{"all": true}); w.Code != http.StatusNoContent {
 		t.Fatalf("mark all read expected 204, got %d", w.Code)
 	}
 	if got := getInbox(t, r, "0622000099"); got.Unread != 0 {
@@ -132,4 +140,74 @@ func TestInbox_RequiresPhone(t *testing.T) {
 	if w := postJSON(r, "/api/inbox/read", map[string]interface{}{}); w.Code != http.StatusUnauthorized {
 		t.Errorf("POST /inbox/read without X-Phone: expected 401, got %d", w.Code)
 	}
+}
+
+// Deleting a request removes every inbox item recorded about it.
+func TestInbox_DeletingRequestRemovesItsNotifications(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "0622000099", "origin": "Saillans", "destination": "Crest",
+	})
+	var created map[string]interface{}
+	_ = json.NewDecoder(w.Body).Decode(&created)
+	requestID := created["ID"].(string)
+	postJSON(r, "/api/requests/"+requestID+"/offer-contact", map[string]interface{}{"phone": "0611000001", "name": "Alice"})
+	if got := getInbox(t, r, "0622000099"); len(got.Items) != 1 {
+		t.Fatalf("expected 1 item before delete, got %d", len(got.Items))
+	}
+
+	if w := deleteJSONBody(r, "/api/requests/"+requestID, map[string]interface{}{"phone": "0622000099"}); w.Code/100 != 2 {
+		t.Fatalf("DELETE request expected 2xx, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := getInbox(t, r, "0622000099"); len(got.Items) != 0 {
+		t.Errorf("expected inbox items about the deleted request to be gone, got %d", len(got.Items))
+	}
+}
+
+// The privacy case: when a driver deletes their ride, their name and route
+// disappear from the searchers' inboxes too.
+func TestInbox_DeletingRideRemovesItFromSearchersInbox(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	// Searcher's alert, then a matching ride → ride_match in the searcher's inbox.
+	if w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "0622000099", "origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	}); w.Code != http.StatusCreated {
+		t.Fatalf("POST /requests expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "0611000001", "origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	if w.Code != http.StatusCreated {
+		t.Fatalf("POST /rides expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+	var ride map[string]interface{}
+	_ = json.NewDecoder(w.Body).Decode(&ride)
+	rideID := ride["ID"].(string)
+
+	before := getInbox(t, r, "0622000099")
+	if len(before.Items) != 1 || before.Items[0].Kind != "ride_match" || before.Items[0].ContactName != "Alice" {
+		t.Fatalf("expected Alice's ride_match in Bob's inbox, got %+v", before.Items)
+	}
+
+	if w := deleteJSONBody(r, "/api/rides/"+rideID, map[string]interface{}{"phone": "0611000001"}); w.Code/100 != 2 {
+		t.Fatalf("DELETE ride expected 2xx, got %d: %s", w.Code, w.Body.String())
+	}
+	if after := getInbox(t, r, "0622000099"); len(after.Items) != 0 {
+		t.Errorf("deleted ride must leave no trace in Bob's inbox, got %+v", after.Items)
+	}
+}
+
+func deleteJSONBody(r *gin.Engine, path string, body interface{}) *httptest.ResponseRecorder {
+	b, _ := json.Marshal(body)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodDelete, path, bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	return w
 }

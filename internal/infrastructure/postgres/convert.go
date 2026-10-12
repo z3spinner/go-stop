@@ -164,6 +164,8 @@ func inboxItemFromRow(row queries.Notification) domain.InboxItem {
 		Title:       row.Title,
 		Body:        row.Body,
 		DedupKey:    row.DedupKey.String,
+		RideID:      uuidTo(row.RideID),
+		RequestID:   uuidTo(row.RequestID),
 		CreatedAt:   tsTo(row.CreatedAt),
 		ReadAt:      tsTo(row.ReadAt),
 	}

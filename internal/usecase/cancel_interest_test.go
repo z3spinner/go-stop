@@ -46,6 +46,10 @@ func TestCancelInterest_DeletesPendingInterestAndNotifiesDriver(t *testing.T) {
 	if !n.called {
 		t.Error("expected the driver to be notified of the cancellation")
 	}
+	assertInbox(t, n, "555-driver", domain.Message{
+		Kind: domain.KindInterestCancelled, DedupKey: "interest_cancelled:int-1",
+		ContactName: "Bob", RideID: "ride-1",
+	})
 }
 
 func TestCancelInterest_RejectsNonOwner(t *testing.T) {

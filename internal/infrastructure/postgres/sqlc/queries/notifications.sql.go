@@ -13,8 +13,9 @@ import (
 
 const addNotification = `-- name: AddNotification :exec
 INSERT INTO notifications (phone, kind, contact_name, origin, destination,
-                           departure_at, url, title, body, dedup_key)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                           departure_at, url, title, body, ride_id, request_id,
+                           dedup_key)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 ON CONFLICT (phone, dedup_key) DO NOTHING
 `
 
@@ -28,11 +29,15 @@ type AddNotificationParams struct {
 	Url         string             `db:"url"`
 	Title       string             `db:"title"`
 	Body        string             `db:"body"`
+	RideID      pgtype.UUID        `db:"ride_id"`
+	RequestID   pgtype.UUID        `db:"request_id"`
 	DedupKey    pgtype.Text        `db:"dedup_key"`
 }
 
 // Records one inbox entry. A repeat of the same logical event (same phone and
-// dedup_key, e.g. a push retry) is ignored.
+// dedup_key: a push retry, a repeat ping or offer) is ignored, so it neither
+// duplicates nor resurfaces as unread, and the first recorded details (e.g. a
+// ride's time before an edit) are kept. Deliberate: one entry per event.
 func (q *Queries) AddNotification(ctx context.Context, arg AddNotificationParams) error {
 	_, err := q.db.Exec(ctx, addNotification,
 		arg.Phone,
@@ -44,20 +49,53 @@ func (q *Queries) AddNotification(ctx context.Context, arg AddNotificationParams
 		arg.Url,
 		arg.Title,
 		arg.Body,
+		arg.RideID,
+		arg.RequestID,
 		arg.DedupKey,
 	)
 	return err
 }
 
 const countUnreadNotifications = `-- name: CountUnreadNotifications :one
-SELECT COUNT(*)::int AS unread FROM notifications WHERE phone = $1 AND read_at IS NULL
+SELECT COUNT(*)::int AS unread FROM (
+    SELECT read_at FROM notifications
+    WHERE phone = $1
+    ORDER BY created_at DESC
+    LIMIT $2::int
+) newest
+WHERE read_at IS NULL
 `
 
-func (q *Queries) CountUnreadNotifications(ctx context.Context, phone string) (int32, error) {
-	row := q.db.QueryRow(ctx, countUnreadNotifications, phone)
+type CountUnreadNotificationsParams struct {
+	Phone    string `db:"phone"`
+	MaxItems int32  `db:"max_items"`
+}
+
+// Counts over the same newest-N window ListNotificationsByPhone returns, so
+// the badge never counts items the inbox can't show.
+func (q *Queries) CountUnreadNotifications(ctx context.Context, arg CountUnreadNotificationsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, countUnreadNotifications, arg.Phone, arg.MaxItems)
 	var unread int32
 	err := row.Scan(&unread)
 	return unread, err
+}
+
+const deleteInboxForRequest = `-- name: DeleteInboxForRequest :exec
+DELETE FROM notifications WHERE request_id = $1
+`
+
+func (q *Queries) DeleteInboxForRequest(ctx context.Context, requestID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteInboxForRequest, requestID)
+	return err
+}
+
+const deleteInboxForRide = `-- name: DeleteInboxForRide :exec
+DELETE FROM notifications WHERE ride_id = $1
+`
+
+func (q *Queries) DeleteInboxForRide(ctx context.Context, rideID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteInboxForRide, rideID)
+	return err
 }
 
 const deleteNotificationsOlderThan = `-- name: DeleteNotificationsOlderThan :execrows
@@ -74,7 +112,7 @@ func (q *Queries) DeleteNotificationsOlderThan(ctx context.Context, createdAt pg
 
 const listNotificationsByPhone = `-- name: ListNotificationsByPhone :many
 SELECT id, phone, kind, contact_name, origin, destination, departure_at,
-       url, title, body, dedup_key, created_at, read_at
+       url, title, body, ride_id, request_id, dedup_key, created_at, read_at
 FROM notifications
 WHERE phone = $1
 ORDER BY created_at DESC
@@ -106,6 +144,8 @@ func (q *Queries) ListNotificationsByPhone(ctx context.Context, arg ListNotifica
 			&i.Url,
 			&i.Title,
 			&i.Body,
+			&i.RideID,
+			&i.RequestID,
 			&i.DedupKey,
 			&i.CreatedAt,
 			&i.ReadAt,

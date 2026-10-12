@@ -64,6 +64,7 @@ func (uc *CancelInterest) Execute(interestID, searcherPhone string) error {
 			DepartureAt: ride.DepartureAt,
 			Kind:        domain.KindInterestCancelled,
 			DedupKey:    domain.KindInterestCancelled + ":" + interest.ID,
+			RideID:      ride.ID,
 		}, uc.subs, uc.notifier)
 	}
 	return nil
