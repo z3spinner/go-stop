@@ -181,6 +181,42 @@ definitions:
       taken:
         type: boolean
     type: object
+  handler.InboxItem:
+    properties:
+      body:
+        type: string
+      contact_name:
+        type: string
+      created_at:
+        description: RFC 3339
+        type: string
+      departure_at:
+        description: RFC 3339; omitted when unknown
+        type: string
+      destination:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      origin:
+        type: string
+      read:
+        type: boolean
+      title:
+        type: string
+      url:
+        type: string
+    type: object
+  handler.InboxResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.InboxItem'
+        type: array
+      unread:
+        type: integer
+    type: object
   handler.InterestListItem:
     properties:
       id:
@@ -191,6 +227,13 @@ definitions:
         type: string
       status:
         type: string
+    type: object
+  handler.MarkInboxReadBody:
+    properties:
+      ids:
+        items:
+          type: string
+        type: array
     type: object
   handler.MyInterest:
     properties:
@@ -399,6 +442,66 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:
       - destinations
+  /inbox:
+    get:
+      operationId: listInbox
+      parameters:
+      - description: Recipient phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.InboxResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
+  /inbox/read:
+    post:
+      consumes:
+      - application/json
+      operationId: markInboxRead
+      parameters:
+      - description: Recipient phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      - description: Item ids (empty = all)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.MarkInboxReadBody'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
   /interests:
     get:
       operationId: listMyInterests

@@ -22,7 +22,12 @@ func lastN(s string, n int) string {
 
 // sendToAll delivers msg to every subscription for phone.
 // Stale subscriptions (push service returns 410) are removed automatically.
+// When the notifier keeps an inbox (notification.Recorder), msg is recorded
+// first, so recipients without any push subscription still get it in the app.
 func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRepository, notifier notification.Notifier) {
+	if rec, ok := notifier.(notification.Recorder); ok {
+		rec.Record(phone, msg)
+	}
 	subList, err := subs.FindByPhone(phone)
 	if err != nil {
 		return // no subscription — nothing to do
@@ -65,6 +70,9 @@ func NotifySearcher(phone string, ride domain.Ride, subs repository.Subscription
 		Origin:      ride.Origin,
 		Destination: ride.Destination,
 		DepartureAt: ride.DepartureAt,
+		Kind:        domain.KindRideMatch,
+		// Retries of the same match (RetryNotifications) stay one inbox entry.
+		DedupKey: domain.KindRideMatch + ":" + ride.ID,
 	}
 	sendToAll(phone, msg, subs, notifier)
 }
@@ -79,6 +87,8 @@ func NotifyDriver(phone string, req domain.Request, subs repository.Subscription
 		Origin:      req.Origin,
 		Destination: req.Destination,
 		DepartureAt: req.DepartureAt,
+		Kind:        domain.KindRequestMatch,
+		DedupKey:    domain.KindRequestMatch + ":" + req.ID,
 	}
 	sendToAll(phone, msg, subs, notifier)
 }

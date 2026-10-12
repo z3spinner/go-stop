@@ -12,11 +12,15 @@ import (
 
 type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
+	// Records one inbox entry. A repeat of the same logical event (same phone and
+	// dedup_key, e.g. a push retry) is ignored.
+	AddNotification(ctx context.Context, arg AddNotificationParams) error
 	ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
 	// Returns the count of currently active rides using the same window as ListRidesActive.
 	CountRidesActive(ctx context.Context, graceMinutes int32) (int64, error)
+	CountUnreadNotifications(ctx context.Context, phone string) (int32, error)
 	DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error
 	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
@@ -26,6 +30,7 @@ type Querier interface {
 	DeleteFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (int64, error)
 	DeleteInterest(ctx context.Context, id pgtype.UUID) error
 	DeleteNotificationsForRide(ctx context.Context, rideID pgtype.UUID) error
+	DeleteNotificationsOlderThan(ctx context.Context, createdAt pgtype.Timestamptz) (int64, error)
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
 	DeleteRide(ctx context.Context, id pgtype.UUID) error
 	DeleteSubscription(ctx context.Context, phone string) error
@@ -105,6 +110,7 @@ type Querier interface {
 	// Returns all interests made by a searcher, joined with ride info for display.
 	// Includes rides that may have expired (so the searcher can see their full history).
 	ListInterestsBySearcher(ctx context.Context, searcherPhone string) ([]ListInterestsBySearcherRow, error)
+	ListNotificationsByPhone(ctx context.Context, arg ListNotificationsByPhoneParams) ([]Notification, error)
 	// Returns pending notifications for a searcher (for UI display).
 	ListNotificationsForSearcher(ctx context.Context, searcherPhone string) ([]NotificationQueue, error)
 	ListRequestsByPhone(ctx context.Context, arg ListRequestsByPhoneParams) ([]Request, error)
@@ -112,9 +118,11 @@ type Querier interface {
 	ListRidesActive(ctx context.Context, graceMinutes int32) ([]Ride, error)
 	ListRidesByPhone(ctx context.Context, phone string) ([]Ride, error)
 	ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error)
+	MarkAllNotificationsRead(ctx context.Context, phone string) error
 	MarkFeedbackSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSentByRideAndRequest(ctx context.Context, arg MarkNotificationSentByRideAndRequestParams) error
+	MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) error
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)
 	SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error)
 	// Returns rides on the given date whose departure window (±flexibility) overlaps

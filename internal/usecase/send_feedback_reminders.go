@@ -65,6 +65,8 @@ func (uc *SendFeedbackReminders) Execute() error {
 			Origin:      task.Origin,
 			Destination: task.Destination,
 			DepartureAt: task.DepartureAt,
+			Kind:        domain.KindFeedbackReminder,
+			DedupKey:    domain.KindFeedbackReminder + ":" + task.RideID,
 		}, uc.subs, uc.notifier)
 		_ = uc.queue.MarkSent(task.ID)
 	}

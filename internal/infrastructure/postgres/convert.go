@@ -150,3 +150,21 @@ func feedbackTaskFromRow(q queries.FeedbackQueue) domain.FeedbackTask {
 		CreatedAt:   tsTo(q.CreatedAt),
 	}
 }
+
+func inboxItemFromRow(row queries.Notification) domain.InboxItem {
+	return domain.InboxItem{
+		ID:          uuidTo(row.ID),
+		Phone:       row.Phone,
+		Kind:        row.Kind,
+		ContactName: row.ContactName,
+		Origin:      row.Origin,
+		Destination: row.Destination,
+		DepartureAt: tsTo(row.DepartureAt),
+		URL:         row.Url,
+		Title:       row.Title,
+		Body:        row.Body,
+		DedupKey:    row.DedupKey.String,
+		CreatedAt:   tsTo(row.CreatedAt),
+		ReadAt:      tsTo(row.ReadAt),
+	}
+}

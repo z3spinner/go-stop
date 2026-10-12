@@ -205,6 +205,35 @@ type NotificationItem struct {
 	SentCount   int    `json:"sent_count"`
 }
 
+// InboxItem is one notification in GET /inbox. Kind (see domain/inbox.go) plus
+// the contact name and route let the client render it in the reader's
+// language; Title/Body are the server-rendered fallback for unknown kinds.
+// The other party's phone number is never included.
+type InboxItem struct {
+	ID          string `json:"id"`
+	Kind        string `json:"kind"`
+	ContactName string `json:"contact_name"`
+	Origin      string `json:"origin"`
+	Destination string `json:"destination"`
+	DepartureAt string `json:"departure_at,omitempty"` // RFC 3339; omitted when unknown
+	URL         string `json:"url"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	CreatedAt   string `json:"created_at"` // RFC 3339
+	Read        bool   `json:"read"`
+}
+
+// InboxResponse is returned by GET /inbox.
+type InboxResponse struct {
+	Items  []InboxItem `json:"items"`
+	Unread int         `json:"unread"`
+}
+
+// MarkInboxReadBody is the body for POST /inbox/read. Empty ids = mark all.
+type MarkInboxReadBody struct {
+	IDs []string `json:"ids"`
+}
+
 // ConfigResponse is returned by GET /config.
 type ConfigResponse struct {
 	SiteName         string `json:"siteName"`

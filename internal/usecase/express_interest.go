@@ -63,9 +63,12 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone, searcherName string) (
 		Title:       "Quelqu'un demande votre contact",
 		Body:        fmt.Sprintf("%s cherche un trajet %s → %s", searcherName, ride.Origin, ride.Destination),
 		URL:         "/my-rides",
+		ContactName: searcherName,
 		Origin:      ride.Origin,
 		Destination: ride.Destination,
 		DepartureAt: ride.DepartureAt,
+		Kind:        domain.KindInterestReceived,
+		DedupKey:    domain.KindInterestReceived + ":" + interest.ID,
 	}, uc.subs, uc.notifier)
 
 	return interest, nil

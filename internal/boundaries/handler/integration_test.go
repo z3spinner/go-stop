@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, notifications`)
 		if truncErr == nil {
 			break
 		}
@@ -73,7 +73,8 @@ func setupRouter() *gin.Engine {
 	reqRepo := postgres.NewRequestRepo(handlerPool, 60)
 	subRepo := postgres.NewSubscriptionRepo(handlerPool)
 	destRepo := postgres.NewDestinationRepo(handlerPool)
-	n := &noopNotifier{}
+	inboxRepo := postgres.NewInboxRepo(handlerPool)
+	n := usecase.NewInboxNotifier(&noopNotifier{}, inboxRepo)
 
 	postRide := usecase.NewPostRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n, 60)
 	updateRide := usecase.NewUpdateRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n, 60)
@@ -110,6 +111,8 @@ func setupRouter() *gin.Engine {
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
 
+	inboxH := handler.NewInboxHandler(usecase.NewGetInbox(inboxRepo), usecase.NewMarkInboxRead(inboxRepo))
+
 	r := gin.New()
 	r.POST("/api/rides", rideH.Post)
 	r.GET("/api/rides", rideH.List)
@@ -135,13 +138,15 @@ func setupRouter() *gin.Engine {
 	r.POST("/api/subscriptions", subH.Subscribe)
 	r.DELETE("/api/subscriptions/:phone", subH.Unsubscribe)
 	r.GET("/api/stats", statsH.Get)
+	r.GET("/api/inbox", inboxH.List)
+	r.POST("/api/inbox/read", inboxH.MarkRead)
 	return r
 }
 
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers`); err != nil {
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers, notifications`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }
