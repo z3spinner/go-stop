@@ -33,6 +33,7 @@ type feedbackRequest struct {
 // @Success  204
 // @Failure  400  {object}  handler.ErrorResponse
 // @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
 // @Failure  500  {object}  handler.ErrorResponse
 // @Router   /rides/{id}/feedback [post]
 func (h *FeedbackHandler) Post(c *gin.Context) {
@@ -44,6 +45,10 @@ func (h *FeedbackHandler) Post(c *gin.Context) {
 	if err := h.recordFeedback.Execute(c.Param("id"), normalizePhone(req.Phone), req.Taken); err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+			return
+		}
+		if errors.Is(err, usecase.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

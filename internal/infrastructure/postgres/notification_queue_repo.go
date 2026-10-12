@@ -18,12 +18,16 @@ func NewNotificationQueueRepo(pool *pgxpool.Pool) *NotificationQueueRepo {
 	return &NotificationQueueRepo{q: queries.New(pool)}
 }
 
-func (r *NotificationQueueRepo) Enqueue(rideID, requestID, searcherPhone string) error {
-	return r.q.EnqueueNotification(context.Background(), queries.EnqueueNotificationParams{
+// Enqueue records a ride↔request pair and reports whether it was newly inserted
+// (true) or already present (false), so callers notify only newly-matched
+// searchers. Duplicates are ignored via ON CONFLICT DO NOTHING.
+func (r *NotificationQueueRepo) Enqueue(rideID, requestID, searcherPhone string) (bool, error) {
+	n, err := r.q.EnqueueNotification(context.Background(), queries.EnqueueNotificationParams{
 		RideID:        uuidFrom(rideID),
 		RequestID:     uuidFrom(requestID),
 		SearcherPhone: searcherPhone,
 	})
+	return n == 1, err
 }
 
 func (r *NotificationQueueRepo) FindPending(retryAfter time.Time, maxRetries int) ([]domain.NotificationQueueEntry, error) {

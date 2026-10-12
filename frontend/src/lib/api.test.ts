@@ -88,6 +88,14 @@ describe('api facade — owner-scoped read sends X-Phone', () => {
 		expect(url).toBe('/api/interests/i9/contact');
 		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0699999999');
 	});
+
+	it('requests.getOfferStatus(id, phone) sends X-Phone on the status read', async () => {
+		fetchMock.mockResolvedValue(mockResponse(200, { offered: true }));
+		await api.requests.getOfferStatus('q1', '0612345678');
+		const { url, init } = lastCall();
+		expect(url).toBe('/api/requests/q1/offer-contact-status');
+		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0612345678');
+	});
 });
 
 describe('api facade — mutation sends phone in JSON body', () => {
@@ -142,5 +150,35 @@ describe('api facade — query building', () => {
 		await api.rides.list({}, '0600000004');
 		const { init } = lastCall();
 		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0600000004');
+	});
+});
+
+describe('api facade — inbox', () => {
+	it('inbox.list(phone) GETs /api/inbox with X-Phone', async () => {
+		fetchMock.mockResolvedValue(mockResponse(200, { items: [], unread: 0 }));
+		const res = await api.inbox.list('0600000005');
+		expect(res).toEqual({ items: [], unread: 0 });
+		const { url, init } = lastCall();
+		expect(url).toBe('/api/inbox');
+		expect(init.method).toBe('GET');
+		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0600000005');
+	});
+
+	it('inbox.markRead(phone, ids) POSTs exactly those ids with X-Phone and resolves null', async () => {
+		fetchMock.mockResolvedValue(mockResponse(204, undefined));
+		expect(await api.inbox.markRead('0600000006', ['n1', 'n2'])).toBeNull();
+		const { url, init } = lastCall();
+		expect(url).toBe('/api/inbox/read');
+		expect(init.method).toBe('POST');
+		expect(JSON.parse(init.body as string)).toEqual({ ids: ['n1', 'n2'] });
+		const headers = init.headers as Record<string, string>;
+		expect(headers['X-Phone']).toBe('0600000006');
+		expect(headers['Content-Type']).toBe('application/json');
+	});
+
+	it('inbox.markAllRead(phone) sends an explicit all=true', async () => {
+		fetchMock.mockResolvedValue(mockResponse(204, undefined));
+		await api.inbox.markAllRead('0600000006');
+		expect(JSON.parse(lastCall().init.body as string)).toEqual({ all: true });
 	});
 });

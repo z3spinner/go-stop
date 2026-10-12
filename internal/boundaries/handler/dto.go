@@ -34,6 +34,16 @@ type DeleteRideBody struct {
 	Phone string `json:"phone"`
 }
 
+// UpdateRideBody is the body for PUT /rides/{id}. Driver name and phone cannot be
+// changed; phone authorizes the edit.
+type UpdateRideBody struct {
+	Phone       string `json:"phone"`
+	Origin      string `json:"origin"`
+	Destination string `json:"destination"`
+	DepartureAt string `json:"departure_at"`
+	Flexibility int    `json:"flexibility"`
+}
+
 // ExpressInterestBody is the body for POST /rides/{id}/interest.
 type ExpressInterestBody struct {
 	Phone string `json:"phone"`
@@ -71,6 +81,25 @@ type DeleteRequestBody struct {
 // PingRequestBody is the body for POST /requests/{id}/ping.
 type PingRequestBody struct {
 	RideID string `json:"ride_id"`
+}
+
+// OfferContactBody is the body for POST /requests/{id}/offer-contact.
+type OfferContactBody struct {
+	Phone string `json:"phone"`
+	Name  string `json:"name"`
+}
+
+// ContactOfferItem is one entry of GET /requests/{id}/offers.
+type ContactOfferItem struct {
+	ID           string `json:"id"`
+	OffererName  string `json:"offerer_name"`
+	OffererPhone string `json:"offerer_phone"`
+}
+
+// ContactOfferStatusResponse reports whether the caller already offered contact
+// on a request.
+type ContactOfferStatusResponse struct {
+	Offered bool `json:"offered"`
 }
 
 // SubscriptionBody is the body for POST /subscriptions.
@@ -176,10 +205,43 @@ type NotificationItem struct {
 	SentCount   int    `json:"sent_count"`
 }
 
+// InboxItem is one notification in GET /inbox. Kind (see domain/inbox.go) plus
+// the contact name and route let the client render it in the reader's
+// language; Title/Body are the server-rendered fallback for unknown kinds.
+// The other party's phone number is never included.
+type InboxItem struct {
+	ID          string `json:"id"`
+	Kind        string `json:"kind"`
+	ContactName string `json:"contact_name"`
+	Origin      string `json:"origin"`
+	Destination string `json:"destination"`
+	DepartureAt string `json:"departure_at,omitempty"` // RFC 3339; omitted when unknown
+	URL         string `json:"url"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	CreatedAt   string `json:"created_at"` // RFC 3339
+	Read        bool   `json:"read"`
+}
+
+// InboxResponse is returned by GET /inbox.
+type InboxResponse struct {
+	Items  []InboxItem `json:"items"`
+	Unread int         `json:"unread"`
+}
+
+// MarkInboxReadBody is the body for POST /inbox/read: mark the given ids, or
+// every item when all is true. Empty ids without all marks nothing.
+type MarkInboxReadBody struct {
+	IDs []string `json:"ids"`
+	All bool     `json:"all"`
+}
+
 // ConfigResponse is returned by GET /config.
 type ConfigResponse struct {
 	SiteName         string `json:"siteName"`
 	ReturnDelayHours int    `json:"returnDelayHours"`
+	// How many days the in-app inbox keeps notifications.
+	NotificationRetentionDays int `json:"notificationRetentionDays"`
 }
 
 // VapidKeyResponse is returned by GET /vapid-public-key.

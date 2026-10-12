@@ -229,10 +229,10 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .trip-type-toggle { display: flex; gap: 0; margin-top: 6px; }
 .trip-type-btn {
   flex: 1;
-  padding: 9px;
+  padding: 10px 12px;
   border: 1px solid var(--gray-300);
   background: white;
-  font-size: 0.9rem;
+  font-size: 1rem;
   cursor: pointer;
   color: var(--gray-600);
   transition: background 0.15s;
@@ -360,18 +360,25 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   margin: 8px 0;
 }
 .feedback-question { font-size: 0.9rem; font-weight: 500; display: block; margin-bottom: 8px; }
-.feedback-btns { display: flex; gap: 8px; }
+/* Replies stacked vertically; each coloured (outline by default), filling solid
+   when it is the current selection. Green = someone came along, amber = drove alone. */
+.feedback-btns { display: flex; flex-direction: column; gap: 8px; }
 .btn-fb-yes, .btn-fb-no {
-  flex: 1;
-  padding: 7px;
-  border: 1px solid var(--gray-300);
+  width: 100%;
+  padding: 9px;
+  border: 1.5px solid;
   border-radius: var(--radius);
   background: white;
   font-size: 0.85rem;
   cursor: pointer;
 }
-.btn-fb-yes:hover { background: var(--green); color: white; border-color: var(--green); }
+.btn-fb-yes { color: var(--green); border-color: var(--green); }
+.btn-fb-no  { color: var(--gray-600); border-color: var(--gray-300); }
+.btn-fb-yes:hover { background: #ecfdf5; }
 .btn-fb-no:hover  { background: var(--gray-100); }
+/* Persistent selection — the driver's current (uncommitted) choice fills solid. */
+.btn-fb-yes.selected { background: var(--green); color: white; border-color: var(--green); font-weight: 600; }
+.btn-fb-no.selected  { background: var(--gray-300); color: var(--gray-900); border-color: var(--gray-600); font-weight: 600; }
 .feedback-thanks  { font-size: 0.85rem; color: var(--green); font-weight: 500; }
 
 .alert-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -503,12 +510,12 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .activity-count { font-weight: 600; color: var(--blue); }
 @media (max-width: 360px) { .activity-stats { grid-template-columns: 1fr; } }
 
-/* Footer stats link */
-.btn-footer-stats {
+/* Footer navigation links — share one style with the privacy button above */
+.btn-footer-stats, .btn-footer-about, .btn-footer-flyer {
   background: none; border: none; font-size: 0.8rem; color: var(--gray-600);
   cursor: pointer; padding: 4px 8px; text-decoration: underline; text-decoration-color: var(--gray-300);
 }
-.btn-footer-stats:hover { color: var(--gray-900); }
+.btn-footer-stats:hover, .btn-footer-about:hover, .btn-footer-flyer:hover { color: var(--gray-900); }
 
 /* Interest / contact consent UI */
 .btn-interest {
@@ -609,6 +616,26 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   line-height: 1;
 }
 .bell-activate-label:hover { text-decoration: underline; }
+.bell-badge {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+.inbox-item { display: flex; gap: 10px; align-items: flex-start; text-decoration: none; color: inherit; }
+.inbox-item:hover { background: var(--gray-100); }
+.inbox-unread { border-left: 3px solid var(--blue); background: #f0fdf4; }
+.inbox-icon { font-size: 1.1rem; line-height: 1.4; }
 .tag-accepted { background: #dcfce7; color: #166534; }
 .req-action { margin-top: 6px; }
 .btn-contact-link { color: var(--blue); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
@@ -662,3 +689,56 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
 .btn-ping-searcher:disabled { opacity: 0.5; cursor: default; }
 .btn-me-icon { background:none; border:none; border-radius:50%; width:28px; height:28px; padding:0; cursor:pointer; color:var(--gray-600); display:flex; align-items:center; justify-content:center; }
 .btn-me-icon:hover { background:var(--gray-100); color:var(--gray-900); }
+
+/* --- Make shadcn Select / Combobox / NumberStepper match the native input look ---
+   These are unlayered, so they win over the components' Tailwind utility classes
+   (same mechanism used for the feed tabs and flyer). */
+[data-slot='select-trigger'] {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  background: white;
+  color: var(--gray-900);
+  box-shadow: none;
+}
+[data-slot='select-trigger']:focus-visible {
+  outline: 2px solid var(--blue);
+  border-color: transparent;
+  box-shadow: none;
+}
+[data-slot='select-trigger'] > svg { color: var(--gray-600); }
+
+/* Combobox input is a real <input>, already covered by the global input rule,
+   but the dropdown content/items get the app's surface + brand-green highlight. */
+[data-slot='select-content'] {
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  background: white;
+  font-size: 1rem;
+}
+[data-slot='select-item'][data-highlighted] {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.number-stepper {
+  /* Sit on its own line under the label (compact), like every other field,
+     instead of running inline next to the label text. */
+  display: flex;
+  width: max-content;
+  margin-top: 4px;
+  height: 44px;
+  border-color: var(--gray-300);
+  border-radius: var(--radius);
+}
+/* Keep the stepper compact: the global `input { width:100% }` rule would
+   otherwise stretch the value field across the whole row. */
+.number-stepper input { width: 3.25rem; font-size: 1rem; }
+.number-stepper button:not(:disabled):hover { background: var(--gray-100); }

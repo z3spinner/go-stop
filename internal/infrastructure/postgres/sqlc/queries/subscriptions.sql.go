@@ -28,6 +28,36 @@ func (q *Queries) DeleteSubscriptionByEndpoint(ctx context.Context, endpoint str
 	return err
 }
 
+const listAllSubscriptions = `-- name: ListAllSubscriptions :many
+SELECT id, phone, endpoint, p256dh, auth FROM subscriptions
+`
+
+func (q *Queries) ListAllSubscriptions(ctx context.Context) ([]Subscription, error) {
+	rows, err := q.db.Query(ctx, listAllSubscriptions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscription{}
+	for rows.Next() {
+		var i Subscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.Phone,
+			&i.Endpoint,
+			&i.P256dh,
+			&i.Auth,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSubscriptionsByPhone = `-- name: ListSubscriptionsByPhone :many
 SELECT id, phone, endpoint, p256dh, auth
 FROM subscriptions WHERE phone = $1

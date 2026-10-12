@@ -16,16 +16,35 @@ import (
 
 type mockRideRepo struct {
 	saved   []domain.Ride
+	updated []domain.Ride
 	byID    map[string]domain.Ride
 	saveErr error
+	// updateErr, when set, makes UpdateByID fail (e.g. repository.ErrDuplicateRide).
+	updateErr error
+	// dup, when set, makes Save report the ride as a pre-existing duplicate:
+	// it returns dup with created=false and does not record a new save.
+	dup *domain.Ride
 }
 
-func (m *mockRideRepo) Save(r domain.Ride) error {
+func (m *mockRideRepo) Save(r domain.Ride) (domain.Ride, bool, error) {
 	if m.saveErr != nil {
-		return m.saveErr
+		return domain.Ride{}, false, m.saveErr
+	}
+	if m.dup != nil {
+		return *m.dup, false, nil
 	}
 	m.saved = append(m.saved, r)
-	return nil
+	return r, true, nil
+}
+func (m *mockRideRepo) UpdateByID(r domain.Ride) (domain.Ride, error) {
+	if m.updateErr != nil {
+		return domain.Ride{}, m.updateErr
+	}
+	m.updated = append(m.updated, r)
+	if m.byID != nil {
+		m.byID[r.ID] = r
+	}
+	return r, nil
 }
 func (m *mockRideRepo) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.byID[id]
@@ -35,6 +54,7 @@ func (m *mockRideRepo) FindByID(id string) (domain.Ride, error) {
 	return r, nil
 }
 func (m *mockRideRepo) FindAll() ([]domain.Ride, error)           { return m.saved, nil }
+func (m *mockRideRepo) CountAvailable() (int, error)              { return len(m.saved), nil }
 func (m *mockRideRepo) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return nil, nil
@@ -54,8 +74,7 @@ func (m *mockRideRepo) FindByOriginAndDestinationFuzzy(string, string) ([]domain
 func (m *mockRideRepo) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepo) Delete(string) error                                { return nil }
 func (m *mockRideRepo) DeleteExpired() error                               { return nil }
-func (m *mockRideRepo) FindPendingFeedback() ([]domain.Ride, error)        { return nil, nil }
-func (m *mockRideRepo) SetFeedbackGiven(string) error                      { return nil }
+func (m *mockRideRepo) ClaimFeedback(string) (bool, error)                 { return true, nil }
 
 type mockRequestRepo struct {
 	saved    []domain.Request
@@ -104,6 +123,13 @@ func (m *mockSubRepo) FindByPhone(phone string) ([]domain.Subscription, error) {
 	}
 	return nil, errors.New("not found")
 }
+func (m *mockSubRepo) FindAll() ([]domain.Subscription, error) {
+	out := make([]domain.Subscription, 0, len(m.subs))
+	for _, s := range m.subs {
+		out = append(out, s)
+	}
+	return out, nil
+}
 func (m *mockSubRepo) DeleteByEndpoint(string) error { return nil }
 func (m *mockSubRepo) Delete(phone string) error     { delete(m.subs, phone); return nil }
 
@@ -115,8 +141,8 @@ func TestPostRide_SavesRide(t *testing.T) {
 	subs := &mockSubRepo{}
 	n := &mockNotifier{}
 
-	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n)
-	_, err := uc.Execute(domain.Ride{
+	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n, 60)
+	saved, created, err := uc.Execute(domain.Ride{
 		DriverName: "Alice", Phone: "555-0001",
 		Origin: "Village A", Destination: "Station",
 		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
@@ -126,6 +152,12 @@ func TestPostRide_SavesRide(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	if !created {
+		t.Error("expected a new ride to report created=true")
+	}
+	if saved.ID == "" {
+		t.Error("expected returned ride to have an ID")
+	}
 	if len(rides.saved) != 1 {
 		t.Errorf("expected 1 saved ride, got %d", len(rides.saved))
 	}
@@ -134,6 +166,55 @@ func TestPostRide_SavesRide(t *testing.T) {
 	}
 	if rides.saved[0].ExpiresAt.IsZero() {
 		t.Error("expected ExpiresAt to be set")
+	}
+}
+
+// A ride departing shortly before midnight must stay alive (and so searchable)
+// for its whole grace window. The naive expiry of "midnight after the departure
+// day" would retire it minutes after departure — before the grace window ends —
+// so the row gets cleaned up / filtered out mid-grace. ExpiresAt must therefore
+// be at least departure + flexibility + grace.
+func TestPostRide_ExpiryCoversGraceWindowPastMidnight(t *testing.T) {
+	rides := &mockRideRepo{}
+	uc := usecase.NewPostRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{}, 60)
+
+	// Departs 23:50 with 30-min flexibility; grace is 60 min.
+	// Grace window ends at 23:50 + 30 + 60 = 01:00 the next day — well past
+	// the 00:00 midnight that the old logic would have used.
+	dep := time.Date(2026, 6, 1, 23, 50, 0, 0, time.UTC)
+	if _, _, err := uc.Execute(domain.Ride{
+		DriverName: "Alice", Phone: "555-0001",
+		Origin: "Village A", Destination: "Station",
+		DepartureAt: dep, Flexibility: domain.Flexibility(30),
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := dep.Add(90 * time.Minute) // departure + flexibility + grace
+	got := rides.saved[0].ExpiresAt
+	if got.Before(want) {
+		t.Errorf("ExpiresAt %v is before the grace-window end %v; ride would vanish mid-grace", got, want)
+	}
+}
+
+// A normal daytime ride should keep the original "midnight after departure"
+// retention — the grace floor only ever extends expiry, never shortens it.
+func TestPostRide_ExpiryStaysAtNextMidnightForDaytimeRide(t *testing.T) {
+	rides := &mockRideRepo{}
+	uc := usecase.NewPostRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{}, 60)
+
+	dep := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
+	if _, _, err := uc.Execute(domain.Ride{
+		DriverName: "Alice", Phone: "555-0001",
+		Origin: "Village A", Destination: "Station",
+		DepartureAt: dep, Flexibility: domain.Flexibility(30),
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)
+	if got := rides.saved[0].ExpiresAt; !got.Equal(want) {
+		t.Errorf("ExpiresAt = %v, want next midnight %v", got, want)
 	}
 }
 
@@ -147,8 +228,8 @@ func TestPostRide_NotifiesMatchingSearchers(t *testing.T) {
 	}}
 	n := &mockNotifier{}
 
-	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n)
-	_, err := uc.Execute(domain.Ride{
+	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n, 60)
+	_, _, err := uc.Execute(domain.Ride{
 		DriverName: "Alice", Phone: "555-0001",
 		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
 	})
@@ -161,14 +242,52 @@ func TestPostRide_NotifiesMatchingSearchers(t *testing.T) {
 	}
 }
 
+// A duplicate re-post must return the existing ride without re-running the
+// match/notify path — searchers were already pinged for the original.
+func TestPostRide_DuplicateReturnsExistingAndSkipsNotify(t *testing.T) {
+	existing := domain.Ride{
+		ID: "ride-original", DriverName: "Alice", Phone: "555-0001",
+		Origin: "Village A", Destination: "Station",
+		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
+	}
+	rides := &mockRideRepo{dup: &existing}
+	reqs := &mockRequestRepo{
+		matching: []domain.Request{{ID: "req-1", SearcherName: "Bob", Phone: "555-0002"}},
+	}
+	subs := &mockSubRepo{subs: map[string]domain.Subscription{
+		"555-0002": {Phone: "555-0002", Endpoint: "https://push.example.com"},
+	}}
+	n := &mockNotifier{}
+
+	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n, 60)
+	saved, created, err := uc.Execute(domain.Ride{
+		DriverName: "Alice", Phone: "555-0001",
+		Origin: "Village A", Destination: "Station",
+		DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if created {
+		t.Error("expected a duplicate to report created=false")
+	}
+	if saved.ID != "ride-original" {
+		t.Errorf("expected the existing ride to be returned, got ID %q", saved.ID)
+	}
+	if n.called {
+		t.Error("should not notify searchers for a duplicate re-post")
+	}
+}
+
 func TestPostRide_SkipsNotificationIfNoSubscription(t *testing.T) {
 	rides := &mockRideRepo{}
 	reqs := &mockRequestRepo{matching: []domain.Request{{Phone: "555-0003"}}}
 	subs := &mockSubRepo{subs: map[string]domain.Subscription{}}
 	n := &mockNotifier{}
 
-	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n)
-	_, err := uc.Execute(domain.Ride{DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)})
+	uc := usecase.NewPostRide(rides, reqs, subs, &noopNotifQueue{}, n, 60)
+	_, _, err := uc.Execute(domain.Ride{DepartureAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)})
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -180,8 +299,8 @@ func TestPostRide_SkipsNotificationIfNoSubscription(t *testing.T) {
 
 func TestPostRide_ReturnsErrorIfSaveFails(t *testing.T) {
 	rides := &mockRideRepo{saveErr: errors.New("db error")}
-	uc := usecase.NewPostRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{})
-	if _, err := uc.Execute(domain.Ride{DepartureAt: time.Now()}); err == nil {
+	uc := usecase.NewPostRide(rides, &mockRequestRepo{}, &mockSubRepo{}, &noopNotifQueue{}, &mockNotifier{}, 60)
+	if _, _, err := uc.Execute(domain.Ride{DepartureAt: time.Now()}); err == nil {
 		t.Error("expected error when save fails")
 	}
 }

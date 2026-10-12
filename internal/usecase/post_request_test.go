@@ -16,11 +16,15 @@ type mockRideRepoWithMatch struct {
 	matchResult []domain.Ride
 }
 
-func (m *mockRideRepoWithMatch) Save(domain.Ride) error { return nil }
+func (m *mockRideRepoWithMatch) Save(rd domain.Ride) (domain.Ride, bool, error) {
+	return rd, true, nil
+}
+func (m *mockRideRepoWithMatch) UpdateByID(rd domain.Ride) (domain.Ride, error) { return rd, nil }
 func (m *mockRideRepoWithMatch) FindByID(string) (domain.Ride, error) {
 	return domain.Ride{}, errors.New("not found")
 }
 func (m *mockRideRepoWithMatch) FindAll() ([]domain.Ride, error)           { return nil, nil }
+func (m *mockRideRepoWithMatch) CountAvailable() (int, error)              { return 0, nil }
 func (m *mockRideRepoWithMatch) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoWithMatch) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil
@@ -40,10 +44,9 @@ func (m *mockRideRepoWithMatch) FindByOriginAndDestinationFuzzy(string, string) 
 func (m *mockRideRepoWithMatch) FindMatching(domain.Request) ([]domain.Ride, error) {
 	return m.matchResult, nil
 }
-func (m *mockRideRepoWithMatch) Delete(string) error                         { return nil }
-func (m *mockRideRepoWithMatch) DeleteExpired() error                        { return nil }
-func (m *mockRideRepoWithMatch) FindPendingFeedback() ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoWithMatch) SetFeedbackGiven(string) error               { return nil }
+func (m *mockRideRepoWithMatch) Delete(string) error                { return nil }
+func (m *mockRideRepoWithMatch) DeleteExpired() error               { return nil }
+func (m *mockRideRepoWithMatch) ClaimFeedback(string) (bool, error) { return true, nil }
 
 func TestPostRequest_SavesRequest(t *testing.T) {
 	reqs := &mockRequestRepo{}
@@ -78,7 +81,7 @@ func TestPostRequest_NotifiesMatchingDrivers(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewPostRequest(reqs, ridesWithMatch, subs, n)
-	_, err := uc.Execute(domain.Request{
+	saved, err := uc.Execute(domain.Request{
 		SearcherName: "Bob",
 		DepartureAt:  time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC),
 	})
@@ -89,6 +92,10 @@ func TestPostRequest_NotifiesMatchingDrivers(t *testing.T) {
 	if !n.called {
 		t.Error("expected notification to be sent to driver")
 	}
+	assertInbox(t, n, "555-0001", domain.Message{
+		Kind: domain.KindRequestMatch, DedupKey: "request_match:" + saved.ID,
+		ContactName: "Bob", RequestID: saved.ID,
+	})
 }
 
 func TestPostRequest_ReturnsErrorIfSaveFails(t *testing.T) {

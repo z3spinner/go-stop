@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/z3spinner/go-stop/internal/boundaries/repository"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
 	"github.com/z3spinner/go-stop/internal/usecase"
 )
@@ -19,6 +20,7 @@ type InterestHandler struct {
 	getInterestContact *usecase.GetInterestContact
 	cancelInterest     *usecase.CancelInterest
 	interestRepo       *postgres.InterestRepo
+	statRepo           repository.StatRepository
 }
 
 func NewInterestHandler(
@@ -27,6 +29,7 @@ func NewInterestHandler(
 	getInterestContact *usecase.GetInterestContact,
 	cancelInterest *usecase.CancelInterest,
 	interestRepo *postgres.InterestRepo,
+	statRepo repository.StatRepository,
 ) *InterestHandler {
 	return &InterestHandler{
 		expressInterest:    expressInterest,
@@ -34,6 +37,7 @@ func NewInterestHandler(
 		getInterestContact: getInterestContact,
 		cancelInterest:     cancelInterest,
 		interestRepo:       interestRepo,
+		statRepo:           statRepo,
 	}
 }
 
@@ -111,7 +115,7 @@ func (h *InterestHandler) Accept(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	searcherPhone, err := h.acceptInterest.Execute(c.Param("id"), normalizePhone(req.Phone))
+	searcherPhone, connected, err := h.acceptInterest.Execute(c.Param("id"), normalizePhone(req.Phone))
 	if err != nil {
 		if errors.Is(err, usecase.ErrUnauthorized) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
@@ -119,6 +123,11 @@ func (h *InterestHandler) Accept(c *gin.Context) {
 		}
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
+	}
+	// Record the connection asynchronously (best-effort), only on the genuine
+	// pending → accepted transition so repeats don't double-count.
+	if connected && h.statRepo != nil {
+		go func() { _ = h.statRepo.RecordConnection() }()
 	}
 	c.JSON(http.StatusOK, AcceptInterestResponse{SearcherPhone: searcherPhone})
 }

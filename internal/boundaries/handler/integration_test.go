@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/z3spinner/go-stop/internal/boundaries/handler"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -52,7 +53,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, notification_queue`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, notifications`)
 		if truncErr == nil {
 			break
 		}
@@ -72,42 +73,51 @@ func setupRouter() *gin.Engine {
 	reqRepo := postgres.NewRequestRepo(handlerPool, 60)
 	subRepo := postgres.NewSubscriptionRepo(handlerPool)
 	destRepo := postgres.NewDestinationRepo(handlerPool)
-	n := &noopNotifier{}
+	inboxRepo := postgres.NewInboxRepo(handlerPool)
+	n := usecase.NewInboxNotifier(&noopNotifier{}, inboxRepo)
 
-	postRide := usecase.NewPostRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n)
+	postRide := usecase.NewPostRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n, 60)
+	updateRide := usecase.NewUpdateRide(rideRepo, reqRepo, subRepo, postgres.NewNotificationQueueRepo(handlerPool), n, 60)
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
 	searchRides := usecase.NewSearchRides(rideRepo)
-	deleteRide := usecase.NewDeleteRide(rideRepo, postgres.NewNotificationQueueRepo(handlerPool))
+	deleteRide := usecase.NewDeleteRide(rideRepo, postgres.NewNotificationQueueRepo(handlerPool), postgres.NewFeedbackQueueRepo(handlerPool), inboxRepo)
 	postRequest := usecase.NewPostRequest(reqRepo, rideRepo, subRepo, n)
 	getMyRequests := usecase.NewGetMyRequests(reqRepo)
-	deleteRequest := usecase.NewDeleteRequest(reqRepo)
+	deleteRequest := usecase.NewDeleteRequest(reqRepo, inboxRepo)
 	getDests := usecase.NewGetDestinations(destRepo)
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	statRepo := postgres.NewStatRepo(handlerPool)
 	interestRepo := postgres.NewInterestRepo(handlerPool)
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, reqRepo)
-	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, postgres.NewFeedbackQueueRepo(handlerPool))
 	getStats := usecase.NewGetStats(statRepo)
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, n)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, n)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, n)
 	getActiveRequests := usecase.NewGetActiveRequests(reqRepo)
+	contactOfferRepo := postgres.NewContactOfferRepo(handlerPool)
+	offerContact := usecase.NewOfferContact(reqRepo, contactOfferRepo, subRepo, n)
+	getContactOfferStatus := usecase.NewGetRequestContactOfferStatus(reqRepo, contactOfferRepo)
+	getRequestContactOffers := usecase.NewGetRequestContactOffers(reqRepo, contactOfferRepo)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), reqRepo)
+	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), offerContact, getContactOfferStatus, getRequestContactOffers, reqRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
+
+	inboxH := handler.NewInboxHandler(usecase.NewGetInbox(inboxRepo), usecase.NewMarkInboxRead(inboxRepo))
 
 	r := gin.New()
 	r.POST("/api/rides", rideH.Post)
 	r.GET("/api/rides", rideH.List)
 	r.GET("/api/rides/:id", rideH.Get)
+	r.PUT("/api/rides/:id", rideH.Update)
 	r.DELETE("/api/rides/:id", rideH.Delete)
 	r.GET("/api/rides/:id/requests", rideH.ListMatchingRequests)
 	r.POST("/api/rides/:id/feedback", feedbackH.Post)
@@ -120,17 +130,24 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/requests", reqH.List)
 	r.GET("/api/requests/:id", reqH.Get)
 	r.DELETE("/api/requests/:id", reqH.Delete)
+	r.POST("/api/requests/:id/ping", reqH.Ping)
+	r.POST("/api/requests/:id/offer-contact", reqH.OfferContact)
+	r.GET("/api/requests/:id/offer-contact-status", reqH.GetContactOfferStatus)
+	r.GET("/api/requests/:id/offers", reqH.ListContactOffers)
 	r.GET("/api/destinations", destH.List)
 	r.POST("/api/subscriptions", subH.Subscribe)
+	r.POST("/api/subscriptions/test", subH.TestPush)
 	r.DELETE("/api/subscriptions/:phone", subH.Unsubscribe)
 	r.GET("/api/stats", statsH.Get)
+	r.GET("/api/inbox", inboxH.List)
+	r.POST("/api/inbox/read", inboxH.MarkRead)
 	return r
 }
 
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, notification_queue`); err != nil {
+		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers, notifications`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }
@@ -151,6 +168,24 @@ func getReq(r *gin.Engine, path string) *httptest.ResponseRecorder {
 	return w
 }
 
+func putJSON(r *gin.Engine, path string, body interface{}) *httptest.ResponseRecorder {
+	b, _ := json.Marshal(body)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPut, path, bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	return w
+}
+
+// getWithPhone issues a GET with the owner X-Phone header (driver-only views).
+func getWithPhone(r *gin.Engine, path, phone string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("X-Phone", phone)
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func searchEventCount(t *testing.T) int {
 	t.Helper()
 	var n int
@@ -159,6 +194,28 @@ func searchEventCount(t *testing.T) int {
 		t.Fatalf("count search_events: %v", err)
 	}
 	return n
+}
+
+func connectionEventCount(t *testing.T) int {
+	t.Helper()
+	var n int
+	if err := handlerPool.QueryRow(context.Background(),
+		`SELECT count(*) FROM connection_events`).Scan(&n); err != nil {
+		t.Fatalf("count connection_events: %v", err)
+	}
+	return n
+}
+
+// waitConnectionCount waits for the async RecordConnection goroutine to reach
+// `want`, then briefly re-reads to catch an erroneous extra insert.
+func waitConnectionCount(t *testing.T, want int) int {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for connectionEventCount(t) < want && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	time.Sleep(200 * time.Millisecond)
+	return connectionEventCount(t)
 }
 
 func TestHTTP_PostAndGetRides(t *testing.T) {
@@ -191,6 +248,188 @@ func TestHTTP_PostAndGetRides(t *testing.T) {
 	json.Unmarshal(w2.Body.Bytes(), &rides)
 	if len(rides) != 1 {
 		t.Errorf("expected 1 ride, got %d", len(rides))
+	}
+}
+
+func TestHTTP_PostRide_IsIdempotent(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	ride := map[string]interface{}{
+		"driver_name": "Alice", "phone": "06 12 34 56 78",
+		"origin": "Village A", "destination": "Station",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	}
+
+	// First post creates the ride.
+	w1 := postJSON(r, "/api/rides", ride)
+	if w1.Code != http.StatusCreated {
+		t.Fatalf("first post: expected 201, got %d: %s", w1.Code, w1.Body.String())
+	}
+	var first map[string]interface{}
+	json.Unmarshal(w1.Body.Bytes(), &first)
+	id := first["ID"].(string)
+	if id == "" {
+		t.Fatal("expected an ID on the created ride")
+	}
+
+	// Re-posting the identical ride is a no-op: 200 with the same ride.
+	w2 := postJSON(r, "/api/rides", ride)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("duplicate post: expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	var second map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &second)
+	if second["ID"] != id {
+		t.Errorf("duplicate post should return the existing ride %q, got %q", id, second["ID"])
+	}
+
+	// Same ride with different name case, route case, whitespace and phone
+	// formatting still collapses to the same ride (normalized dedup key).
+	w3 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "  alice ", "phone": "0612345678",
+		"origin": "village a", "destination": "STATION",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	if w3.Code != http.StatusOK {
+		t.Fatalf("normalized duplicate: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+	var third map[string]interface{}
+	json.Unmarshal(w3.Body.Bytes(), &third)
+	if third["ID"] != id {
+		t.Errorf("normalized duplicate should return ride %q, got %q", id, third["ID"])
+	}
+
+	// A different departure instant is a genuinely new ride.
+	w4 := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "06 12 34 56 78",
+		"origin": "Village A", "destination": "Station",
+		"departure_at": "2030-06-01T09:01:00Z", "flexibility": 30,
+	})
+	if w4.Code != http.StatusCreated {
+		t.Fatalf("different time: expected 201, got %d: %s", w4.Code, w4.Body.String())
+	}
+
+	// Exactly two rides exist: the original and the different-time one.
+	wList := getReq(r, "/api/rides")
+	var rides []map[string]interface{}
+	json.Unmarshal(wList.Body.Bytes(), &rides)
+	if len(rides) != 2 {
+		t.Errorf("expected 2 rides after dedup, got %d", len(rides))
+	}
+}
+
+func TestHTTP_UpdateRide_EditsInPlaceAndKeepsInterest(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	id := ride["ID"].(string)
+
+	// A searcher expresses interest in the original ride.
+	wi := postJSON(r, "/api/rides/"+id+"/interest", map[string]interface{}{
+		"phone": "5550002", "name": "Bob",
+	})
+	if wi.Code != http.StatusCreated {
+		t.Fatalf("express interest: expected 201, got %d: %s", wi.Code, wi.Body.String())
+	}
+
+	// Driver edits the route, time and flexibility.
+	wu := putJSON(r, "/api/rides/"+id, map[string]interface{}{
+		"phone": "5550001", "origin": "Saillans", "destination": "Die",
+		"departure_at": "2030-06-01T17:30:00Z", "flexibility": 60,
+	})
+	if wu.Code != http.StatusOK {
+		t.Fatalf("update: expected 200, got %d: %s", wu.Code, wu.Body.String())
+	}
+	var updated map[string]interface{}
+	json.Unmarshal(wu.Body.Bytes(), &updated)
+	if updated["ID"] != id {
+		t.Errorf("edit must keep the ride id: got %v", updated["ID"])
+	}
+	if updated["Destination"] != "Die" || updated["DriverName"] != "Alice" {
+		t.Errorf("unexpected updated ride: %+v", updated)
+	}
+	if updated["Flexibility"].(float64) != 60 {
+		t.Errorf("flexibility not updated: %v", updated["Flexibility"])
+	}
+
+	// The interest survives the edit (same ride id).
+	wl := getWithPhone(r, "/api/rides/"+id+"/interests", "5550001")
+	var interests []map[string]interface{}
+	json.Unmarshal(wl.Body.Bytes(), &interests)
+	if len(interests) != 1 {
+		t.Errorf("expected the interest to survive the edit, got %d", len(interests))
+	}
+}
+
+func TestHTTP_UpdateRide_WrongPhone_Returns403(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	id := ride["ID"].(string)
+
+	wu := putJSON(r, "/api/rides/"+id, map[string]interface{}{
+		"phone": "5559999", "origin": "A", "destination": "C",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	if wu.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d", wu.Code)
+	}
+}
+
+func TestHTTP_UpdateRide_NotFound_Returns404(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	wu := putJSON(r, "/api/rides/"+uuid.New().String(), map[string]interface{}{
+		"phone": "5550001", "origin": "A", "destination": "B",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	if wu.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", wu.Code)
+	}
+}
+
+func TestHTTP_UpdateRide_DuplicateKey_Returns409(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Two rides by the same driver on different routes.
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Die",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var rideB map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &rideB)
+	idB := rideB["ID"].(string)
+
+	// Editing ride B to exactly match ride A's dedup key conflicts.
+	wu := putJSON(r, "/api/rides/"+idB, map[string]interface{}{
+		"phone": "5550001", "origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	if wu.Code != http.StatusConflict {
+		t.Errorf("expected 409, got %d: %s", wu.Code, wu.Body.String())
 	}
 }
 
@@ -1137,5 +1376,192 @@ func TestHTTP_Search_CountFalseSuppressesRecording(t *testing.T) {
 
 	if got := searchEventCount(t); got != 1 {
 		t.Errorf("expected exactly 1 recorded search event (count=false must suppress the reverse lookup), got %d", got)
+	}
+}
+
+// A driver accepting a searcher's interest is a "connection made": it records
+// exactly one connection event, and a repeated accept must not add another.
+func TestHTTP_Connection_RecordedOnAcceptOnce(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	// Pending interest alone records no connection.
+	w2 := postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
+		"phone": "5550002", "name": "Bob",
+	})
+	var interest map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &interest)
+	interestID := interest["id"].(string)
+	time.Sleep(200 * time.Millisecond)
+	if got := connectionEventCount(t); got != 0 {
+		t.Fatalf("a pending interest must not record a connection, got %d", got)
+	}
+
+	// Accepting it records exactly one connection.
+	if w3 := postJSON(r, "/api/interests/"+interestID+"/accept", map[string]interface{}{"phone": "5550001"}); w3.Code != http.StatusOK {
+		t.Fatalf("accept: expected 200, got %d: %s", w3.Code, w3.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Fatalf("expected 1 connection after accept, got %d", got)
+	}
+
+	// Re-accepting must not double-count.
+	if w4 := postJSON(r, "/api/interests/"+interestID+"/accept", map[string]interface{}{"phone": "5550001"}); w4.Code != http.StatusOK {
+		t.Fatalf("re-accept: expected 200, got %d: %s", w4.Code, w4.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Errorf("repeat accept must not add a connection, got %d", got)
+	}
+}
+
+// A driver pinging a matching searcher (driver_shared) is a "connection made":
+// one connection event, and a repeated ping must not add another.
+func TestHTTP_Connection_RecordedOnPingOnce(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	// Searcher posts an alert.
+	wr := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "5550002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var request map[string]interface{}
+	json.Unmarshal(wr.Body.Bytes(), &request)
+	requestID := request["ID"].(string)
+
+	// Driver posts a matching ride.
+	wd := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(wd.Body.Bytes(), &ride)
+	rideID := ride["ID"].(string)
+
+	ping := func() *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		b, _ := json.Marshal(map[string]interface{}{"ride_id": rideID})
+		req, _ := http.NewRequest(http.MethodPost, "/api/requests/"+requestID+"/ping", bytes.NewBuffer(b))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Phone", "5550001")
+		r.ServeHTTP(w, req)
+		return w
+	}
+
+	if w := ping(); w.Code != http.StatusNoContent {
+		t.Fatalf("ping: expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Fatalf("expected 1 connection after ping, got %d", got)
+	}
+
+	// Re-pinging finds the existing driver_shared interest and must not add one.
+	if w := ping(); w.Code != http.StatusNoContent {
+		t.Fatalf("re-ping: expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	if got := waitConnectionCount(t, 1); got != 1 {
+		t.Errorf("repeat ping must not add a connection, got %d", got)
+	}
+}
+
+// Unanswered = still-pending interests whose ride has expired. Inserted directly
+// because the API will not accept rides in the past.
+func TestHTTP_Stats_UnansweredCountsPendingOnceRideGone(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+	ctx := context.Background()
+
+	insertRide := func(id string, expiresAt time.Time) {
+		if _, err := handlerPool.Exec(ctx,
+			`INSERT INTO rides (id, driver_name, phone, origin, destination, date, departure_at, flexibility, expires_at)
+			 VALUES ($1,'D','5550001','Saillans','Crest', $2::timestamptz::date, $2, 0, $3)`,
+			id, expiresAt, expiresAt); err != nil {
+			t.Fatalf("insert ride: %v", err)
+		}
+	}
+	insertInterest := func(rideID, phone, status string) {
+		if _, err := handlerPool.Exec(ctx,
+			`INSERT INTO interests (ride_id, searcher_phone, searcher_name, status)
+			 VALUES ($1, $2, 'S', $3)`, rideID, phone, status); err != nil {
+			t.Fatalf("insert interest: %v", err)
+		}
+	}
+
+	past := time.Now().Add(-2 * time.Hour)
+	future := time.Now().Add(48 * time.Hour)
+	expired := "11111111-1111-1111-1111-111111111111"
+	live := "22222222-2222-2222-2222-222222222222"
+	gone := "33333333-3333-3333-3333-333333333333" // ride_id with no rides row (deleted by expiry cron)
+	insertRide(expired, past)
+	insertRide(live, future)
+
+	insertInterest(expired, "5550010", "pending")  // counts: pending + expired ride still present
+	insertInterest(gone, "5550013", "pending")     // counts: pending + ride already deleted (the common case)
+	insertInterest(live, "5550011", "pending")     // not counted: ride still live
+	insertInterest(expired, "5550012", "accepted") // not counted: not pending
+
+	w := getReq(r, "/api/stats")
+	if w.Code != http.StatusOK {
+		t.Fatalf("stats: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var stats domain.Stats
+	if err := json.Unmarshal(w.Body.Bytes(), &stats); err != nil {
+		t.Fatalf("decode stats: %v", err)
+	}
+	if stats.Unanswered.AllTime != 2 {
+		t.Errorf("expected unanswered all_time=2 (expired-ride + deleted-ride pending interests), got %d", stats.Unanswered.AllTime)
+	}
+}
+
+// Deleting a ride must also drop its pending feedback task, so the driver stops
+// getting "did someone come along?" reminders for a ride they removed (which
+// otherwise 404 once the ride row is gone).
+func TestHTTP_DeleteRide_RemovesFeedbackTask(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5550001",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 0,
+	})
+	var ride map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &ride)
+	id := ride["ID"].(string)
+
+	// A queued feedback task, as the enqueue cron would create once the ride departs.
+	if _, err := handlerPool.Exec(context.Background(),
+		`INSERT INTO feedback_queue (ride_id, phone, origin, destination, ride_date, departure_at, send_after)
+		 VALUES ($1, '5550001', 'Saillans', 'Crest', '2030-06-01', '2030-06-01T09:00:00Z', '2030-06-01T11:00:00Z')`, id); err != nil {
+		t.Fatalf("insert feedback task: %v", err)
+	}
+
+	b, _ := json.Marshal(map[string]string{"phone": "5550001"})
+	req, _ := http.NewRequest(http.MethodDelete, "/api/rides/"+id, bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req)
+	if w2.Code != http.StatusNoContent {
+		t.Fatalf("delete: expected 204, got %d: %s", w2.Code, w2.Body.String())
+	}
+
+	var n int
+	if err := handlerPool.QueryRow(context.Background(),
+		`SELECT count(*) FROM feedback_queue WHERE ride_id=$1`, id).Scan(&n); err != nil {
+		t.Fatalf("count feedback_queue: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("expected feedback task removed on ride delete, got %d", n)
 	}
 }

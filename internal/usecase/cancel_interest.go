@@ -58,9 +58,13 @@ func (uc *CancelInterest) Execute(interestID, searcherPhone string) error {
 			Title:       "Demande de contact annulée",
 			Body:        fmt.Sprintf("%s a annulé sa demande (%s → %s)", interest.SearcherName, ride.Origin, ride.Destination),
 			URL:         "/my-rides",
+			ContactName: interest.SearcherName,
 			Origin:      ride.Origin,
 			Destination: ride.Destination,
 			DepartureAt: ride.DepartureAt,
+			Kind:        domain.KindInterestCancelled,
+			DedupKey:    domain.KindInterestCancelled + ":" + interest.ID,
+			RideID:      ride.ID,
 		}, uc.subs, uc.notifier)
 	}
 	return nil

@@ -1,7 +1,22 @@
-test:
-	TEST_DATABASE_URL=postgres://gostop:gostop@localhost:5432/gostop?sslmode=disable \
-	go test -tags integration -count=1 -p 1 ./...
+# ── Test stacks ──────────────────────────────────────────────────────────────
+# Integration and e2e each run in their own isolated docker compose project with
+# NO published host ports, so they never touch the devstack DB/ports and can run
+# in parallel with the devstack and each other. The DB is tmpfs (fresh per run);
+# the module/node caches persist across runs (so `down` keeps named volumes).
+ITEST := docker compose -p gostop-itest -f docker-compose.itest.yml
+E2E   := docker compose -p gostop-e2e   -f docker-compose.e2e.yml
 
+# Integration tests in an isolated stack (own Postgres). Leaves the devstack alone.
+test-integration:
+	@$(ITEST) up --build --abort-on-container-exit --exit-code-from tests; \
+	  code=$$?; \
+	  $(ITEST) down --remove-orphans >/dev/null 2>&1; \
+	  exit $$code
+
+# Back-compat: `make test` runs the integration stack.
+test: test-integration
+
+# Pure unit tests (no DB), run directly on the host.
 test-unit:
 	go test ./internal/usecase/...
 
@@ -38,8 +53,17 @@ dev:
 	@echo "Go :8080 + Vite :5173 (proxying /api). Ctrl-C stops both."
 	@( go run . & echo $$! > /tmp/gostop-go.pid ; npm run dev --prefix frontend ; kill `cat /tmp/gostop-go.pid` )
 
-test-e2e: build-web
-	npm run test:e2e
+# End-to-end tests in an isolated stack: the production app image (self-contained
+# SPA + API) + its own Postgres + a Playwright runner — all on a private network.
+test-e2e:
+	@$(E2E) up --build --abort-on-container-exit --exit-code-from tests; \
+	  code=$$?; \
+	  $(E2E) down --remove-orphans >/dev/null 2>&1; \
+	  exit $$code
+
+# Everything: unit (host), then the integration and e2e stacks in parallel.
+test-all: test-unit
+	@$(MAKE) -j2 test-integration test-e2e
 
 swagger-install:
 	go install github.com/swaggo/swag/cmd/swag@latest

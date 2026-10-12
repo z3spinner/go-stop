@@ -4,16 +4,18 @@
 -->
 
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { api } from '$lib/api';
 	import { userPhone } from '$lib/stores';
 	import { formatTime, formatDate, flexLabel } from '$lib/utils';
 	import { m } from '$lib/paraglide/messages';
-	import type { Request } from '$lib/types';
+	import type { Request, ContactOffer } from '$lib/types';
 
 	let { request, onseematches }: { request: Request; onseematches?: (o: string, d: string, dep: string) => void } = $props();
 	let msg = $state('');
 	let deleted = $state(false);
+	let contactOffers = $state<ContactOffer[]>([]);
 
 	const ZERO = '0001-01-01T00:00:00Z';
 	const hasDate = $derived(request.Date !== ZERO && request.Date?.slice(0, 4) !== '0001');
@@ -29,6 +31,13 @@
 			msg = m.deleteErr();
 		}
 	}
+
+	onMount(async () => {
+		const phone = get(userPhone);
+		if (phone) {
+			contactOffers = await api.requests.listOffers(request.ID, phone).catch(() => []);
+		}
+	});
 </script>
 
 <div class="card rounded border p-3" id="card-{request.ID}" style:opacity={deleted ? 0.4 : 1}>
@@ -53,4 +62,17 @@
 		<button type="button" class="btn btn-danger btn-delete" data-id={request.ID} data-phone={get(userPhone)} disabled={deleted} onclick={del}>{m.btnDelete()}</button>
 	</div>
 	<div class="delete-msg" id="msg-{request.ID}">{msg}</div>
+	{#if contactOffers.length > 0}
+		<div class="contact-offers mt-2 border-t pt-2">
+			<div class="contact-offers-title mb-1 text-xs font-semibold text-gray-500">{m.contactOffersTitle()} ({contactOffers.length})</div>
+			<ul class="contact-offers-list space-y-1">
+				{#each contactOffers as offer (offer.id)}
+					<li class="contact-offer-item text-sm">
+						<span class="font-medium">{offer.offerer_name}</span>
+						— <a class="underline underline-offset-2" href="tel:{offer.offerer_phone}">{offer.offerer_phone}</a>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
 </div>

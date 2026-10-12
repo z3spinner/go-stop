@@ -17,7 +17,8 @@ type mockRideRepoDelete struct {
 	deleted []string
 }
 
-func (m *mockRideRepoDelete) Save(domain.Ride) error { return nil }
+func (m *mockRideRepoDelete) Save(rd domain.Ride) (domain.Ride, bool, error) { return rd, true, nil }
+func (m *mockRideRepoDelete) UpdateByID(rd domain.Ride) (domain.Ride, error) { return rd, nil }
 func (m *mockRideRepoDelete) FindByID(id string) (domain.Ride, error) {
 	r, ok := m.rides[id]
 	if !ok {
@@ -26,6 +27,7 @@ func (m *mockRideRepoDelete) FindByID(id string) (domain.Ride, error) {
 	return r, nil
 }
 func (m *mockRideRepoDelete) FindAll() ([]domain.Ride, error)           { return nil, nil }
+func (m *mockRideRepoDelete) CountAvailable() (int, error)              { return 0, nil }
 func (m *mockRideRepoDelete) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoDelete) FindByOriginAndDestination(string, string) ([]domain.Ride, error) {
 	return nil, nil
@@ -47,9 +49,8 @@ func (m *mockRideRepoDelete) Delete(id string) error {
 	m.deleted = append(m.deleted, id)
 	return nil
 }
-func (m *mockRideRepoDelete) DeleteExpired() error                        { return nil }
-func (m *mockRideRepoDelete) FindPendingFeedback() ([]domain.Ride, error) { return nil, nil }
-func (m *mockRideRepoDelete) SetFeedbackGiven(string) error               { return nil }
+func (m *mockRideRepoDelete) DeleteExpired() error               { return nil }
+func (m *mockRideRepoDelete) ClaimFeedback(string) (bool, error) { return true, nil }
 
 type mockRequestRepoDelete struct {
 	requests map[string]domain.Request
@@ -75,7 +76,7 @@ func (m *mockRequestRepoDelete) DeleteExpired() error { return nil }
 
 type noopNotifQueue struct{}
 
-func (n *noopNotifQueue) Enqueue(string, string, string) error { return nil }
+func (n *noopNotifQueue) Enqueue(string, string, string) (bool, error) { return true, nil }
 func (n *noopNotifQueue) FindPending(time.Time, int) ([]domain.NotificationQueueEntry, error) {
 	return nil, nil
 }
@@ -86,11 +87,29 @@ func (n *noopNotifQueue) DeleteExpired() error                          { return
 func (n *noopNotifQueue) ListForSearcher(string) ([]domain.NotificationQueueEntry, error) {
 	return nil, nil
 }
+
+// mockFeedbackQueue records which ride ids had their feedback task removed.
+type mockFeedbackQueueDelete struct{ deletedByRideID []string }
+
+func (m *mockFeedbackQueueDelete) EnqueueStartedRides(time.Time) error { return nil }
+func (m *mockFeedbackQueueDelete) FindDue(time.Time, int) ([]domain.FeedbackTask, error) {
+	return nil, nil
+}
+func (m *mockFeedbackQueueDelete) FindByRideID(string) (domain.FeedbackTask, error) {
+	return domain.FeedbackTask{}, errors.New("not found")
+}
+func (m *mockFeedbackQueueDelete) MarkSent(string) error { return nil }
+func (m *mockFeedbackQueueDelete) DeleteByRideID(rideID string) (bool, error) {
+	m.deletedByRideID = append(m.deletedByRideID, rideID)
+	return true, nil
+}
+func (m *mockFeedbackQueueDelete) DeleteExhausted(int, time.Duration) error { return nil }
+
 func TestDeleteRide_DeletesWhenPhoneMatches(t *testing.T) {
 	rides := &mockRideRepoDelete{
 		rides: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-0001"}},
 	}
-	uc := usecase.NewDeleteRide(rides, &noopNotifQueue{})
+	uc := usecase.NewDeleteRide(rides, &noopNotifQueue{}, &mockFeedbackQueueDelete{}, &mockInboxRepo{})
 	if err := uc.Execute("ride-1", "555-0001"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -99,11 +118,27 @@ func TestDeleteRide_DeletesWhenPhoneMatches(t *testing.T) {
 	}
 }
 
+// Deleting a ride must also drop its pending feedback task, so the driver stops
+// getting "did someone come along?" reminders (which 404 once the ride is gone).
+func TestDeleteRide_RemovesFeedbackTask(t *testing.T) {
+	rides := &mockRideRepoDelete{
+		rides: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-0001"}},
+	}
+	fq := &mockFeedbackQueueDelete{}
+	uc := usecase.NewDeleteRide(rides, &noopNotifQueue{}, fq, &mockInboxRepo{})
+	if err := uc.Execute("ride-1", "555-0001"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(fq.deletedByRideID) != 1 || fq.deletedByRideID[0] != "ride-1" {
+		t.Errorf("expected feedback task for ride-1 to be removed, got %v", fq.deletedByRideID)
+	}
+}
+
 func TestDeleteRide_RejectsWrongPhone(t *testing.T) {
 	rides := &mockRideRepoDelete{
 		rides: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-0001"}},
 	}
-	uc := usecase.NewDeleteRide(rides, &noopNotifQueue{})
+	uc := usecase.NewDeleteRide(rides, &noopNotifQueue{}, &mockFeedbackQueueDelete{}, &mockInboxRepo{})
 	if err := uc.Execute("ride-1", "555-9999"); err == nil {
 		t.Error("expected unauthorized error")
 	}
@@ -113,7 +148,7 @@ func TestDeleteRide_RejectsWrongPhone(t *testing.T) {
 }
 
 func TestDeleteRide_ReturnsErrorIfNotFound(t *testing.T) {
-	uc := usecase.NewDeleteRide(&mockRideRepoDelete{rides: map[string]domain.Ride{}}, &noopNotifQueue{})
+	uc := usecase.NewDeleteRide(&mockRideRepoDelete{rides: map[string]domain.Ride{}}, &noopNotifQueue{}, &mockFeedbackQueueDelete{}, &mockInboxRepo{})
 	if err := uc.Execute("nonexistent", "555-0001"); err == nil {
 		t.Error("expected not found error")
 	}
@@ -123,7 +158,7 @@ func TestDeleteRequest_DeletesWhenPhoneMatches(t *testing.T) {
 	reqs := &mockRequestRepoDelete{
 		requests: map[string]domain.Request{"req-1": {ID: "req-1", Phone: "555-0002"}},
 	}
-	uc := usecase.NewDeleteRequest(reqs)
+	uc := usecase.NewDeleteRequest(reqs, &mockInboxRepo{})
 	if err := uc.Execute("req-1", "555-0002"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -136,7 +171,7 @@ func TestDeleteRequest_RejectsWrongPhone(t *testing.T) {
 	reqs := &mockRequestRepoDelete{
 		requests: map[string]domain.Request{"req-1": {ID: "req-1", Phone: "555-0002"}},
 	}
-	uc := usecase.NewDeleteRequest(reqs)
+	uc := usecase.NewDeleteRequest(reqs, &mockInboxRepo{})
 	if err := uc.Execute("req-1", "555-9999"); err == nil {
 		t.Error("expected unauthorized error")
 	}
@@ -144,7 +179,7 @@ func TestDeleteRequest_RejectsWrongPhone(t *testing.T) {
 
 func TestDeleteRequest_ReturnsErrorIfNotFound(t *testing.T) {
 	reqs := &mockRequestRepoDelete{requests: map[string]domain.Request{}}
-	uc := usecase.NewDeleteRequest(reqs)
+	uc := usecase.NewDeleteRequest(reqs, &mockInboxRepo{})
 	if err := uc.Execute("nonexistent", "555-0001"); err == nil {
 		t.Error("expected not found error")
 	}

@@ -13,15 +13,25 @@ import (
 )
 
 type mockNotifier struct {
-	called  bool
-	lastMsg domain.Message
-	err     error
+	called   bool
+	lastMsg  domain.Message
+	err      error
+	recorded []recordedMsg // every Record call (the inbox copy), in order
+}
+
+type recordedMsg struct {
+	phone string
+	msg   domain.Message
 }
 
 func (m *mockNotifier) Send(sub domain.Subscription, msg domain.Message) error {
 	m.called = true
 	m.lastMsg = msg
 	return m.err
+}
+
+func (m *mockNotifier) Record(phone string, msg domain.Message) {
+	m.recorded = append(m.recorded, recordedMsg{phone: phone, msg: msg})
 }
 
 type mockSubRepoNotify struct {
@@ -35,8 +45,9 @@ func (m *mockSubRepoNotify) FindByPhone(string) ([]domain.Subscription, error) {
 	}
 	return m.subs, nil
 }
-func (m *mockSubRepoNotify) Delete(string) error           { return nil }
-func (m *mockSubRepoNotify) DeleteByEndpoint(string) error { return nil }
+func (m *mockSubRepoNotify) FindAll() ([]domain.Subscription, error) { return m.subs, nil }
+func (m *mockSubRepoNotify) Delete(string) error                     { return nil }
+func (m *mockSubRepoNotify) DeleteByEndpoint(string) error           { return nil }
 
 func TestNotifySearcher_SendsToAllDevices(t *testing.T) {
 	sub1 := domain.Subscription{Phone: "555-0001", Endpoint: "https://fcm.example/1"}
@@ -82,11 +93,15 @@ func (n *countingNotifier) Send(_ domain.Subscription, _ domain.Message) error {
 	return nil
 }
 
+func (n *countingNotifier) Record(string, domain.Message) {}
+
 type goneNotifier struct{}
 
 func (n *goneNotifier) Send(_ domain.Subscription, _ domain.Message) error {
 	return errors.New("push service returned status 410")
 }
+
+func (n *goneNotifier) Record(string, domain.Message) {}
 
 type trackingSubRepo struct {
 	subs    []domain.Subscription
@@ -97,7 +112,8 @@ func (r *trackingSubRepo) Save(domain.Subscription) error { return nil }
 func (r *trackingSubRepo) FindByPhone(string) ([]domain.Subscription, error) {
 	return r.subs, nil
 }
-func (r *trackingSubRepo) Delete(string) error { return nil }
+func (r *trackingSubRepo) FindAll() ([]domain.Subscription, error) { return r.subs, nil }
+func (r *trackingSubRepo) Delete(string) error                     { return nil }
 func (r *trackingSubRepo) DeleteByEndpoint(string) error {
 	r.deleted = true
 	return nil

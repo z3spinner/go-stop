@@ -14,6 +14,33 @@ type AppSetting struct {
 	CreatedAt pgtype.Timestamptz `db:"created_at"`
 }
 
+type ConnectionEvent struct {
+	ID          pgtype.UUID        `db:"id"`
+	ConnectedAt pgtype.Timestamptz `db:"connected_at"`
+}
+
+type ContactOffer struct {
+	ID           pgtype.UUID        `db:"id"`
+	RequestID    pgtype.UUID        `db:"request_id"`
+	OffererPhone string             `db:"offerer_phone"`
+	OffererName  string             `db:"offerer_name"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at"`
+}
+
+type FeedbackQueue struct {
+	ID          pgtype.UUID        `db:"id"`
+	RideID      pgtype.UUID        `db:"ride_id"`
+	Phone       string             `db:"phone"`
+	Origin      string             `db:"origin"`
+	Destination string             `db:"destination"`
+	RideDate    pgtype.Date        `db:"ride_date"`
+	DepartureAt pgtype.Timestamptz `db:"departure_at"`
+	SendAfter   pgtype.Timestamptz `db:"send_after"`
+	SentCount   int32              `db:"sent_count"`
+	LastSentAt  pgtype.Timestamptz `db:"last_sent_at"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at"`
+}
+
 type Interest struct {
 	ID            pgtype.UUID        `db:"id"`
 	RideID        pgtype.UUID        `db:"ride_id"`
@@ -21,6 +48,24 @@ type Interest struct {
 	SearcherName  string             `db:"searcher_name"`
 	Status        string             `db:"status"`
 	CreatedAt     pgtype.Timestamptz `db:"created_at"`
+}
+
+type Notification struct {
+	ID          pgtype.UUID        `db:"id"`
+	Phone       string             `db:"phone"`
+	Kind        string             `db:"kind"`
+	ContactName string             `db:"contact_name"`
+	Origin      string             `db:"origin"`
+	Destination string             `db:"destination"`
+	DepartureAt pgtype.Timestamptz `db:"departure_at"`
+	Url         string             `db:"url"`
+	Title       string             `db:"title"`
+	Body        string             `db:"body"`
+	RideID      pgtype.UUID        `db:"ride_id"`
+	RequestID   pgtype.UUID        `db:"request_id"`
+	DedupKey    pgtype.Text        `db:"dedup_key"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at"`
+	ReadAt      pgtype.Timestamptz `db:"read_at"`
 }
 
 type NotificationQueue struct {
@@ -62,6 +107,7 @@ type Ride struct {
 	FeedbackGiven   bool               `db:"feedback_given"`
 	OriginNorm      pgtype.Text        `db:"origin_norm"`
 	DestinationNorm pgtype.Text        `db:"destination_norm"`
+	DriverNameNorm  pgtype.Text        `db:"driver_name_norm"`
 }
 
 type RideEvent struct {

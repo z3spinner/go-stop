@@ -6,6 +6,8 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { m } from '$lib/paraglide/messages';
+	import { config } from '$lib/config';
+	import { DEFAULT_RETENTION_DAYS } from '$lib/inbox';
 	let { open = false, onclose }: { open?: boolean; onclose: () => void } = $props();
 	function onOpenChange(v: boolean) {
 		if (!v) onclose();
@@ -18,5 +20,6 @@
 			<Dialog.Title>{m.privacyTitle()}</Dialog.Title>
 		</Dialog.Header>
 		<div class="modal-body">{@html m.privacyBody()}</div>
+		<p class="privacy-inbox modal-body">{m.privacyInbox({ days: $config.notificationRetentionDays || DEFAULT_RETENTION_DAYS })}</p>
 	</Dialog.Content>
 </Dialog.Root>

@@ -11,6 +11,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getConnectionEventCounts = `-- name: GetConnectionEventCounts :one
+SELECT
+  COUNT(*)                                                                           AS all_time,
+  COUNT(*) FILTER (WHERE connected_at >= DATE_TRUNC('year',  NOW()))                AS this_year,
+  COUNT(*) FILTER (WHERE connected_at >= DATE_TRUNC('month', NOW()))                AS this_month
+FROM connection_events
+`
+
+type GetConnectionEventCountsRow struct {
+	AllTime   int64 `db:"all_time"`
+	ThisYear  int64 `db:"this_year"`
+	ThisMonth int64 `db:"this_month"`
+}
+
+func (q *Queries) GetConnectionEventCounts(ctx context.Context) (GetConnectionEventCountsRow, error) {
+	row := q.db.QueryRow(ctx, getConnectionEventCounts)
+	var i GetConnectionEventCountsRow
+	err := row.Scan(&i.AllTime, &i.ThisYear, &i.ThisMonth)
+	return i, err
+}
+
 const getRideEventCounts = `-- name: GetRideEventCounts :one
 SELECT
   COUNT(*)                                                                           AS all_time,
@@ -106,6 +127,44 @@ func (q *Queries) GetTopRoutes(ctx context.Context) ([]GetTopRoutesRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUnansweredCounts = `-- name: GetUnansweredCounts :one
+SELECT
+  COUNT(*)                                                                           AS all_time,
+  COUNT(*) FILTER (WHERE i.created_at >= DATE_TRUNC('year',  NOW()))                AS this_year,
+  COUNT(*) FILTER (WHERE i.created_at >= DATE_TRUNC('month', NOW()))                AS this_month
+FROM interests i
+LEFT JOIN rides r ON r.id = i.ride_id
+WHERE i.status = 'pending' AND (r.id IS NULL OR r.expires_at < NOW())
+`
+
+type GetUnansweredCountsRow struct {
+	AllTime   int64 `db:"all_time"`
+	ThisYear  int64 `db:"this_year"`
+	ThisMonth int64 `db:"this_month"`
+}
+
+// Contact requests that went unanswered: still pending once the ride is no longer
+// available. The hourly cron DELETEs rides past expires_at, so an unanswered
+// request is usually a pending interest whose ride row is already gone; the
+// expires_at check also catches the brief window before cleanup runs. Left join
+// so the (dominant) orphaned-interest case is counted, not dropped. Bucketed by
+// when the request was made.
+func (q *Queries) GetUnansweredCounts(ctx context.Context) (GetUnansweredCountsRow, error) {
+	row := q.db.QueryRow(ctx, getUnansweredCounts)
+	var i GetUnansweredCountsRow
+	err := row.Scan(&i.AllTime, &i.ThisYear, &i.ThisMonth)
+	return i, err
+}
+
+const insertConnectionEvent = `-- name: InsertConnectionEvent :exec
+INSERT INTO connection_events DEFAULT VALUES
+`
+
+func (q *Queries) InsertConnectionEvent(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, insertConnectionEvent)
+	return err
 }
 
 const insertRideEvent = `-- name: InsertRideEvent :exec

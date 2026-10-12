@@ -10,9 +10,24 @@ import (
 )
 
 type RideRepository interface {
-	Save(ride domain.Ride) error
+	// Save upserts the ride on its dedup key (phone + normalized driver name +
+	// normalized route + exact departure instant). A new ride is inserted and
+	// returned with created=true. A re-post of an existing ride refreshes its
+	// mutable non-key fields (driver name, route display, flexibility) and
+	// returns the canonical row with created=false; id, posted_at and
+	// feedback_given are preserved.
+	Save(ride domain.Ride) (saved domain.Ride, created bool, err error)
+	// UpdateByID edits a ride in place by its id (route, departure time,
+	// derived date/expiry, flexibility), preserving driver_name, phone,
+	// posted_at and feedback_given. Returns ErrDuplicateRide if the edit
+	// collides with another of the driver's rides on the dedup key.
+	UpdateByID(ride domain.Ride) (domain.Ride, error)
 	FindByID(id string) (domain.Ride, error)
 	FindAll() ([]domain.Ride, error)
+	// CountAvailable returns the number of currently active rides using the
+	// same grace window as FindAll. Prefer this over FindAll when only a count
+	// is needed (avoids loading all ride data into memory).
+	CountAvailable() (int, error)
 	FindByPhone(phone string) ([]domain.Ride, error)
 	FindByOriginAndDestination(origin, destination string) ([]domain.Ride, error)
 	// FindByOriginAndDestinationFuzzy is a trigram-based fallback for typos and
@@ -22,8 +37,9 @@ type RideRepository interface {
 	FindByOriginDestinationDateTime(origin, destination string, departureAt time.Time, toleranceMins int) ([]domain.Ride, error)
 	FindByOriginAndTime(origin, destination string, searchTime time.Time, toleranceMins int) ([]domain.Ride, error)
 	FindMatching(request domain.Request) ([]domain.Ride, error)
-	FindPendingFeedback() ([]domain.Ride, error)
 	Delete(id string) error
 	DeleteExpired() error
-	SetFeedbackGiven(id string) error
+	// ClaimFeedback flips feedback_given false→true and reports whether this call
+	// performed the flip (true = caller won the claim and should record the stat).
+	ClaimFeedback(id string) (bool, error)
 }

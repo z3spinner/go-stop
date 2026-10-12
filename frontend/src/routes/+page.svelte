@@ -15,12 +15,11 @@
 	import RequestFeedCard from '$lib/components/requests/RequestFeedCard.svelte';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide, PublicRequest, Stats } from '$lib/types';
+	import type { PublicRide, PublicRequest } from '$lib/types';
 
 	let rides = $state<PublicRide[]>([]);
 	let requests = $state<PublicRequest[]>([]);
 	let contacts = $state<Map<string, string>>(new Map());
-	let stats = $state<Stats | null>(null);
 	let pendingBadge = $state(0);
 	let myIds = $state<Set<string>>(new Set());
 
@@ -49,7 +48,6 @@
 		contacts = await loadAcceptedContacts(phone);
 		try { rides = (await api.rides.list()) as PublicRide[]; } catch { rides = []; }
 		try { requests = await api.requests.listActive(); } catch { requests = []; }
-		try { stats = await api.stats.get(); } catch { stats = null; }
 		// pending-interest badge: count pending interests across my own rides
 		if (phone) {
 			try {
@@ -114,21 +112,6 @@
 			{/if}
 		</div>
 	</div>
-</section>
-
-<section id="home-stats" class="mt-5">
-	{#if stats && stats.total_confirmed > 0}
-		<div class="stats-widget rounded border p-3">
-			<div class="stats-widget-title font-semibold">{m.statsAllTime({ n: stats.total_confirmed })}</div>
-			{#each stats.top_routes as rt}
-				<button type="button" class="stats-row stats-row-btn block w-full text-left" data-origin={rt.Origin} data-dest={rt.Destination}
-					onclick={() => goto(`/search?origin=${encodeURIComponent(rt.Origin)}&destination=${encodeURIComponent(rt.Destination)}`)}>
-					{rt.Origin} → {rt.Destination} <span class="stats-count">{m.statsRouteCount({ n: rt.Count })}</span>
-				</button>
-			{/each}
-			<a class="btn-all-stats underline" href="/stats">{m.btnAllStats()}</a>
-		</div>
-	{/if}
 </section>
 
 <style>

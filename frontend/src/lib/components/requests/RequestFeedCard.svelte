@@ -4,7 +4,12 @@
 -->
 
 <script lang="ts">
+	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import { api, ApiError } from '$lib/api';
+	import { userName, userPhone } from '$lib/stores';
+	import { openProfileModal } from '$lib/profileModal';
+	import { normalizePhone } from '$lib/utils';
 	import { formatTime, formatDate, flexLabel } from '$lib/utils';
 	import { m } from '$lib/paraglide/messages';
 	import type { PublicRequest } from '$lib/types';
@@ -18,12 +23,65 @@
 	const hasTime = $derived(request.DepartureAt !== ZERO && request.DepartureAt?.slice(0, 4) !== '0001');
 	const isDaily = $derived(hasTime && request.DepartureAt.slice(0, 10) === '1970-01-01');
 
+	let busy = $state(false);
+	let offered = $state(false);
+	let offerError = $state('');
+	let syncedPhone = $state('');
+	let statusToken = $state('');
+	const currentPhone = $derived(normalizePhone($userPhone));
+	const shareButtonText = $derived(offered ? m.contactOfferSent() : m.btnShareContact());
+
+	$effect(() => {
+		const phone = currentPhone;
+		const token = `${request.ID}:${phone}`;
+		if (statusToken === token) return;
+		statusToken = token;
+		syncedPhone = phone;
+		offered = false;
+		if (phone === '') return;
+		void (async () => {
+			try {
+				const status = await api.requests.getOfferStatus(request.ID, phone);
+				if (statusToken === token && syncedPhone === phone) offered = status.offered;
+			} catch (e) {
+				if (statusToken !== token || syncedPhone !== phone) return;
+				offered = false;
+				// A 403 means this is the searcher's own request; a 404 means the card
+				// went stale while the feed was open. In both cases the right fallback is
+				// to leave the secondary CTA available without surfacing a misleading
+				// inline error for a passive background refresh.
+				if (e instanceof ApiError && (e.status === 403 || e.status === 404)) return;
+				offerError = e instanceof Error ? e.message : String(e);
+			}
+		})();
+	});
+
 	function drive() {
 		const u = new URLSearchParams({ origin: request.Origin, destination: request.Destination });
 		// Only a concrete one-off date+time can prefill the departure; daily/day/anytime
 		// leave it to the driver (no specific instant to seed).
 		if (hasTime && !isDaily) u.set('departure_at', request.DepartureAt);
 		goto(`/post-ride?${u.toString()}`);
+	}
+
+	async function shareContact() {
+		if (busy || offered) return;
+		const name = get(userName).trim();
+		const phone = normalizePhone(get(userPhone));
+		if (!name || !phone) {
+			openProfileModal(() => shareContact());
+			return;
+		}
+		busy = true;
+		offerError = '';
+		try {
+			await api.requests.offerContact(request.ID, phone, name);
+			offered = true;
+		} catch (e) {
+			offerError = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
 	}
 </script>
 
@@ -43,15 +101,17 @@
 			<span class="tag">{flexLabel(request.Flexibility)}</span>
 		{/if}
 	</div>
-	<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
+	<div class="req-actions mt-1.5 flex flex-wrap gap-2">
+		<button type="button" class="btn-drive-this" data-origin={request.Origin} data-dest={request.Destination} onclick={drive}>{m.btnDriveThis()}</button>
+		<button type="button" class="btn-share-contact" class:shared={offered} data-request-id={request.ID} aria-label={shareButtonText} title={shareButtonText} disabled={busy || offered} onclick={shareContact}>{shareButtonText}</button>
+	</div>
+	{#if offerError}<span class="offer-state mt-1 text-sm text-gray-600">{offerError}</span>{/if}
 </div>
 
 <style>
 	/* Compact outline-green button matching the rides panel's "Demander le
 	   contact" (.btn-interest), so both feeds read at the same weight. */
 	.btn-drive-this {
-		margin-top: 6px;
-		width: 100%;
 		padding: 5px 10px;
 		font-size: 0.85rem;
 		border: 1px solid var(--blue, #28a836);
@@ -63,5 +123,24 @@
 	.btn-drive-this:hover {
 		background: var(--blue, #28a836);
 		color: #fff;
+	}
+	/* Muted outline button for the secondary "share contact" action. */
+	.btn-share-contact {
+		padding: 5px 10px;
+		font-size: 0.85rem;
+		border: 1px solid var(--gray-400, #9ca3af);
+		border-radius: var(--radius, 8px);
+		background: none;
+		color: var(--gray-600, #4b5563);
+		cursor: pointer;
+	}
+	.btn-share-contact:hover:not(:disabled),
+	.btn-share-contact.shared {
+		border-color: var(--blue, #28a836);
+		color: var(--blue, #28a836);
+	}
+	.btn-share-contact:disabled {
+		opacity: 0.5;
+		cursor: default;
 	}
 </style>

@@ -17,10 +17,12 @@ type mockRideRepoSearch struct {
 	fuzzyCalled    bool
 }
 
-func (m *mockRideRepoSearch) Save(domain.Ride) error                    { return nil }
-func (m *mockRideRepoSearch) FindByID(string) (domain.Ride, error)      { return domain.Ride{}, nil }
-func (m *mockRideRepoSearch) FindAll() ([]domain.Ride, error)           { return nil, nil }
-func (m *mockRideRepoSearch) FindByPhone(string) ([]domain.Ride, error) { return nil, nil }
+func (m *mockRideRepoSearch) Save(rd domain.Ride) (domain.Ride, bool, error) { return rd, true, nil }
+func (m *mockRideRepoSearch) UpdateByID(rd domain.Ride) (domain.Ride, error) { return rd, nil }
+func (m *mockRideRepoSearch) FindByID(string) (domain.Ride, error)           { return domain.Ride{}, nil }
+func (m *mockRideRepoSearch) FindAll() ([]domain.Ride, error)                { return nil, nil }
+func (m *mockRideRepoSearch) CountAvailable() (int, error)                   { return 0, nil }
+func (m *mockRideRepoSearch) FindByPhone(string) ([]domain.Ride, error)      { return nil, nil }
 func (m *mockRideRepoSearch) FindByOriginAndDestination(o, d string) ([]domain.Ride, error) {
 	return m.resultsByRoute[o+"|"+d], nil
 }
@@ -40,8 +42,7 @@ func (m *mockRideRepoSearch) FindByOriginAndTime(string, string, time.Time, int)
 func (m *mockRideRepoSearch) FindMatching(domain.Request) ([]domain.Ride, error) { return nil, nil }
 func (m *mockRideRepoSearch) Delete(string) error                                { return nil }
 func (m *mockRideRepoSearch) DeleteExpired() error                               { return nil }
-func (m *mockRideRepoSearch) FindPendingFeedback() ([]domain.Ride, error)        { return nil, nil }
-func (m *mockRideRepoSearch) SetFeedbackGiven(string) error                      { return nil }
+func (m *mockRideRepoSearch) ClaimFeedback(string) (bool, error)                 { return true, nil }
 
 func TestSearchRides_FiltersByOriginAndDestination(t *testing.T) {
 	rides := &mockRideRepoSearch{

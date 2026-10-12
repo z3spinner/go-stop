@@ -36,13 +36,16 @@ func TestAcceptInterest_AcceptsAndReturnsSearcherPhone(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewAcceptInterest(interests, rides, subs, n)
-	searcherPhone, err := uc.Execute("int-1", "555-driver")
+	searcherPhone, connected, err := uc.Execute("int-1", "555-driver")
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if searcherPhone != "555-searcher" {
 		t.Errorf("expected searcher phone 555-searcher, got %s", searcherPhone)
+	}
+	if !connected {
+		t.Error("expected connected=true when a pending interest is newly accepted")
 	}
 	if len(interests.acceptCalled) == 0 || interests.acceptCalled[0] != "int-1" {
 		t.Error("expected Accept called on interest int-1")
@@ -70,7 +73,7 @@ func TestAcceptInterest_RejectsWrongDriverPhone(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewAcceptInterest(interests, rides, subs, n)
-	_, err := uc.Execute("int-1", "555-wrong")
+	_, _, err := uc.Execute("int-1", "555-wrong")
 
 	if !errors.Is(err, usecase.ErrUnauthorized) {
 		t.Errorf("expected ErrUnauthorized, got %v", err)
@@ -87,9 +90,37 @@ func TestAcceptInterest_ReturnsErrorIfInterestNotFound(t *testing.T) {
 	n := &mockNotifier{}
 
 	uc := usecase.NewAcceptInterest(interests, rides, subs, n)
-	_, err := uc.Execute("nonexistent", "555-driver")
+	_, _, err := uc.Execute("nonexistent", "555-driver")
 
 	if err == nil {
 		t.Error("expected error for missing interest")
+	}
+}
+
+func TestAcceptInterest_AlreadyAcceptedReportsNotNewlyConnected(t *testing.T) {
+	// Re-accepting an already-accepted interest must not report a new connection,
+	// otherwise a repeated click would double-count in the statistics.
+	interest := domain.Interest{
+		ID: "int-1", RideID: "ride-1",
+		SearcherPhone: "555-searcher", Status: "accepted",
+	}
+	interests := &mockInterestRepo{
+		byID:  map[string]domain.Interest{"int-1": interest},
+		saved: []domain.Interest{interest},
+	}
+	rides := &mockRideRepo{
+		byID: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-driver"}},
+	}
+	subs := &mockSubRepo{subs: map[string]domain.Subscription{}}
+	n := &mockNotifier{}
+
+	uc := usecase.NewAcceptInterest(interests, rides, subs, n)
+	_, connected, err := uc.Execute("int-1", "555-driver")
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if connected {
+		t.Error("expected connected=false when re-accepting an already-accepted interest")
 	}
 }

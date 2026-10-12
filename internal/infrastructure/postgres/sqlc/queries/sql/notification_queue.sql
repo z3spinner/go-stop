@@ -1,4 +1,6 @@
--- name: EnqueueNotification :exec
+-- name: EnqueueNotification :execrows
+-- Returns rows affected: 1 when a new ride↔request pair is inserted, 0 when it
+-- already existed. Callers use this to notify only newly-matched searchers.
 INSERT INTO notification_queue (ride_id, request_id, searcher_phone)
 VALUES ($1, $2, $3)
 ON CONFLICT (ride_id, request_id) DO NOTHING;

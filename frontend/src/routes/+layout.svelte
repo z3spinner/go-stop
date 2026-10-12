@@ -8,26 +8,34 @@
 	import '../legacy.css'; // ported live-site styles; targets the preserved semantic class names
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { registerLangStrategy } from '$lib/locale';
 	import { loadConfig } from '$lib/config';
 	import { userPhone } from '$lib/stores';
 	import { get } from 'svelte/store';
-	import { updateBellState, pollForNotifications, isStandalone, maybeMarkStandalonePrompted } from '$lib/pwa';
-	import { openNotifModal } from '$lib/notifModal';
+	import { updateBellState } from '$lib/pwa';
+	import { refreshInbox } from '$lib/inbox';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
 	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
 	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
 	import A2HSModal from '$lib/components/notifications/A2HSModal.svelte';
-	import PollToastHost from '$lib/components/notifications/PollToast.svelte';
 	import NotifModal from '$lib/components/notifications/NotifModal.svelte';
 	import ProfileModal from '$lib/components/profile/ProfileModal.svelte';
+	import PullToRefresh from '$lib/components/layout/PullToRefresh.svelte';
 	import { m } from '$lib/paraglide/messages';
 
 	let { children } = $props();
 	let showPrivacy = $state(false);
 	let isHome = $derived(page.url.pathname === '/');
+	let isFlyer = $derived(page.url.pathname === '/flyer');
+
+	// Bumping this remounts the page subtree, re-running each page's onMount fetch.
+	let refreshNonce = $state(0);
+	async function refresh() {
+		await invalidateAll(); // re-run load() for the pages that use it
+		refreshNonce++; // remount to re-run onMount-based fetches
+	}
 
 	function back() {
 		// Always return to the home hub. history.back() is unreliable here because
@@ -43,39 +51,86 @@
 		loadConfig();
 		const phone = get(userPhone);
 		updateBellState(phone);
-		if (isStandalone() && maybeMarkStandalonePrompted()) {
-			openNotifModal('default');
+		// No notification prompt on first launch: it used to fire here before the
+		// user could orient or pick a language, and a language change reloads the
+		// page (locale.ts) — discarding the prompt and forcing the bell to be
+		// re-activated. Notifications are offered contextually instead (after
+		// posting a ride/request or expressing interest) and via the bell, which
+		// shows an "Activate" label until subscribed.
+		// Keep the bell's unread badge current: on load and whenever the profile
+		// phone changes (debounced — the phone field updates the store per
+		// keystroke), when the app comes back to the foreground, and right away
+		// when a push arrives while it's open (the service worker posts
+		// 'inbox-updated').
+		let phoneTimer: ReturnType<typeof setTimeout> | undefined;
+		let firstPhone = true;
+		const unsubPhone = userPhone.subscribe((p) => {
+			clearTimeout(phoneTimer);
+			if (firstPhone) {
+				firstPhone = false;
+				refreshInbox(p.trim(), { force: true });
+			} else {
+				phoneTimer = setTimeout(() => refreshInbox(p.trim(), { force: true }), 600);
+			}
+		});
+		// Leftover from the old toast polling, replaced by the inbox.
+		try {
+			localStorage.removeItem('poll_seen');
+		} catch {
+			/* storage unavailable */
 		}
 		const onVis = () => {
-			if (document.visibilityState === 'visible') pollForNotifications(get(userPhone));
+			if (document.visibilityState === 'visible') refreshInbox(get(userPhone).trim());
+		};
+		const onSwMessage = (e: MessageEvent) => {
+			if (e.data?.type === 'inbox-updated') refreshInbox(get(userPhone).trim(), { force: true });
 		};
 		document.addEventListener('visibilitychange', onVis);
-		return () => document.removeEventListener('visibilitychange', onVis);
+		navigator.serviceWorker?.addEventListener('message', onSwMessage);
+		return () => {
+			unsubPhone();
+			clearTimeout(phoneTimer);
+			document.removeEventListener('visibilitychange', onVis);
+			navigator.serviceWorker?.removeEventListener('message', onSwMessage);
+		};
 	});
 </script>
 
-<header class="top-bar mx-auto flex max-w-xl items-center gap-2 p-3" class:page-bar={!isHome}>
-	{#if !isHome}
-		<button id="back" type="button" class="btn-back" onclick={back}>{m.btnBack()}</button>
+<!-- The whole page (header + content + footer) lives inside PullToRefresh so a
+     pull drags it down natively; modals/toasts below stay outside (overlays). -->
+<PullToRefresh onrefresh={refresh}>
+	{#if isFlyer}
+		{#key refreshNonce}
+			{@render children()}
+		{/key}
+	{:else}
+		<header class="top-bar mx-auto flex max-w-xl items-center gap-2 p-3" class:page-bar={!isHome}>
+			{#if !isHome}
+				<button id="back" type="button" class="btn-back" onclick={back}>{m.btnBack()}</button>
+			{/if}
+			<TopBar onprivacy={() => (showPrivacy = true)} />
+		</header>
+
+		<div id="app" class="mx-auto max-w-xl p-3">
+			{#key refreshNonce}
+				{@render children()}
+			{/key}
+		</div>
+
+		<footer id="app-footer" class="mx-auto max-w-xl p-3 text-center text-sm text-gray-500">
+			<button type="button" class="btn-footer-privacy underline" onclick={() => (showPrivacy = true)}>{m.footerPrivacy()}</button>
+			<span> · </span>
+			<a class="btn-footer-about underline" href="/about">{m.aboutTitle()}</a>
+			<span> · </span>
+			<a class="btn-footer-flyer underline" href="/flyer">{m.flyerMetaTitle()}</a>
+			<span> · </span>
+			<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
+		</footer>
 	{/if}
-	<TopBar onprivacy={() => (showPrivacy = true)} />
-</header>
-
-<div id="app" class="mx-auto max-w-xl p-3">
-	{@render children()}
-</div>
-
-<footer id="app-footer" class="mx-auto max-w-xl p-3 text-center text-sm text-gray-500">
-	<button type="button" class="btn-footer-privacy underline" onclick={() => (showPrivacy = true)}>{m.footerPrivacy()}</button>
-	<span> · </span>
-	<a class="btn-footer-about underline" href="/about">{m.aboutTitle()}</a>
-	<span> · </span>
-	<a class="btn-footer-stats underline" href="/stats">{m.statsPageTitle()}</a>
-</footer>
+</PullToRefresh>
 
 <A2HSBanner />
 <A2HSModal />
-<PollToastHost />
 <NotifModal />
 <ProfileModal />
 <PrivacyModal open={showPrivacy} onclose={() => (showPrivacy = false)} />

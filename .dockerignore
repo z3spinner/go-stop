@@ -1,0 +1,23 @@
+# Keep the Docker build context small and free of host-built / root-owned
+# artifacts. The frontend stage builds web/build fresh inside the image, and the
+# Go binary serves it from disk — none of these are needed in the build context.
+.git
+.github
+
+# Node / SvelteKit build artifacts (rebuilt inside the frontend stage)
+node_modules
+frontend/node_modules
+frontend/.svelte-kit
+frontend/build
+web/build
+.svelte-kit
+
+# Test / tooling output
+docs/superpowers
+playwright-report
+test-results
+.playwright-mcp
+
+# Editor / OS noise
+.DS_Store
+*.log

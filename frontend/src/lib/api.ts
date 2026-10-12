@@ -25,13 +25,15 @@ import type {
 	InterestListItem,
 	MyInterest,
 	ContactInfo,
+	ContactOffer,
 	ExpressInterestResponse,
 	AcceptInterestResponse,
-	NotificationItem,
+	Inbox,
 	Stats,
 	Config,
 	VapidKey,
 	PostRideBody,
+	UpdateRideBody,
 	PostRequestBody,
 	SubscriptionBody,
 	RideSearchParams
@@ -73,6 +75,8 @@ export const api = {
 		// public — no phone (the detail page is shareable; contact is gated via interests)
 		get: (id: string) => unwrap<PublicRide>(gen.getRide(id)),
 		post: (body: PostRideBody) => unwrap<Ride>(gen.createRide(body)),
+		// In-place edit of an owned ride (route, time, flexibility). Phone authorizes.
+		update: (id: string, body: UpdateRideBody) => unwrap<Ride>(gen.updateRide(id, body)),
 		del: (id: string, phone: string) => unwrap<null>(gen.deleteRide(id, { phone })),
 		listInterests: (id: string, phone: string) =>
 			unwrap<InterestListItem[]>(gen.listRideInterests(id, phoneHeader(phone))),
@@ -89,7 +93,13 @@ export const api = {
 		post: (body: PostRequestBody) => unwrap<Request>(gen.createRequest(body)),
 		del: (id: string, phone: string) => unwrap<null>(gen.deleteRequest(id, { phone })),
 		ping: (id: string, rideId: string, phone: string) =>
-			unwrap<null>(gen.pingRequest(id, { ride_id: rideId }, phoneHeader(phone)))
+			unwrap<null>(gen.pingRequest(id, { ride_id: rideId }, phoneHeader(phone))),
+		offerContact: (id: string, phone: string, name: string) =>
+			unwrap<null>(gen.offerContact(id, { phone, name })),
+		getOfferStatus: (id: string, phone: string) =>
+			unwrap<{ offered: boolean }>(gen.getContactOfferStatus(id, phoneHeader(phone))),
+		listOffers: (id: string, phone: string) =>
+			unwrap<ContactOffer[]>(gen.listContactOffers(id, phoneHeader(phone)))
 	},
 	interests: {
 		express: (rideId: string, phone: string, name?: string) =>
@@ -109,7 +119,13 @@ export const api = {
 		test: (phone: string, lang: string) =>
 			unwrap<{ sent: number }>(gen.testSubscription({ phone, lang }))
 	},
-	notifications: {
-		list: (phone: string) => unwrap<NotificationItem[]>(gen.listNotifications(phoneHeader(phone)))
+	inbox: {
+		list: (phone: string) => unwrap<Inbox>(gen.listInbox(phoneHeader(phone))),
+		/** Mark exactly these items read (an empty list marks nothing). */
+		markRead: (phone: string, ids: string[]) =>
+			unwrap<null>(gen.markInboxRead({ ids }, phoneHeader(phone))),
+		/** Mark every item read. */
+		markAllRead: (phone: string) =>
+			unwrap<null>(gen.markInboxRead({ all: true }, phoneHeader(phone)))
 	}
 };

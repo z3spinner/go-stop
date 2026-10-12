@@ -53,15 +53,24 @@ injected server-side for link previews (`og.go`).
 | Run dev stack (DB + API + Vite) | `docker compose up --build` → app on :5173 (proxies `/api`→:8080) |
 | Run Go + Vite locally (no Docker) | `make dev` |
 | Unit tests (fast, no DB) | `make test-unit` |
-| All tests incl. integration | `make test` (needs Postgres on :5432; runs `-tags integration -p 1`) |
+| Integration tests (isolated stack) | `make test-integration` (alias: `make test`) |
+| E2E tests (isolated stack) | `make test-e2e` |
+| Unit + integration + e2e (stacks in parallel) | `make test-all` |
 | Lint Go (golangci-lint) | `make lint` (`make lint-install` once to install the pinned version) |
 | Auto-fix Go formatting | `make fmt` |
 | Regenerate SQL code | `make sqlc` (after editing `*.sql`) |
 | Regenerate OpenAPI spec | `make swagger` (after changing handler annotations) |
 | Regenerate OpenAPI **+ frontend client** | `make api-generate` |
 | Build frontend | `make build-web` |
-| E2E | `make test-e2e` |
 | Seed dev DB | `make seed` |
+
+**Integration and e2e run in their own throwaway docker compose projects**
+(`gostop-itest` / `gostop-e2e`, see `docker-compose.itest.yml` /
+`docker-compose.e2e.yml`) with **no published host ports** — so they spin up
+their own Postgres (and, for e2e, the production app image + Playwright), never
+touch the devstack's DB or ports, and run in parallel with the devstack and each
+other. No need to start Postgres yourself, and `make test` no longer truncates
+the dev database.
 
 ## Code generation pipeline — keep these in sync
 

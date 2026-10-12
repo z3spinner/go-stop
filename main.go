@@ -52,11 +52,26 @@ func main() {
 	}
 	log.Printf("vapid: keys ready (source: %s)", vapidSource)
 
-	notifier := webpush.New(vapidKeys.Public, vapidKeys.Private, vapidKeys.Email)
+	// Every push with a Kind is also kept in the recipient's in-app inbox, so a
+	// missed notification can still be read in the app (see usecase/inbox.go).
+	inboxRepo := postgres.NewInboxRepo(pool)
+	notifier := usecase.NewInboxNotifier(webpush.New(vapidKeys.Public, vapidKeys.Private, vapidKeys.Email), inboxRepo)
+	inboxRetentionDays := usecase.DefaultInboxRetentionDays
+	if v := os.Getenv("NOTIFICATION_RETENTION_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			inboxRetentionDays = usecase.ClampInboxRetentionDays(n)
+		}
+	}
+	getInbox := usecase.NewGetInbox(inboxRepo)
+	markInboxRead := usecase.NewMarkInboxRead(inboxRepo)
+	purgeInbox := usecase.NewPurgeInbox(inboxRepo, inboxRetentionDays)
 
 	notifQueueRepo := postgres.NewNotificationQueueRepo(pool)
+	feedbackQueueRepo := postgres.NewFeedbackQueueRepo(pool)
+	contactOfferRepo := postgres.NewContactOfferRepo(pool)
 
-	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier)
+	postRide := usecase.NewPostRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier, graceMins)
+	updateRide := usecase.NewUpdateRide(rideRepo, requestRepo, subRepo, notifQueueRepo, notifier, graceMins)
 	postRequest := usecase.NewPostRequest(requestRepo, rideRepo, subRepo, notifier)
 	getRides := usecase.NewGetRides(rideRepo)
 	getMyRides := usecase.NewGetMyRides(rideRepo)
@@ -65,8 +80,8 @@ func main() {
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	sendTestPush := usecase.NewSendTestPush(subRepo, notifier)
-	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo)
-	deleteRequest := usecase.NewDeleteRequest(requestRepo)
+	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo, feedbackQueueRepo, inboxRepo)
+	deleteRequest := usecase.NewDeleteRequest(requestRepo, inboxRepo)
 	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, interestRepo, subRepo, notifier)
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	getActiveRequests := usecase.NewGetActiveRequests(requestRepo)
@@ -75,13 +90,17 @@ func main() {
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, requestRepo)
 	retryNotifications := usecase.NewRetryNotifications(notifQueueRepo, rideRepo, subRepo, notifier, 2, 3)
 	getPendingNotifications := usecase.NewGetPendingNotifications(notifQueueRepo, rideRepo)
-	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo)
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, feedbackQueueRepo)
 	getStats := usecase.NewGetStats(statRepo)
-	sendFeedbackReminders := usecase.NewSendFeedbackReminders(rideRepo, subRepo, notifier)
+	enqueueFeedback := usecase.NewEnqueueFeedback(feedbackQueueRepo)
+	sendFeedbackReminders := usecase.NewSendFeedbackReminders(feedbackQueueRepo, subRepo, notifier, 2, 3)
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, notifier)
+	offerContact := usecase.NewOfferContact(requestRepo, contactOfferRepo, subRepo, notifier)
+	getContactOfferStatus := usecase.NewGetRequestContactOfferStatus(requestRepo, contactOfferRepo)
+	getRequestContactOffers := usecase.NewGetRequestContactOffers(requestRepo, contactOfferRepo)
 
 	serviceTZ := time.UTC
 	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
@@ -93,12 +112,16 @@ func main() {
 		}
 	}
 
-	rideH := handler.NewRideHandler(postRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
-	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo)
-	requestH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, requestRepo)
+	settingsRepo := postgres.NewSettingsRepo(pool)
+	sendEngagementReminder := usecase.NewSendEngagementReminder(rideRepo, subRepo, settingsRepo, notifier, serviceTZ)
+
+	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
+	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getContactOfferStatus, getRequestContactOffers, requestRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
+	inboxH := handler.NewInboxHandler(getInbox, markInboxRead)
 	vapidH := handler.NewVapidHandler(vapidKeys.Public)
 
 	siteName := os.Getenv("SITE_NAME")
@@ -111,14 +134,19 @@ func main() {
 			returnDelayHours = n
 		}
 	}
-	configH := handler.NewConfigHandler(siteName, returnDelayHours)
+	configH := handler.NewConfigHandler(siteName, returnDelayHours, inboxRetentionDays)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
 
 	go func() {
 		ticker := time.NewTicker(time.Hour)
 		defer ticker.Stop()
-		for range ticker.C {
+		runCronCycle := func() {
+			// enqueueFeedback runs FIRST, before expireRides, so an evening ride
+			// about to be expired/deleted is still captured into the feedback queue.
+			if err := enqueueFeedback.Execute(); err != nil {
+				log.Printf("enqueue feedback: %v", err)
+			}
 			if err := expireRides.Execute(); err != nil {
 				log.Printf("expire rides: %v", err)
 			}
@@ -131,6 +159,16 @@ func main() {
 			if err := retryNotifications.Execute(); err != nil {
 				log.Printf("retry notifications: %v", err)
 			}
+			if err := sendEngagementReminder.Execute(); err != nil {
+				log.Printf("engagement reminder: %v", err)
+			}
+			if err := purgeInbox.Execute(); err != nil {
+				log.Printf("purge inbox: %v", err)
+			}
+		}
+		runCronCycle() // tick at startup — don't wait an hour for the first cycle
+		for range ticker.C {
+			runCronCycle()
 		}
 	}()
 
@@ -160,6 +198,7 @@ func main() {
 		api.POST("/rides", rideH.Post)
 		api.GET("/rides", rideH.List)
 		api.GET("/rides/:id", rideH.Get)
+		api.PUT("/rides/:id", rideH.Update)
 		api.DELETE("/rides/:id", rideH.Delete)
 		api.GET("/rides/:id/requests", rideH.ListMatchingRequests)
 		api.POST("/rides/:id/feedback", feedbackH.Post)
@@ -170,11 +209,14 @@ func main() {
 		api.GET("/interests", interestH.ListMyRequests)
 		api.GET("/interests/:id/contact", interestH.GetContact)
 
-		api.POST("/requests", requestH.Post)
-		api.GET("/requests", requestH.List)
-		api.GET("/requests/:id", requestH.Get)
-		api.DELETE("/requests/:id", requestH.Delete)
-		api.POST("/requests/:id/ping", requestH.Ping)
+		api.POST("/requests", reqH.Post)
+		api.GET("/requests", reqH.List)
+		api.GET("/requests/:id", reqH.Get)
+		api.DELETE("/requests/:id", reqH.Delete)
+		api.POST("/requests/:id/ping", reqH.Ping)
+		api.POST("/requests/:id/offer-contact", reqH.OfferContact)
+		api.GET("/requests/:id/offer-contact-status", reqH.GetContactOfferStatus)
+		api.GET("/requests/:id/offers", reqH.ListContactOffers)
 
 		api.GET("/destinations", destH.List)
 
@@ -183,6 +225,8 @@ func main() {
 		api.DELETE("/subscriptions/:phone", subH.Unsubscribe)
 
 		api.GET("/notifications", notifQueueH.List)
+		api.GET("/inbox", inboxH.List)
+		api.POST("/inbox/read", inboxH.MarkRead)
 
 		api.GET("/vapid-public-key", vapidH.GetPublicKey)
 		api.GET("/config", configH.Get)

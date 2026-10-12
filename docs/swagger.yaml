@@ -82,6 +82,8 @@ definitions:
     type: object
   domain.Stats:
     properties:
+      connections:
+        $ref: '#/definitions/domain.ActivityCounts'
       rides_posted:
         $ref: '#/definitions/domain.ActivityCounts'
       searches:
@@ -94,6 +96,8 @@ definitions:
         type: integer
       total_this_week:
         type: integer
+      unanswered:
+        $ref: '#/definitions/domain.ActivityCounts'
     type: object
   handler.AcceptInterestBody:
     properties:
@@ -107,6 +111,9 @@ definitions:
     type: object
   handler.ConfigResponse:
     properties:
+      notificationRetentionDays:
+        description: How many days the in-app inbox keeps notifications.
+        type: integer
       returnDelayHours:
         type: integer
       siteName:
@@ -126,6 +133,20 @@ definitions:
         type: string
       role:
         type: string
+    type: object
+  handler.ContactOfferItem:
+    properties:
+      id:
+        type: string
+      offerer_name:
+        type: string
+      offerer_phone:
+        type: string
+    type: object
+  handler.ContactOfferStatusResponse:
+    properties:
+      offered:
+        type: boolean
     type: object
   handler.DeleteRequestBody:
     properties:
@@ -163,6 +184,42 @@ definitions:
       taken:
         type: boolean
     type: object
+  handler.InboxItem:
+    properties:
+      body:
+        type: string
+      contact_name:
+        type: string
+      created_at:
+        description: RFC 3339
+        type: string
+      departure_at:
+        description: RFC 3339; omitted when unknown
+        type: string
+      destination:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      origin:
+        type: string
+      read:
+        type: boolean
+      title:
+        type: string
+      url:
+        type: string
+    type: object
+  handler.InboxResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/handler.InboxItem'
+        type: array
+      unread:
+        type: integer
+    type: object
   handler.InterestListItem:
     properties:
       id:
@@ -173,6 +230,15 @@ definitions:
         type: string
       status:
         type: string
+    type: object
+  handler.MarkInboxReadBody:
+    properties:
+      all:
+        type: boolean
+      ids:
+        items:
+          type: string
+        type: array
     type: object
   handler.MyInterest:
     properties:
@@ -207,6 +273,13 @@ definitions:
         type: string
       sent_count:
         type: integer
+    type: object
+  handler.OfferContactBody:
+    properties:
+      name:
+        type: string
+      phone:
+        type: string
     type: object
   handler.PingRequestBody:
     properties:
@@ -320,6 +393,19 @@ definitions:
           registered).
         type: integer
     type: object
+  handler.UpdateRideBody:
+    properties:
+      departure_at:
+        type: string
+      destination:
+        type: string
+      flexibility:
+        type: integer
+      origin:
+        type: string
+      phone:
+        type: string
+    type: object
   handler.VapidKeyResponse:
     properties:
       publicKey:
@@ -361,6 +447,66 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:
       - destinations
+  /inbox:
+    get:
+      operationId: listInbox
+      parameters:
+      - description: Recipient phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.InboxResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
+  /inbox/read:
+    post:
+      consumes:
+      - application/json
+      operationId: markInboxRead
+      parameters:
+      - description: Recipient phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      - description: Item ids, or all=true
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.MarkInboxReadBody'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
   /interests:
     get:
       operationId: listMyInterests
@@ -644,6 +790,122 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:
       - requests
+  /requests/{id}/offer-contact:
+    post:
+      consumes:
+      - application/json
+      operationId: offerContact
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Offerer phone and name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.OfferContactBody'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+  /requests/{id}/offer-contact-status:
+    get:
+      operationId: getContactOfferStatus
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Offerer phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ContactOfferStatusResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
+  /requests/{id}/offers:
+    get:
+      operationId: listContactOffers
+      parameters:
+      - description: Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request owner phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.ContactOfferItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - requests
   /requests/{id}/ping:
     post:
       consumes:
@@ -749,6 +1011,10 @@ paths:
       produces:
       - application/json
       responses:
+        "200":
+          description: 'Idempotent re-post: existing ride upserted and returned'
+          schema:
+            $ref: '#/definitions/domain.Ride'
         "201":
           description: Created
           schema:
@@ -818,6 +1084,51 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:
       - rides
+    put:
+      consumes:
+      - application/json
+      operationId: updateRide
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated ride fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateRideBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Ride'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - rides
   /rides/{id}/feedback:
     post:
       consumes:
@@ -844,6 +1155,10 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
         "403":
           description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":

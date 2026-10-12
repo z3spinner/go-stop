@@ -8,7 +8,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/z3spinner/go-stop/internal/boundaries/repository"
 	"github.com/z3spinner/go-stop/internal/domain"
 	"github.com/z3spinner/go-stop/internal/infrastructure/postgres/sqlc/queries"
 )
@@ -22,8 +25,15 @@ func NewRideRepo(pool *pgxpool.Pool, graceMins int) *RideRepo {
 	return &RideRepo{q: queries.New(pool), graceMins: int32(graceMins)}
 }
 
-func (r *RideRepo) Save(ride domain.Ride) error {
-	return r.q.InsertRide(context.Background(), queries.InsertRideParams{
+// Save upserts the ride on its dedup key. If no identical ride exists (same
+// phone, normalized driver name, normalized route and exact departure instant —
+// the uq_rides_dedup index) the ride is inserted and returned with created=true.
+// If one already exists, its mutable non-key fields (driver name, route display,
+// flexibility) are refreshed and the canonical row is returned with
+// created=false; id, posted_at and feedback_given are preserved, and the caller
+// can skip re-notifying searchers.
+func (r *RideRepo) Save(ride domain.Ride) (domain.Ride, bool, error) {
+	_, err := r.q.InsertRide(context.Background(), queries.InsertRideParams{
 		ID:          uuidFrom(ride.ID),
 		DriverName:  ride.DriverName,
 		Phone:       ride.Phone,
@@ -35,6 +45,50 @@ func (r *RideRepo) Save(ride domain.Ride) error {
 		PostedAt:    tsFrom(ride.PostedAt),
 		ExpiresAt:   tsFrom(ride.ExpiresAt),
 	})
+	if err == nil {
+		return ride, true, nil
+	}
+	// ON CONFLICT DO NOTHING returns no rows on a duplicate; anything else is a
+	// real error.
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return domain.Ride{}, false, err
+	}
+	updated, err := r.q.UpdateRideByDedupKey(context.Background(), queries.UpdateRideByDedupKeyParams{
+		Phone:       ride.Phone,
+		DriverName:  ride.DriverName,
+		Origin:      ride.Origin,
+		Destination: ride.Destination,
+		Flexibility: int32(ride.Flexibility),
+		DepartureAt: tsFrom(ride.DepartureAt),
+	})
+	if err != nil {
+		return domain.Ride{}, false, err
+	}
+	return rideFromRow(updated), false, nil
+}
+
+// UpdateByID edits a ride in place: route, departure time, derived date/expiry
+// and flexibility. id, driver_name, phone, posted_at and feedback_given are
+// preserved (the ride keeps its identity, so interests survive). A collision
+// with the driver's own dedup key surfaces as repository.ErrDuplicateRide.
+func (r *RideRepo) UpdateByID(ride domain.Ride) (domain.Ride, error) {
+	row, err := r.q.UpdateRideByID(context.Background(), queries.UpdateRideByIDParams{
+		ID:          uuidFrom(ride.ID),
+		Origin:      ride.Origin,
+		Destination: ride.Destination,
+		Date:        dateFrom(ride.Date),
+		DepartureAt: tsFrom(ride.DepartureAt),
+		Flexibility: int32(ride.Flexibility),
+		ExpiresAt:   tsFrom(ride.ExpiresAt),
+	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.Ride{}, repository.ErrDuplicateRide
+		}
+		return domain.Ride{}, err
+	}
+	return rideFromRow(row), nil
 }
 
 func (r *RideRepo) FindByID(id string) (domain.Ride, error) {
@@ -51,6 +105,11 @@ func (r *RideRepo) FindAll() ([]domain.Ride, error) {
 		return nil, err
 	}
 	return ridesFromRows(rows), nil
+}
+
+func (r *RideRepo) CountAvailable() (int, error) {
+	n, err := r.q.CountRidesActive(context.Background(), r.graceMins)
+	return int(n), err
 }
 
 func (r *RideRepo) FindByPhone(phone string) ([]domain.Ride, error) {
@@ -173,14 +232,7 @@ func (r *RideRepo) DeleteExpired() error {
 	return r.q.DeleteExpiredRides(context.Background())
 }
 
-func (r *RideRepo) FindPendingFeedback() ([]domain.Ride, error) {
-	rows, err := r.q.ListRidesPendingFeedback(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	return ridesFromRows(rows), nil
-}
-
-func (r *RideRepo) SetFeedbackGiven(id string) error {
-	return r.q.SetRideFeedbackGiven(context.Background(), uuidFrom(id))
+func (r *RideRepo) ClaimFeedback(id string) (bool, error) {
+	n, err := r.q.ClaimRideFeedback(context.Background(), uuidFrom(id))
+	return n == 1, err
 }

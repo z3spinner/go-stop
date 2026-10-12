@@ -80,6 +80,7 @@ You can optionally customise these from the Scalingo deploy form (all have sensi
 |---|---|
 | `SITE_NAME` | **Your community's name** shown as the site heading (e.g. `Stop Nyons`, `Covoiturage Drôme`) |
 | `SERVICE_TZ` | Community timezone, used to interpret time-only searches (e.g. `Europe/Paris`) |
+| `NOTIFICATION_RETENTION_DAYS` | Upper limit in days for keeping a notification in the in-app inbox (default `30`); notifications are removed earlier when their ride or request expires or is deleted |
 
 ## Architecture
 
@@ -99,30 +100,23 @@ domain ← usecase ← boundaries ← infrastructure
 
 ## Tests
 
-Unit tests (no database):
-
 ```bash
-make test-unit   # go test ./internal/usecase/...
+make test-unit          # unit tests, no database (go test ./internal/usecase/...)
+make test-integration   # integration tests in an isolated stack (alias: make test)
+make test-e2e           # Playwright end-to-end tests in an isolated stack
+make test-all           # unit, then integration + e2e in parallel
 ```
 
-Integration tests need a running PostgreSQL. Start just the `db` and `migrations`
-services, then run the suite:
+Integration and e2e each run in their **own throwaway docker compose project with
+no published host ports** — they bring up their own Postgres (and, for e2e, the
+production app image plus a Playwright runner) on a private network. So:
 
-```bash
-docker compose up -d db migrations
-make test   # go test -tags integration -count=1 -p 1 ./... against localhost:5432
-docker compose down
-```
+- you don't need to start Postgres yourself;
+- they **never touch the dev stack's database or ports**, and run fine in
+  parallel with `docker compose up` and with each other;
+- each run gets a fresh tmpfs database and tears itself down afterwards.
 
-`make test` points `TEST_DATABASE_URL` at the compose database. That database is
-tmpfs-backed, so its contents live only in RAM and are discarded when the stack
-stops — no separate test override is needed.
-
-End-to-end (Playwright) tests build the SPA and run it against the Go server:
-
-```bash
-make test-e2e
-```
+See `docker-compose.itest.yml` / `docker-compose.e2e.yml`.
 
 ## License
 

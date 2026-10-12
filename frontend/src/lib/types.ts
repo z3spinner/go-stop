@@ -45,7 +45,7 @@ import type {
 	HandlerContactInfo,
 	HandlerExpressInterestResponse,
 	HandlerAcceptInterestResponse,
-	HandlerNotificationItem,
+	HandlerInboxItem,
 	DomainStats,
 	DomainRouteStat,
 	DomainActivityCounts,
@@ -53,13 +53,14 @@ import type {
 	HandlerVapidKeyResponse,
 	// Request bodies / params — keep as-is (callers build these, optionality is fine)
 	HandlerPostRideBody as PostRideBody,
+	HandlerUpdateRideBody as UpdateRideBody,
 	HandlerPostRequestBody as PostRequestBody,
 	HandlerSubscriptionBody as SubscriptionBody,
 	ListRidesParams as RideSearchParams
 } from './api/generated/go-stop-api';
 
 // Re-export request body / param aliases unchanged
-export type { PostRideBody, PostRequestBody, SubscriptionBody, RideSearchParams };
+export type { PostRideBody, UpdateRideBody, PostRequestBody, SubscriptionBody, RideSearchParams };
 
 // ── Response entity aliases (all fields required) ────────────────────────────
 export type Ride = DeepRequired<DomainRide>;
@@ -70,15 +71,30 @@ export type MyInterest = DeepRequired<HandlerMyInterest>;
 export type ContactInfo = DeepRequired<HandlerContactInfo>;
 export type ExpressInterestResponse = DeepRequired<HandlerExpressInterestResponse>;
 export type AcceptInterestResponse = DeepRequired<HandlerAcceptInterestResponse>;
-export type NotificationItem = DeepRequired<HandlerNotificationItem>;
 export type Stats = DeepRequired<DomainStats>;
 export type RouteStat = DeepRequired<DomainRouteStat>;
 export type ActivityCounts = DeepRequired<DomainActivityCounts>;
-export type Config = DeepRequired<HandlerConfigResponse>;
+// notificationRetentionDays is optional so an older server (or a test fixture)
+// without it still type-checks; callers fall back to the default.
+export type Config = DeepRequired<Omit<HandlerConfigResponse, 'notificationRetentionDays'>> &
+	Pick<HandlerConfigResponse, 'notificationRetentionDays'>;
 export type VapidKey = DeepRequired<HandlerVapidKeyResponse>;
+
+// ── InboxItem — partial exception ────────────────────────────────────────────
+// `departure_at` is `omitempty` on the server (unknown for some kinds).
+export type InboxItem = DeepRequired<Omit<HandlerInboxItem, 'departure_at'>> &
+	Pick<HandlerInboxItem, 'departure_at'>;
+export type Inbox = { items: InboxItem[]; unread: number };
 
 // ── InterestListItem — partial exception ─────────────────────────────────────
 // `id` and `status` are always populated; `searcher_name` / `searcher_phone`
 // are `omitempty` on the server and may genuinely be absent.
 export type InterestListItem = DeepRequired<Pick<HandlerInterestListItem, 'id' | 'status'>> &
 	Pick<HandlerInterestListItem, 'searcher_name' | 'searcher_phone'>;
+
+// ContactOffer is one entry of GET /requests/{id}/offers.
+export type ContactOffer = {
+	id: string;
+	offerer_name: string;
+	offerer_phone: string;
+};
