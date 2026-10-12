@@ -157,6 +157,7 @@ export interface HandlerInterestListItem {
 }
 
 export interface HandlerMarkInboxReadBody {
+  all?: boolean;
   ids?: string[];
 }
 

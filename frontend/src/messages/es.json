@@ -119,6 +119,7 @@
   "inboxRetention": "Las notificaciones se guardan {days} días y luego se eliminan.",
   "inboxTitle": "Notificaciones",
   "inboxUnreadAria": "Notificaciones, {count} sin leer",
+  "inboxUnreadLabel": "Sin leer",
   "interestCount": [
     {
       "declarations": [
@@ -203,7 +204,7 @@
   "postRideTitle": "Publicar un viaje",
   "privacyBody": "<h3>Qué recopilamos</h3><p>Al publicar un viaje o búsqueda guardamos: nombre, teléfono, origen, destino, hora y flexibilidad. Nada más.</p><h3>Cuánto tiempo</h3><p>Los viajes y búsquedas se <strong>eliminan automáticamente</strong> al final del día de salida.</p><h3>Quién ve tu teléfono</h3><p>Tu número es visible para cualquier persona que vea tu anuncio. Es intencional — así se contactan las partes directamente.</p><h3>Cookies y almacenamiento local</h3><p>Sin cookies. Go Stop no usa rastreadores ni analíticas. Tu nombre, teléfono e idioma se guardan solo en tu dispositivo (<code>localStorage</code>).</p><h3>Terceros</h3><p>No se comparten datos con terceros. Las notificaciones push viajan mediante el estándar Web Push a través del servicio push de tu navegador.</p>",
   "privacyClose": "Cerrar",
-  "privacyInbox": "Las notificaciones que recibes también se guardan en la página Notificaciones del sitio durante {days} días y luego se eliminan automáticamente. Contienen el nombre de la otra persona y el trayecto, nunca su número.",
+  "privacyInbox": "Las notificaciones que recibes también se guardan en la página Notificaciones del sitio durante {days} días, incluso después de la fecha del trayecto, y luego se eliminan automáticamente. Contienen el nombre de la otra persona y el trayecto, nunca su número. Si eliminas tu anuncio, las notificaciones sobre él también se eliminan, para todos.",
   "privacyTitle": "Privacidad",
   "profileRequiredBody": "Añade tu nombre y número para que el conductor sepa quién lo pide.",
   "profileRequiredTitle": "Completa tu perfil",

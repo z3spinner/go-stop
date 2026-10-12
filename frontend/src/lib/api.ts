@@ -121,8 +121,11 @@ export const api = {
 	},
 	inbox: {
 		list: (phone: string) => unwrap<Inbox>(gen.listInbox(phoneHeader(phone))),
-		/** Mark the given items read, or all of them when ids is omitted/empty. */
-		markRead: (phone: string, ids: string[] = []) =>
-			unwrap<null>(gen.markInboxRead({ ids }, phoneHeader(phone)))
+		/** Mark exactly these items read (an empty list marks nothing). */
+		markRead: (phone: string, ids: string[]) =>
+			unwrap<null>(gen.markInboxRead({ ids }, phoneHeader(phone))),
+		/** Mark every item read. */
+		markAllRead: (phone: string) =>
+			unwrap<null>(gen.markInboxRead({ all: true }, phoneHeader(phone)))
 	}
 };

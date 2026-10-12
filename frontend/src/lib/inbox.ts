@@ -18,40 +18,51 @@ export const inboxItems = writable<InboxItem[]>([]);
 export const inboxUnread = writable(0);
 
 const THROTTLE_MS = 30_000;
-let lastLoadMs = 0;
+// Last successful-or-pending load, per phone. Reset on failure so an error
+// doesn't block the next attempt for 30s.
+let last = { phone: '', ms: 0 };
+// The phone of the most recent request: a slower response for a previous phone
+// (the user just changed it) must not overwrite the current one.
+let current = '';
 
 /**
- * Reload the inbox for phone. Calls within 30s of the previous load are skipped
- * unless `force` (used when a push just arrived or the inbox page opens).
- * Network errors keep the last known state.
+ * Reload the inbox for phone. Calls for the same phone within 30s of the
+ * previous load are skipped unless `force` (used when a push just arrived, the
+ * phone changed, or the inbox page opens). Network errors keep the last state.
  */
 export async function refreshInbox(phone: string, { force = false } = {}): Promise<void> {
+	current = phone;
 	if (!phone) {
 		inboxItems.set([]);
 		inboxUnread.set(0);
 		return;
 	}
 	const now = Date.now();
-	if (!force && now - lastLoadMs < THROTTLE_MS) return;
-	lastLoadMs = now;
+	if (!force && last.phone === phone && now - last.ms < THROTTLE_MS) return;
+	last = { phone, ms: now };
 	try {
 		const res = await api.inbox.list(phone);
+		if (phone !== current) return;
 		inboxItems.set(res.items ?? []);
 		inboxUnread.set(res.unread ?? 0);
 	} catch {
-		/* offline / server error: keep what we have */
+		last = { phone: '', ms: 0 }; // offline / server error: keep state, allow retry
 	}
 }
 
-/** Mark everything read (clears the bell badge). Best-effort. */
-export async function markAllInboxRead(phone: string): Promise<void> {
-	if (!phone) return;
+/**
+ * Mark exactly these items read — the ones the user has actually been shown —
+ * then reload so the badge reflects anything that arrived meanwhile.
+ * Best-effort.
+ */
+export async function markInboxItemsRead(phone: string, ids: string[]): Promise<void> {
+	if (!phone || ids.length === 0) return;
 	try {
-		await api.inbox.markRead(phone);
-		inboxUnread.set(0);
+		await api.inbox.markRead(phone, ids);
 	} catch {
-		/* the badge just stays until the next successful refresh */
+		return; // the badge just stays until the next successful refresh
 	}
+	await refreshInbox(phone, { force: true });
 }
 
 type TitleFn = (name: string) => string;
@@ -95,9 +106,12 @@ export function inboxIcon(item: InboxItem): string {
 	return ICONS[item.kind] ?? '🔔';
 }
 
-/** True when the trip this item is about has already departed. */
+/**
+ * True when the trip this item is about has already departed. Never for the
+ * feedback reminder, whose whole point is that the trip is over.
+ */
 export function isPastTrip(item: InboxItem, now: number = Date.now()): boolean {
-	if (!item.departure_at) return false;
+	if (!item.departure_at || item.kind === 'feedback_reminder') return false;
 	const t = Date.parse(item.departure_at);
 	return !Number.isNaN(t) && t < now;
 }

@@ -4,7 +4,7 @@
 -->
 
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { userPhone } from '$lib/stores';
 	import { pushState } from '$lib/pwa';
@@ -18,19 +18,23 @@
 		inboxRoute,
 		inboxTitle,
 		isPastTrip,
-		markAllInboxRead,
+		markInboxItemsRead,
 		refreshInbox
 	} from '$lib/inbox';
 	import { formatTime } from '$lib/utils';
 	import { m } from '$lib/paraglide/messages';
-	import type { InboxItem } from '$lib/types';
 
-	const phone = get(userPhone).trim();
-	// A snapshot, not the live store: opening the page marks everything read on
-	// the server (clearing the bell), but items stay highlighted for this visit
-	// so the user can still see what was new.
-	let items = $state<InboxItem[]>([]);
-	let loaded = $state(false);
+	// Follows the profile phone live (it can be entered from the settings modal
+	// opened on this page).
+	let phone = $derived($userPhone.trim());
+	// The live list: items that arrive while the page is open (a push lands and
+	// the layout refreshes the store) show up here too.
+	let items = $derived($inboxItems);
+	let loadedFor = $state<string | null>(null);
+	let loaded = $derived(phone !== '' && loadedFor === phone);
+	// Ids that were unread when shown during this visit. They stay highlighted
+	// after being marked read on the server, so the user can see what was new.
+	let shownUnread = $state<Set<string>>(new Set());
 	let days = $derived($config.notificationRetentionDays || DEFAULT_RETENTION_DAYS);
 	let pushOn = $derived($pushState === 'subscribed');
 
@@ -40,15 +44,25 @@
 		else openNotifModal(s);
 	}
 
-	onMount(async () => {
-		if (!phone) {
-			loaded = true;
-			return;
-		}
-		await refreshInbox(phone, { force: true });
-		items = get(inboxItems);
-		loaded = true;
-		if (items.some((i) => !i.read)) markAllInboxRead(phone);
+	// (Re)load whenever the phone changes.
+	$effect(() => {
+		const p = phone;
+		if (!p) return;
+		refreshInbox(p, { force: true }).then(() => {
+			if (untrack(() => phone) === p) loadedFor = p;
+		});
+	});
+
+	// Mark read exactly the unread items now on screen — never items the page
+	// hasn't displayed (a notification arriving later gets its own pass).
+	$effect(() => {
+		const p = phone;
+		const list = items;
+		if (!loaded) return;
+		const fresh = untrack(() => list.filter((i) => !i.read && !shownUnread.has(i.id)).map((i) => i.id));
+		if (fresh.length === 0) return;
+		shownUnread = new Set([...untrack(() => shownUnread), ...fresh]);
+		markInboxItemsRead(p, fresh);
 	});
 </script>
 
@@ -70,10 +84,11 @@
 			<p class="empty text-gray-500">{m.inboxEmpty()}</p>
 		{:else}
 			{#each items as item (item.id)}
-				<a class="inbox-item card rounded border p-3" class:inbox-unread={!item.read} href={item.url || '/'} data-kind={item.kind}>
+				{@const unread = !item.read || shownUnread.has(item.id)}
+				<a class="inbox-item card rounded border p-3" class:inbox-unread={unread} href={item.url || '/'} data-kind={item.kind}>
 					<span class="inbox-icon" aria-hidden="true">{inboxIcon(item)}</span>
 					<span class="flex min-w-0 flex-col gap-0.5">
-						<span class="inbox-title font-medium">{inboxTitle(item)}</span>
+						<span class="inbox-title font-medium">{#if unread}<span class="sr-only">{m.inboxUnreadLabel()}: </span>{/if}{inboxTitle(item)}</span>
 						<span class="inbox-route text-sm text-gray-700" translate="no">{inboxRoute(item)}</span>
 						<span class="inbox-meta flex flex-wrap items-center gap-2 text-xs text-gray-500">
 							<span>{formatTime(item.created_at)}</span>

@@ -119,6 +119,7 @@
   "inboxRetention": "Notifications are kept for {days} days, then deleted.",
   "inboxTitle": "Notifications",
   "inboxUnreadAria": "Notifications, {count} unread",
+  "inboxUnreadLabel": "Unread",
   "interestCount": [
     {
       "declarations": [
@@ -203,7 +204,7 @@
   "postRideTitle": "Post a ride",
   "privacyBody": "<h3>What we collect</h3>\n<p>When you post a ride or request we store: your name, phone number, origin, destination, departure time, and flexibility window. Nothing else.</p>\n<h3>How long we keep it</h3>\n<p>Rides and requests are <strong>automatically and permanently deleted</strong> at the end of their departure day. If you want to delete your post sooner, use the delete option — you'll need the phone number you posted with.</p>\n<p>Push notification subscriptions are kept until you unsubscribe.</p>\n<h3>Who can see your phone number</h3>\n<p>Your phone number is visible to anyone who views your ride or request card. This is intentional — it's how the two parties contact each other directly.</p>\n<h3>Cookies &amp; local storage</h3>\n<p>No cookies. Go-Stop uses no tracking and no analytics.</p>\n<p>The following is saved in your browser's <code>localStorage</code> (on your device only, never sent to the server):</p>\n<ul>\n<li>Your name and phone number — to pre-fill forms on your next visit</li>\n<li>Your language preference</li>\n</ul>\n<p>You can clear this at any time by clearing your browser's site data.</p>\n<h3>Third parties</h3>\n<p>No data is shared with third parties. Push notifications are delivered via the Web Push standard through your browser's push service (e.g. Google FCM for Chrome). The push payload contains only the match details you'd see on screen.</p>",
   "privacyClose": "Close",
-  "privacyInbox": "The notifications you receive are also kept on the site's Notifications page for {days} days, then deleted automatically. They contain the other person's first name and the route, never their number.",
+  "privacyInbox": "The notifications you receive are also kept on the site's Notifications page for {days} days, even after the trip date, then deleted automatically. They contain the other person's first name and the route, never their number. If you delete your post, the notifications about it are deleted too, for everyone.",
   "privacyTitle": "Privacy",
   "profileRequiredBody": "Add your name and phone number so the driver knows who's asking.",
   "profileRequiredTitle": "Complete your profile",

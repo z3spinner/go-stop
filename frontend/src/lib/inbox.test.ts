@@ -12,7 +12,7 @@ import {
 	inboxTitle,
 	inboxUnread,
 	isPastTrip,
-	markAllInboxRead,
+	markInboxItemsRead,
 	refreshInbox
 } from './inbox';
 import { m } from './paraglide/messages';
@@ -69,6 +69,9 @@ describe('isPastTrip', () => {
 		expect(isPastTrip(item({ departure_at: '2026-10-12T11:00:00Z' }), now)).toBe(true);
 		expect(isPastTrip(item({ departure_at: '2026-10-12T13:00:00Z' }), now)).toBe(false);
 	});
+	it('never tags the feedback reminder (the trip being over is its point)', () => {
+		expect(isPastTrip(item({ kind: 'feedback_reminder', departure_at: '2026-10-12T11:00:00Z' }), now)).toBe(false);
+	});
 });
 
 describe('badgeText', () => {
@@ -115,11 +118,48 @@ describe('refreshInbox / markAllInboxRead', () => {
 		expect(get(inboxUnread)).toBe(0);
 	});
 
-	it('mark-all-read clears the badge', async () => {
-		inboxUnread.set(4);
+	it('throttles per phone: another phone is not throttled', async () => {
+		const list = vi.spyOn(api.inbox, 'list').mockResolvedValue({ items: [], unread: 0 });
+		await refreshInbox('0611111111', { force: true });
+		await refreshInbox('0622222222');
+		expect(list).toHaveBeenCalledTimes(2);
+	});
+
+	it('a failed load does not block the next attempt', async () => {
+		const list = vi.spyOn(api.inbox, 'list').mockRejectedValueOnce(new Error('offline'));
+		list.mockResolvedValue({ items: [item()], unread: 1 });
+		await refreshInbox('0633333333', { force: true });
+		await refreshInbox('0633333333'); // not forced, right after the failure
+		expect(list).toHaveBeenCalledTimes(2);
+		expect(get(inboxUnread)).toBe(1);
+	});
+
+	it('ignores a late response for a phone that was replaced', async () => {
+		let resolveOld!: (v: { items: InboxItem[]; unread: number }) => void;
+		const list = vi.spyOn(api.inbox, 'list');
+		list.mockImplementationOnce(() => new Promise((r) => (resolveOld = r)));
+		list.mockResolvedValueOnce({ items: [item({ id: 'new' })], unread: 1 });
+		const old = refreshInbox('0644444444', { force: true });
+		await refreshInbox('0655555555', { force: true });
+		resolveOld({ items: [item({ id: 'old' })], unread: 5 });
+		await old;
+		expect(get(inboxItems).map((i) => i.id)).toEqual(['new']);
+		expect(get(inboxUnread)).toBe(1);
+	});
+
+	it('marks exactly the given ids read, then reloads', async () => {
 		const mark = vi.spyOn(api.inbox, 'markRead').mockResolvedValue(null);
-		await markAllInboxRead('0611111111');
-		expect(mark).toHaveBeenCalledWith('0611111111');
+		const list = vi.spyOn(api.inbox, 'list').mockResolvedValue({ items: [item({ read: true })], unread: 0 });
+		inboxUnread.set(1);
+		await markInboxItemsRead('0611111111', ['n1']);
+		expect(mark).toHaveBeenCalledWith('0611111111', ['n1']);
+		expect(list).toHaveBeenCalledWith('0611111111');
 		expect(get(inboxUnread)).toBe(0);
+	});
+
+	it('does nothing for an empty id list', async () => {
+		const mark = vi.spyOn(api.inbox, 'markRead');
+		await markInboxItemsRead('0611111111', []);
+		expect(mark).not.toHaveBeenCalled();
 	});
 });

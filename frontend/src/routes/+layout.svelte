@@ -57,19 +57,39 @@
 		// re-activated. Notifications are offered contextually instead (after
 		// posting a ride/request or expressing interest) and via the bell, which
 		// shows an "Activate" label until subscribed.
-		// Keep the bell's unread badge current: on load, when the app comes back to
-		// the foreground, and right away when a push arrives while it's open (the
-		// service worker posts 'inbox-updated').
-		refreshInbox(phone, { force: true });
+		// Keep the bell's unread badge current: on load and whenever the profile
+		// phone changes (debounced — the phone field updates the store per
+		// keystroke), when the app comes back to the foreground, and right away
+		// when a push arrives while it's open (the service worker posts
+		// 'inbox-updated').
+		let phoneTimer: ReturnType<typeof setTimeout> | undefined;
+		let firstPhone = true;
+		const unsubPhone = userPhone.subscribe((p) => {
+			clearTimeout(phoneTimer);
+			if (firstPhone) {
+				firstPhone = false;
+				refreshInbox(p.trim(), { force: true });
+			} else {
+				phoneTimer = setTimeout(() => refreshInbox(p.trim(), { force: true }), 600);
+			}
+		});
+		// Leftover from the old toast polling, replaced by the inbox.
+		try {
+			localStorage.removeItem('poll_seen');
+		} catch {
+			/* storage unavailable */
+		}
 		const onVis = () => {
-			if (document.visibilityState === 'visible') refreshInbox(get(userPhone));
+			if (document.visibilityState === 'visible') refreshInbox(get(userPhone).trim());
 		};
 		const onSwMessage = (e: MessageEvent) => {
-			if (e.data?.type === 'inbox-updated') refreshInbox(get(userPhone), { force: true });
+			if (e.data?.type === 'inbox-updated') refreshInbox(get(userPhone).trim(), { force: true });
 		};
 		document.addEventListener('visibilitychange', onVis);
 		navigator.serviceWorker?.addEventListener('message', onSwMessage);
 		return () => {
+			unsubPhone();
+			clearTimeout(phoneTimer);
 			document.removeEventListener('visibilitychange', onVis);
 			navigator.serviceWorker?.removeEventListener('message', onSwMessage);
 		};
