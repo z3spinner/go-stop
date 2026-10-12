@@ -117,6 +117,7 @@
   "inboxPushOff": "Les alertes ne sont pas activées sur cet appareil : vous ne verrez les nouvelles notifications qu'en ouvrant le site.",
   "inboxPushSettings": "Réglages des alertes",
   "inboxRetention": "Une notification disparaît quand le trajet ou la demande concernés expirent (au plus {days} jours).",
+  "inboxTestTag": "Notification de test",
   "inboxTitle": "Notifications",
   "inboxUnreadAria": "Notifications, {count} non lue(s)",
   "inboxUnreadLabel": "Non lue",

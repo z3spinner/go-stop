@@ -6,7 +6,7 @@ package domain
 import "time"
 
 // Notification kinds. A Message with a Kind is also kept in the recipient's
-// in-app inbox; a Message without one (test push, engagement reminder) is
+// in-app inbox; a Message without one (the engagement reminder broadcast) is
 // push-only. The frontend renders each kind in the reader's language, so these
 // values are part of the API contract — don't rename them.
 const (
@@ -18,6 +18,7 @@ const (
 	KindDriverShared      = "driver_shared"      // a driver shared their number with a searcher
 	KindContactOffered    = "contact_offered"    // someone offered their contact on a request
 	KindFeedbackReminder  = "feedback_reminder"  // "did your ride leave with passengers?"
+	KindTest              = "test"               // the user's own "send a test notification"
 )
 
 // InboxItem is one persisted notification in a user's in-app inbox.

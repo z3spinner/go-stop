@@ -141,7 +141,7 @@ func TestInboxNotifier_DropsDailyAlertSentinelDeparture(t *testing.T) {
 func TestInboxNotifier_SkipsMessagesWithoutKind(t *testing.T) {
 	inbox := &mockInboxRepo{}
 	n := usecase.NewInboxNotifier(&mockNotifier{}, inbox)
-	n.Record("0611111111", domain.Message{Title: "Test", Body: "quote", URL: "/"})
+	n.Record("0611111111", domain.Message{Title: "Qui ne tente rien…", Body: "quote", URL: "/"})
 	if len(inbox.added) != 0 {
 		t.Errorf("kind-less message should be push-only, got %d inbox items", len(inbox.added))
 	}

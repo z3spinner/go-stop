@@ -58,6 +58,12 @@ describe('inboxRoute / inboxIcon', () => {
 	it('has a generic icon for unknown kinds', () => {
 		expect(inboxIcon(item({ kind: 'something_new' }))).toBe('🔔');
 	});
+	it('shows a test notification with its own quote text', () => {
+		const t = item({ kind: 'test', contact_name: '', origin: '', destination: '', title: 'Citation du jour', body: 'Un autre monde est possible.' });
+		expect(inboxTitle(t)).toBe('Citation du jour');
+		expect(inboxRoute(t)).toBe('Un autre monde est possible.');
+		expect(inboxIcon(t)).toBe('🔔');
+	});
 });
 
 describe('isPastTrip', () => {

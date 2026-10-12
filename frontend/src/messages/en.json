@@ -117,6 +117,7 @@
   "inboxPushOff": "Alerts aren't on for this device: you'll only see new notifications when you open the site.",
   "inboxPushSettings": "Alert settings",
   "inboxRetention": "A notification disappears when the ride or request it's about expires (after {days} days at most).",
+  "inboxTestTag": "Test notification",
   "inboxTitle": "Notifications",
   "inboxUnreadAria": "Notifications, {count} unread",
   "inboxUnreadLabel": "Unread",

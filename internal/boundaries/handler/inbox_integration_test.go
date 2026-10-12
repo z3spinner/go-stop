@@ -15,6 +15,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/z3spinner/go-stop/internal/boundaries/handler"
+	"github.com/z3spinner/go-stop/internal/domain"
+	"github.com/z3spinner/go-stop/internal/infrastructure/postgres"
 )
 
 func postWithPhone(r *gin.Engine, path, phone string, body interface{}) *httptest.ResponseRecorder {
@@ -210,4 +212,31 @@ func deleteJSONBody(r *gin.Engine, path string, body interface{}) *httptest.Resp
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	return w
+}
+
+// "Send a test notification" also lands in the inbox, so users can see it there.
+func TestInbox_TestPushLandsInInbox(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	// Register a device directly (the HTTP subscribe endpoint resolves the push
+	// host via DNS, which tests shouldn't depend on).
+	if err := postgres.NewSubscriptionRepo(handlerPool).Save(domain.Subscription{
+		Phone: "0622000099", Endpoint: "https://fcm.googleapis.com/fcm/send/inbox-test",
+		Keys: domain.PushKeys{P256DH: "k", Auth: "a"},
+	}); err != nil {
+		t.Fatalf("save subscription: %v", err)
+	}
+	if w := postJSON(r, "/api/subscriptions/test", map[string]interface{}{"phone": "0622000099", "lang": "en"}); w.Code != http.StatusOK {
+		t.Fatalf("test push expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	got := getInbox(t, r, "0622000099")
+	if len(got.Items) != 1 || got.Unread != 1 {
+		t.Fatalf("expected 1 unread inbox item, got %d items / %d unread", len(got.Items), got.Unread)
+	}
+	it := got.Items[0]
+	if it.Kind != "test" || it.Title == "" || it.Body == "" || it.URL != "/" {
+		t.Errorf("unexpected test item: %+v", it)
+	}
 }
