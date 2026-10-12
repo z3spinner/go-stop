@@ -29,6 +29,11 @@ jobs:
         with:
           version: v1.64.8
           install-mode: goinstall
+          # Skip `golangci-lint config verify`: it downloads the JSON schema from
+          # golangci-lint.run on every run, and a slow response there failed CI
+          # with no code problem. The config is still loaded (and rejected if
+          # invalid) by the lint run itself.
+          verify: false
 
   test:
     name: Go tests (unit + integration)
