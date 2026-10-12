@@ -1151,6 +1151,9 @@ test('searcher cannot offer contact to their own request (403)', async ({ page }
 
 test('home requested-rides feed shows share-contact button and UI flow works', async ({ page }) => {
   await setProfile(page, DRIVER);
+  // page.evaluate's fetch needs a loaded page: on about:blank the relative
+  // '/api/...' URL can't be resolved ("Failed to parse URL").
+  await page.goto(BASE);
 
   // Seed a request as SEARCHER.
   await page.evaluate(async ({ s }) => {

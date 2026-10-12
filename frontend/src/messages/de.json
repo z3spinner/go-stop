@@ -102,6 +102,24 @@
   "flyerStep3Title": "Direkter Kontakt",
   "footerPrivacy": "Datenschutz",
   "homeFeedTitle": "Jetzt verfügbar",
+  "inboxEmpty": "Noch keine Benachrichtigungen.",
+  "inboxGoToProfile": "Mein Profil",
+  "inboxKindContactOffered": "{name} kann dir helfen",
+  "inboxKindDriverShared": "{name} kann dich mitnehmen",
+  "inboxKindFeedbackReminder": "Ist deine Fahrt mit Mitfahrenden losgefahren?",
+  "inboxKindInterestAccepted": "{name} hat zugestimmt und den Kontakt geteilt",
+  "inboxKindInterestCancelled": "{name} hat die Kontaktanfrage zurückgezogen",
+  "inboxKindInterestReceived": "{name} möchte deinen Kontakt",
+  "inboxKindRequestMatch": "{name} sucht eine Fahrt auf deiner Strecke",
+  "inboxKindRideMatch": "{name} bietet eine passende Fahrt an",
+  "inboxNoPhone": "Gib deine Telefonnummer in deinem Profil an, um deine Benachrichtigungen zu sehen.",
+  "inboxPast": "vorbei",
+  "inboxPushOff": "Auf diesem Gerät sind keine Benachrichtigungen aktiviert: Neue Benachrichtigungen siehst du nur, wenn du die Seite öffnest.",
+  "inboxPushSettings": "Benachrichtigungseinstellungen",
+  "inboxRetention": "Eine Benachrichtigung verschwindet, wenn die betreffende Fahrt oder Anfrage abläuft (spätestens nach {days} Tagen).",
+  "inboxTitle": "Benachrichtigungen",
+  "inboxUnreadAria": "Benachrichtigungen, {count} ungelesen",
+  "inboxUnreadLabel": "Ungelesen",
   "interestCount": [
     {
       "declarations": [
@@ -182,11 +200,11 @@
       }
     }
   ],
-  "pollToastView": "Ansehen",
   "postReqTitle": "Mitfahrtgesuch aufgeben",
   "postRideTitle": "Fahrt anbieten",
   "privacyBody": "<h3>Was wir speichern</h3><p>Beim Veröffentlichen einer Fahrt oder Anfrage speichern wir: Name, Telefon, Startort, Ziel, Uhrzeit und Flexibilität. Nichts weiter.</p><h3>Wie lange</h3><p>Fahrten und Anfragen werden am Ende des Abfahrtstages <strong>automatisch gelöscht</strong>.</p><h3>Wer deine Nummer sieht</h3><p>Deine Nummer ist für jeden sichtbar, der deine Anzeige ansieht. Das ist beabsichtigt — so kontaktieren sich die Parteien direkt.</p><h3>Cookies und lokale Speicherung</h3><p>Keine Cookies. Go Stop verwendet keine Tracker oder Analysen. Name, Telefon und Sprache werden nur auf deinem Gerät gespeichert (<code>localStorage</code>).</p><h3>Drittanbieter</h3><p>Es werden keine Daten an Dritte weitergegeben. Push-Benachrichtigungen werden über den Web-Push-Standard über den Push-Dienst deines Browsers gesendet.</p>",
   "privacyClose": "Schließen",
+  "privacyInbox": "Die Benachrichtigungen, die du erhältst, werden außerdem auf der Seite „Benachrichtigungen“ gespeichert, bis die betreffende Fahrt oder Anfrage abläuft (höchstens {days} Tage), und dann automatisch gelöscht. Sie enthalten den Vornamen der anderen Person und die Strecke, nie ihre Nummer. Wenn du deine Anzeige löschst, werden die Benachrichtigungen dazu ebenfalls gelöscht, bei allen.",
   "privacyTitle": "Datenschutz",
   "profileRequiredBody": "Gib deinen Namen und deine Nummer an, damit der Fahrer weiß, wer fragt.",
   "profileRequiredTitle": "Profil vervollständigen",

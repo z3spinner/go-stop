@@ -28,7 +28,7 @@ import type {
 	ContactOffer,
 	ExpressInterestResponse,
 	AcceptInterestResponse,
-	NotificationItem,
+	Inbox,
 	Stats,
 	Config,
 	VapidKey,
@@ -119,7 +119,13 @@ export const api = {
 		test: (phone: string, lang: string) =>
 			unwrap<{ sent: number }>(gen.testSubscription({ phone, lang }))
 	},
-	notifications: {
-		list: (phone: string) => unwrap<NotificationItem[]>(gen.listNotifications(phoneHeader(phone)))
+	inbox: {
+		list: (phone: string) => unwrap<Inbox>(gen.listInbox(phoneHeader(phone))),
+		/** Mark exactly these items read (an empty list marks nothing). */
+		markRead: (phone: string, ids: string[]) =>
+			unwrap<null>(gen.markInboxRead({ ids }, phoneHeader(phone))),
+		/** Mark every item read. */
+		markAllRead: (phone: string) =>
+			unwrap<null>(gen.markInboxRead({ all: true }, phoneHeader(phone)))
 	}
 };

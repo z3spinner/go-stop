@@ -54,9 +54,13 @@ func (uc *AcceptInterest) Execute(interestID, driverPhone string) (searcherPhone
 		Title:       "Le conducteur accepte le contact",
 		Body:        fmt.Sprintf("%s → %s", ride.Origin, ride.Destination),
 		URL:         "/interests/" + interestID,
+		ContactName: ride.DriverName,
 		Origin:      ride.Origin,
 		Destination: ride.Destination,
 		DepartureAt: ride.DepartureAt,
+		Kind:        domain.KindInterestAccepted,
+		DedupKey:    domain.KindInterestAccepted + ":" + interestID,
+		RideID:      ride.ID,
 	}, uc.subs, uc.notifier)
 	return interest.SearcherPhone, connected, nil
 }

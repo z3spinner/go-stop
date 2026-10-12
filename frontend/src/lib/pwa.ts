@@ -5,22 +5,10 @@ import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 import { api } from './api';
 import { getLocale } from './locale';
-import type { NotificationItem } from './types';
-
-// True in a real browser and in the jsdom test environment, false during SSR /
-// prerender. We guard localStorage-only functions on the actual presence of
-// `localStorage` rather than SvelteKit's `browser` flag, because that flag is
-// compiled to `false` under Vitest and would disable pure functions in tests.
-// See locale.ts for the same pattern.
-function hasStorage(): boolean {
-	return typeof localStorage !== 'undefined';
-}
 
 export type PushState = 'unsupported' | 'ios-browser' | 'default' | 'granted' | 'denied' | 'subscribed';
 
 export const pushState = writable<PushState>('default');
-/** Notifications surfaced by polling; the layout renders a PollToast per item. */
-export const pollToasts = writable<NotificationItem[]>([]);
 
 export function isIOSBrowser(): boolean {
 	if (!browser) return false;
@@ -138,38 +126,3 @@ export async function reconfigurePush(phone: string): Promise<boolean> {
 	return ok;
 }
 
-const SEEN_KEY = 'poll_seen';
-
-/** Pure: given incoming notifications, return those whose ride_id is unseen and record them (cap 100). */
-export function filterUnseenNotifications(items: NotificationItem[]): NotificationItem[] {
-	if (!hasStorage()) return items;
-	let seen: string[] = [];
-	try {
-		seen = JSON.parse(localStorage.getItem(SEEN_KEY) ?? '[]');
-	} catch {
-		seen = [];
-	}
-	const fresh = items.filter((n) => !seen.includes(n.ride_id));
-	if (fresh.length) {
-		const next = [...seen, ...fresh.map((n) => n.ride_id)].slice(-100);
-		localStorage.setItem(SEEN_KEY, JSON.stringify(next));
-	}
-	return fresh;
-}
-
-let lastPollMs = 0;
-
-/** Poll the backend for ride-match notifications and push fresh ones to pollToasts (throttled 60s). */
-export async function pollForNotifications(phone: string): Promise<void> {
-	if (!browser || !phone) return;
-	const now = Date.now();
-	if (now - lastPollMs < 60_000) return;
-	lastPollMs = now;
-	try {
-		const items = await api.notifications.list(phone);
-		const fresh = filterUnseenNotifications(items);
-		if (fresh.length) pollToasts.update((t) => [...t, ...fresh]);
-	} catch {
-		/* network errors are non-fatal for polling */
-	}
-}

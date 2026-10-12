@@ -82,6 +82,10 @@ func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) (connecte
 		Origin:      ride.Origin,
 		Destination: ride.Destination,
 		DepartureAt: ride.DepartureAt,
+		Kind:        domain.KindDriverShared,
+		// A repeat ping re-pushes but stays one inbox entry.
+		DedupKey: domain.KindDriverShared + ":" + interest.ID,
+		RideID:   ride.ID,
 	}
 	sendToAll(req.Phone, msg, uc.subs, uc.notifier)
 	return connected, nil

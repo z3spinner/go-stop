@@ -13,15 +13,25 @@ import (
 )
 
 type mockNotifier struct {
-	called  bool
-	lastMsg domain.Message
-	err     error
+	called   bool
+	lastMsg  domain.Message
+	err      error
+	recorded []recordedMsg // every Record call (the inbox copy), in order
+}
+
+type recordedMsg struct {
+	phone string
+	msg   domain.Message
 }
 
 func (m *mockNotifier) Send(sub domain.Subscription, msg domain.Message) error {
 	m.called = true
 	m.lastMsg = msg
 	return m.err
+}
+
+func (m *mockNotifier) Record(phone string, msg domain.Message) {
+	m.recorded = append(m.recorded, recordedMsg{phone: phone, msg: msg})
 }
 
 type mockSubRepoNotify struct {
@@ -83,11 +93,15 @@ func (n *countingNotifier) Send(_ domain.Subscription, _ domain.Message) error {
 	return nil
 }
 
+func (n *countingNotifier) Record(string, domain.Message) {}
+
 type goneNotifier struct{}
 
 func (n *goneNotifier) Send(_ domain.Subscription, _ domain.Message) error {
 	return errors.New("push service returned status 410")
 }
+
+func (n *goneNotifier) Record(string, domain.Message) {}
 
 type trackingSubRepo struct {
 	subs    []domain.Subscription

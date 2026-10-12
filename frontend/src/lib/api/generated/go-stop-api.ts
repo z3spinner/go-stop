@@ -76,6 +76,8 @@ export interface HandlerAcceptInterestResponse {
 }
 
 export interface HandlerConfigResponse {
+  /** How many days the in-app inbox keeps notifications. */
+  notificationRetentionDays?: number;
   returnDelayHours?: number;
   siteName?: string;
 }
@@ -126,11 +128,37 @@ export interface HandlerFeedbackBody {
   taken?: boolean;
 }
 
+export interface HandlerInboxItem {
+  body?: string;
+  contact_name?: string;
+  /** RFC 3339 */
+  created_at?: string;
+  /** RFC 3339; omitted when unknown */
+  departure_at?: string;
+  destination?: string;
+  id?: string;
+  kind?: string;
+  origin?: string;
+  read?: boolean;
+  title?: string;
+  url?: string;
+}
+
+export interface HandlerInboxResponse {
+  items?: HandlerInboxItem[];
+  unread?: number;
+}
+
 export interface HandlerInterestListItem {
   id?: string;
   searcher_name?: string;
   searcher_phone?: string;
   status?: string;
+}
+
+export interface HandlerMarkInboxReadBody {
+  all?: boolean;
+  ids?: string[];
 }
 
 export interface HandlerMyInterest {
@@ -337,6 +365,101 @@ export const listDestinations = async ( options?: RequestInit): Promise<listDest
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type listInboxResponse200 = {
+  data: HandlerInboxResponse
+  status: 200
+}
+
+export type listInboxResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type listInboxResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type listInboxResponseSuccess = (listInboxResponse200) & {
+  headers: Headers;
+};
+export type listInboxResponseError = (listInboxResponse401 | listInboxResponse500) & {
+  headers: Headers;
+};
+
+export type listInboxResponse = (listInboxResponseSuccess | listInboxResponseError)
+
+export const getListInboxUrl = () => {
+
+
+
+
+  return `/inbox`
+}
+
+export const listInbox = async ( options?: RequestInit): Promise<listInboxResponse> => {
+
+  return customFetch<listInboxResponse>(getListInboxUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type markInboxReadResponse204 = {
+  data: void
+  status: 204
+}
+
+export type markInboxReadResponse400 = {
+  data: HandlerErrorResponse
+  status: 400
+}
+
+export type markInboxReadResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type markInboxReadResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type markInboxReadResponseSuccess = (markInboxReadResponse204) & {
+  headers: Headers;
+};
+export type markInboxReadResponseError = (markInboxReadResponse400 | markInboxReadResponse401 | markInboxReadResponse500) & {
+  headers: Headers;
+};
+
+export type markInboxReadResponse = (markInboxReadResponseSuccess | markInboxReadResponseError)
+
+export const getMarkInboxReadUrl = () => {
+
+
+
+
+  return `/inbox/read`
+}
+
+export const markInboxRead = async (handlerMarkInboxReadBody: HandlerMarkInboxReadBody, options?: RequestInit): Promise<markInboxReadResponse> => {
+
+  return customFetch<markInboxReadResponse>(getMarkInboxReadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(handlerMarkInboxReadBody)
   }
 );}
 

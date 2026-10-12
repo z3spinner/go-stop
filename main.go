@@ -52,7 +52,19 @@ func main() {
 	}
 	log.Printf("vapid: keys ready (source: %s)", vapidSource)
 
-	notifier := webpush.New(vapidKeys.Public, vapidKeys.Private, vapidKeys.Email)
+	// Every push with a Kind is also kept in the recipient's in-app inbox, so a
+	// missed notification can still be read in the app (see usecase/inbox.go).
+	inboxRepo := postgres.NewInboxRepo(pool)
+	notifier := usecase.NewInboxNotifier(webpush.New(vapidKeys.Public, vapidKeys.Private, vapidKeys.Email), inboxRepo)
+	inboxRetentionDays := usecase.DefaultInboxRetentionDays
+	if v := os.Getenv("NOTIFICATION_RETENTION_DAYS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			inboxRetentionDays = usecase.ClampInboxRetentionDays(n)
+		}
+	}
+	getInbox := usecase.NewGetInbox(inboxRepo)
+	markInboxRead := usecase.NewMarkInboxRead(inboxRepo)
+	purgeInbox := usecase.NewPurgeInbox(inboxRepo, inboxRetentionDays)
 
 	notifQueueRepo := postgres.NewNotificationQueueRepo(pool)
 	feedbackQueueRepo := postgres.NewFeedbackQueueRepo(pool)
@@ -68,8 +80,8 @@ func main() {
 	subscribe := usecase.NewSubscribe(subRepo)
 	unsubscribe := usecase.NewUnsubscribe(subRepo)
 	sendTestPush := usecase.NewSendTestPush(subRepo, notifier)
-	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo, feedbackQueueRepo)
-	deleteRequest := usecase.NewDeleteRequest(requestRepo)
+	deleteRide := usecase.NewDeleteRide(rideRepo, notifQueueRepo, feedbackQueueRepo, inboxRepo)
+	deleteRequest := usecase.NewDeleteRequest(requestRepo, inboxRepo)
 	pingSearcher := usecase.NewPingSearcher(requestRepo, rideRepo, interestRepo, subRepo, notifier)
 	getMyRequests := usecase.NewGetMyRequests(requestRepo)
 	getActiveRequests := usecase.NewGetActiveRequests(requestRepo)
@@ -109,6 +121,7 @@ func main() {
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
+	inboxH := handler.NewInboxHandler(getInbox, markInboxRead)
 	vapidH := handler.NewVapidHandler(vapidKeys.Public)
 
 	siteName := os.Getenv("SITE_NAME")
@@ -121,7 +134,7 @@ func main() {
 			returnDelayHours = n
 		}
 	}
-	configH := handler.NewConfigHandler(siteName, returnDelayHours)
+	configH := handler.NewConfigHandler(siteName, returnDelayHours, inboxRetentionDays)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
 
@@ -148,6 +161,9 @@ func main() {
 			}
 			if err := sendEngagementReminder.Execute(); err != nil {
 				log.Printf("engagement reminder: %v", err)
+			}
+			if err := purgeInbox.Execute(); err != nil {
+				log.Printf("purge inbox: %v", err)
 			}
 		}
 		runCronCycle() // tick at startup — don't wait an hour for the first cycle
@@ -209,6 +225,8 @@ func main() {
 		api.DELETE("/subscriptions/:phone", subH.Unsubscribe)
 
 		api.GET("/notifications", notifQueueH.List)
+		api.GET("/inbox", inboxH.List)
+		api.POST("/inbox/read", inboxH.MarkRead)
 
 		api.GET("/vapid-public-key", vapidH.GetPublicKey)
 		api.GET("/config", configH.Get)

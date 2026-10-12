@@ -29,6 +29,11 @@ jobs:
         with:
           version: v1.64.8
           install-mode: goinstall
+          # Skip `golangci-lint config verify`: it downloads the JSON schema from
+          # golangci-lint.run on every run, and a slow response there failed CI
+          # with no code problem. The config is still loaded (and rejected if
+          # invalid) by the lint run itself.
+          verify: false
 
   test:
     name: Go tests (unit + integration)
@@ -62,3 +67,26 @@ jobs:
       # command covers both. -p 1 keeps DB-backed tests from racing on shared tables.
       - name: Test
         run: go test -tags integration -count=1 -p 1 ./...
+
+  frontend:
+    name: Frontend (type-check, tests, API client drift)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # Compile i18n messages first: svelte-check needs src/lib/paraglide.
+      - run: npm run paraglide
+      - run: npm run check
+      - run: npm test
+      # The orval client is committed; fail if it no longer matches docs/swagger.json
+      # (i.e. someone changed the API without running `make api-generate`).
+      - name: Generated API client is up to date
+        run: npm run api:generate && git diff --exit-code -- src/lib/api/generated

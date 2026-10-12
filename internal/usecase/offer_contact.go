@@ -47,7 +47,8 @@ func (uc *OfferContact) Execute(requestID, offererPhone, offererName string) (cr
 		return false, ErrUnauthorized // searcher cannot offer contact to themselves
 	}
 
-	_, findErr := uc.contactOffers.FindByRequestAndOfferer(requestID, offererPhone)
+	existing, findErr := uc.contactOffers.FindByRequestAndOfferer(requestID, offererPhone)
+	offerID := existing.ID
 	if findErr != nil {
 		// No existing offer — create a new one.
 		offer := domain.ContactOffer{
@@ -60,6 +61,7 @@ func (uc *OfferContact) Execute(requestID, offererPhone, offererName string) (cr
 			return false, fmt.Errorf("save contact offer: %w", saveErr)
 		}
 		created = true
+		offerID = offer.ID
 	}
 
 	// Notify the searcher on all their devices (best-effort).
@@ -71,6 +73,10 @@ func (uc *OfferContact) Execute(requestID, offererPhone, offererName string) (cr
 		Phone:       offererPhone,
 		Origin:      req.Origin,
 		Destination: req.Destination,
+		Kind:        domain.KindContactOffered,
+		// A repeat offer re-pushes but stays one inbox entry.
+		DedupKey:  domain.KindContactOffered + ":" + offerID,
+		RequestID: req.ID,
 	}, uc.subs, uc.notifier)
 
 	return created, nil

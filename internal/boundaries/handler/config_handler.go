@@ -10,12 +10,17 @@ import (
 )
 
 type ConfigHandler struct {
-	siteName         string
-	returnDelayHours int
+	siteName                  string
+	returnDelayHours          int
+	notificationRetentionDays int
 }
 
-func NewConfigHandler(siteName string, returnDelayHours int) *ConfigHandler {
-	return &ConfigHandler{siteName: siteName, returnDelayHours: returnDelayHours}
+func NewConfigHandler(siteName string, returnDelayHours, notificationRetentionDays int) *ConfigHandler {
+	return &ConfigHandler{
+		siteName:                  siteName,
+		returnDelayHours:          returnDelayHours,
+		notificationRetentionDays: notificationRetentionDays,
+	}
 }
 
 // Get returns the public site configuration.
@@ -26,7 +31,8 @@ func NewConfigHandler(siteName string, returnDelayHours int) *ConfigHandler {
 // @Router   /config [get]
 func (h *ConfigHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, ConfigResponse{
-		SiteName:         h.siteName,
-		ReturnDelayHours: h.returnDelayHours,
+		SiteName:                  h.siteName,
+		ReturnDelayHours:          h.returnDelayHours,
+		NotificationRetentionDays: h.notificationRetentionDays,
 	})
 }

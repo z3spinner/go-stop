@@ -62,6 +62,98 @@ const docTemplate = `{
                 }
             }
         },
+        "/inbox": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "operationId": "listInbox",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Recipient phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.InboxResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/inbox/read": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "operationId": "markInboxRead",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Recipient phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Item ids, or all=true",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.MarkInboxReadBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/interests": {
             "get": {
                 "produces": [
@@ -1578,6 +1670,10 @@ const docTemplate = `{
         "handler.ConfigResponse": {
             "type": "object",
             "properties": {
+                "notificationRetentionDays": {
+                    "description": "How many days the in-app inbox keeps notifications.",
+                    "type": "integer"
+                },
                 "returnDelayHours": {
                     "type": "integer"
                 },
@@ -1688,6 +1784,60 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.InboxItem": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "contact_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "RFC 3339",
+                    "type": "string"
+                },
+                "departure_at": {
+                    "description": "RFC 3339; omitted when unknown",
+                    "type": "string"
+                },
+                "destination": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "string"
+                },
+                "read": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.InboxResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.InboxItem"
+                    }
+                },
+                "unread": {
+                    "type": "integer"
+                }
+            }
+        },
         "handler.InterestListItem": {
             "type": "object",
             "properties": {
@@ -1702,6 +1852,20 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "handler.MarkInboxReadBody": {
+            "type": "object",
+            "properties": {
+                "all": {
+                    "type": "boolean"
+                },
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

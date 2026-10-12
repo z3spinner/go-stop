@@ -102,6 +102,24 @@
   "flyerStep3Title": "Contact direct",
   "footerPrivacy": "Confidentialité",
   "homeFeedTitle": "Disponibles maintenant",
+  "inboxEmpty": "Aucune notification pour l'instant.",
+  "inboxGoToProfile": "Mon profil",
+  "inboxKindContactOffered": "{name} peut vous aider",
+  "inboxKindDriverShared": "{name} peut vous emmener",
+  "inboxKindFeedbackReminder": "Votre trajet est-il parti avec des passagers ?",
+  "inboxKindInterestAccepted": "{name} accepte de partager son contact",
+  "inboxKindInterestCancelled": "{name} a annulé sa demande de contact",
+  "inboxKindInterestReceived": "{name} demande votre contact",
+  "inboxKindRequestMatch": "{name} cherche un trajet sur votre route",
+  "inboxKindRideMatch": "{name} propose un trajet pour vous",
+  "inboxNoPhone": "Indiquez votre numéro de téléphone dans votre profil pour voir vos notifications.",
+  "inboxPast": "passé",
+  "inboxPushOff": "Les alertes ne sont pas activées sur cet appareil : vous ne verrez les nouvelles notifications qu'en ouvrant le site.",
+  "inboxPushSettings": "Réglages des alertes",
+  "inboxRetention": "Une notification disparaît quand le trajet ou la demande concernés expirent (au plus {days} jours).",
+  "inboxTitle": "Notifications",
+  "inboxUnreadAria": "Notifications, {count} non lue(s)",
+  "inboxUnreadLabel": "Non lue",
   "interestCount": [
     {
       "declarations": [
@@ -182,11 +200,11 @@
       }
     }
   ],
-  "pollToastView": "Voir",
   "postReqTitle": "Publier une demande",
   "postRideTitle": "Proposer un trajet",
   "privacyBody": "<h3>Ce que nous collectons</h3>\n<p>Lorsque vous publiez un trajet ou une demande, nous enregistrons : votre prénom, numéro de téléphone, lieu de départ, destination, heure de départ et flexibilité. Rien d'autre.</p>\n<h3>Durée de conservation</h3>\n<p>Les trajets et demandes sont <strong>supprimés automatiquement et définitivement</strong> à la fin du jour de départ. Pour supprimer votre annonce plus tôt, utilisez l'option de suppression — le numéro de téléphone utilisé lors de la publication sera demandé.</p>\n<p>Les abonnements aux notifications push sont conservés jusqu'à ce que vous vous désinscriviez.</p>\n<h3>Qui peut voir votre numéro de téléphone</h3>\n<p>Votre numéro est visible par toute personne qui consulte votre annonce. C'est volontaire — c'est ainsi que les deux parties se contactent directement.</p>\n<h3>Cookies &amp; stockage local</h3>\n<p>Aucun cookie. Go-Stop n'utilise ni traceurs ni analytiques.</p>\n<p>Les informations suivantes sont enregistrées dans le <code>localStorage</code> de votre navigateur (sur votre appareil uniquement, jamais envoyées au serveur) :</p>\n<ul>\n<li>Votre prénom et numéro de téléphone — pour pré-remplir les formulaires à votre prochaine visite</li>\n<li>Votre préférence de langue</li>\n</ul>\n<p>Vous pouvez effacer ces données à tout moment en vidant les données de site de votre navigateur.</p>\n<h3>Tiers</h3>\n<p>Aucune donnée n'est partagée avec des tiers. Les notifications push transitent par le standard Web Push via le service push de votre navigateur (ex. Google FCM pour Chrome). Le contenu transmis se limite aux informations de mise en relation visibles à l'écran.</p>",
   "privacyClose": "Fermer",
+  "privacyInbox": "Les notifications que vous recevez sont aussi gardées sur la page Notifications du site jusqu'à l'expiration du trajet ou de la demande concernés (au plus {days} jours), puis supprimées automatiquement. Elles contiennent le prénom de l'autre personne et le trajet, jamais son numéro. Si vous supprimez votre annonce, les notifications qui la concernent sont supprimées aussi, chez tout le monde.",
   "privacyTitle": "Confidentialité",
   "profileRequiredBody": "Ajoutez votre nom et votre numéro pour que le conducteur sache qui demande.",
   "profileRequiredTitle": "Complétez votre profil",
