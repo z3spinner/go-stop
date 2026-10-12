@@ -102,6 +102,23 @@
   "flyerStep3Title": "Direct contact",
   "footerPrivacy": "Privacy",
   "homeFeedTitle": "Nu beschikbaar",
+  "inboxEmpty": "Nog geen meldingen.",
+  "inboxGoToProfile": "Mijn profiel",
+  "inboxKindContactOffered": "{name} kan je helpen",
+  "inboxKindDriverShared": "{name} kan je meenemen",
+  "inboxKindFeedbackReminder": "Is je rit met passagiers vertrokken?",
+  "inboxKindInterestAccepted": "{name} heeft geaccepteerd en contact gedeeld",
+  "inboxKindInterestCancelled": "{name} heeft het contactverzoek ingetrokken",
+  "inboxKindInterestReceived": "{name} vraagt je contactgegevens",
+  "inboxKindRequestMatch": "{name} zoekt een rit op jouw route",
+  "inboxKindRideMatch": "{name} biedt een rit aan die bij je past",
+  "inboxNoPhone": "Vul je telefoonnummer in je profiel in om je meldingen te zien.",
+  "inboxPast": "voorbij",
+  "inboxPushOff": "Meldingen staan niet aan op dit apparaat: je ziet nieuwe meldingen alleen als je de site opent.",
+  "inboxPushSettings": "Meldingsinstellingen",
+  "inboxRetention": "Meldingen worden {days} dagen bewaard en daarna verwijderd.",
+  "inboxTitle": "Meldingen",
+  "inboxUnreadAria": "Meldingen, {count} ongelezen",
   "interestCount": [
     {
       "declarations": [
@@ -182,11 +199,11 @@
       }
     }
   ],
-  "pollToastView": "Bekijk",
   "postReqTitle": "Rit zoeken",
   "postRideTitle": "Rit aanbieden",
   "privacyBody": "<h3>Wat we opslaan</h3><p>Bij het publiceren van een rit of zoekopdracht slaan we op: naam, telefoon, vertrekplaats, bestemming, tijd en flexibiliteit. Niets meer.</p><h3>Hoe lang</h3><p>Ritten en zoekopdrachten worden aan het einde van de vertrekdag <strong>automatisch verwijderd</strong>.</p><h3>Wie jouw nummer ziet</h3><p>Jouw nummer is zichtbaar voor iedereen die jouw advertentie bekijkt. Dit is opzettelijk — zo nemen de partijen direct contact op.</p><h3>Cookies en lokale opslag</h3><p>Geen cookies. Go Stop gebruikt geen trackers of analyses. Naam, telefoon en taal worden alleen op jouw apparaat opgeslagen (<code>localStorage</code>).</p><h3>Derden</h3><p>Er worden geen gegevens gedeeld met derden. Pushmeldingen worden verzonden via de Web Push-standaard via de pushdienst van jouw browser.</p>",
   "privacyClose": "Sluiten",
+  "privacyInbox": "De meldingen die je ontvangt worden ook {days} dagen bewaard op de pagina Meldingen van de site en daarna automatisch verwijderd. Ze bevatten de voornaam van de ander en de route, nooit hun nummer.",
   "privacyTitle": "Privacy",
   "profileRequiredBody": "Voeg je naam en nummer toe zodat de bestuurder weet wie het vraagt.",
   "profileRequiredTitle": "Vul je profiel in",

@@ -14,12 +14,12 @@
 	import { loadConfig } from '$lib/config';
 	import { userPhone } from '$lib/stores';
 	import { get } from 'svelte/store';
-	import { updateBellState, pollForNotifications } from '$lib/pwa';
+	import { updateBellState } from '$lib/pwa';
+	import { refreshInbox } from '$lib/inbox';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
 	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
 	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
 	import A2HSModal from '$lib/components/notifications/A2HSModal.svelte';
-	import PollToastHost from '$lib/components/notifications/PollToast.svelte';
 	import NotifModal from '$lib/components/notifications/NotifModal.svelte';
 	import ProfileModal from '$lib/components/profile/ProfileModal.svelte';
 	import PullToRefresh from '$lib/components/layout/PullToRefresh.svelte';
@@ -57,11 +57,22 @@
 		// re-activated. Notifications are offered contextually instead (after
 		// posting a ride/request or expressing interest) and via the bell, which
 		// shows an "Activate" label until subscribed.
+		// Keep the bell's unread badge current: on load, when the app comes back to
+		// the foreground, and right away when a push arrives while it's open (the
+		// service worker posts 'inbox-updated').
+		refreshInbox(phone, { force: true });
 		const onVis = () => {
-			if (document.visibilityState === 'visible') pollForNotifications(get(userPhone));
+			if (document.visibilityState === 'visible') refreshInbox(get(userPhone));
+		};
+		const onSwMessage = (e: MessageEvent) => {
+			if (e.data?.type === 'inbox-updated') refreshInbox(get(userPhone), { force: true });
 		};
 		document.addEventListener('visibilitychange', onVis);
-		return () => document.removeEventListener('visibilitychange', onVis);
+		navigator.serviceWorker?.addEventListener('message', onSwMessage);
+		return () => {
+			document.removeEventListener('visibilitychange', onVis);
+			navigator.serviceWorker?.removeEventListener('message', onSwMessage);
+		};
 	});
 </script>
 
@@ -100,7 +111,6 @@
 
 <A2HSBanner />
 <A2HSModal />
-<PollToastHost />
 <NotifModal />
 <ProfileModal />
 <PrivacyModal open={showPrivacy} onclose={() => (showPrivacy = false)} />

@@ -134,7 +134,7 @@ func main() {
 			returnDelayHours = n
 		}
 	}
-	configH := handler.NewConfigHandler(siteName, returnDelayHours)
+	configH := handler.NewConfigHandler(siteName, returnDelayHours, inboxRetentionDays)
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
 

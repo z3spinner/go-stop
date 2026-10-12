@@ -80,6 +80,7 @@ You can optionally customise these from the Scalingo deploy form (all have sensi
 |---|---|
 | `SITE_NAME` | **Your community's name** shown as the site heading (e.g. `Stop Nyons`, `Covoiturage Drôme`) |
 | `SERVICE_TZ` | Community timezone, used to interpret time-only searches (e.g. `Europe/Paris`) |
+| `NOTIFICATION_RETENTION_DAYS` | Days a notification stays in each user's in-app inbox (default `30`) |
 
 ## Architecture
 

@@ -45,7 +45,7 @@ import type {
 	HandlerContactInfo,
 	HandlerExpressInterestResponse,
 	HandlerAcceptInterestResponse,
-	HandlerNotificationItem,
+	HandlerInboxItem,
 	DomainStats,
 	DomainRouteStat,
 	DomainActivityCounts,
@@ -71,12 +71,20 @@ export type MyInterest = DeepRequired<HandlerMyInterest>;
 export type ContactInfo = DeepRequired<HandlerContactInfo>;
 export type ExpressInterestResponse = DeepRequired<HandlerExpressInterestResponse>;
 export type AcceptInterestResponse = DeepRequired<HandlerAcceptInterestResponse>;
-export type NotificationItem = DeepRequired<HandlerNotificationItem>;
 export type Stats = DeepRequired<DomainStats>;
 export type RouteStat = DeepRequired<DomainRouteStat>;
 export type ActivityCounts = DeepRequired<DomainActivityCounts>;
-export type Config = DeepRequired<HandlerConfigResponse>;
+// notificationRetentionDays is optional so an older server (or a test fixture)
+// without it still type-checks; callers fall back to the default.
+export type Config = DeepRequired<Omit<HandlerConfigResponse, 'notificationRetentionDays'>> &
+	Pick<HandlerConfigResponse, 'notificationRetentionDays'>;
 export type VapidKey = DeepRequired<HandlerVapidKeyResponse>;
+
+// ── InboxItem — partial exception ────────────────────────────────────────────
+// `departure_at` is `omitempty` on the server (unknown for some kinds).
+export type InboxItem = DeepRequired<Omit<HandlerInboxItem, 'departure_at'>> &
+	Pick<HandlerInboxItem, 'departure_at'>;
+export type Inbox = { items: InboxItem[]; unread: number };
 
 // ── InterestListItem — partial exception ─────────────────────────────────────
 // `id` and `status` are always populated; `searcher_name` / `searcher_phone`

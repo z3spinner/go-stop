@@ -111,6 +111,9 @@ definitions:
     type: object
   handler.ConfigResponse:
     properties:
+      notificationRetentionDays:
+        description: How many days the in-app inbox keeps notifications.
+        type: integer
       returnDelayHours:
         type: integer
       siteName:

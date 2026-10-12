@@ -238,6 +238,8 @@ type MarkInboxReadBody struct {
 type ConfigResponse struct {
 	SiteName         string `json:"siteName"`
 	ReturnDelayHours int    `json:"returnDelayHours"`
+	// How many days the in-app inbox keeps notifications.
+	NotificationRetentionDays int `json:"notificationRetentionDays"`
 }
 
 // VapidKeyResponse is returned by GET /vapid-public-key.

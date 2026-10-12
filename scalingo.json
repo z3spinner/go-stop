@@ -22,6 +22,10 @@
       "description": "Minutes after a ride's flex window closes before it disappears from search results (default: 60)",
       "value": "60"
     },
+    "NOTIFICATION_RETENTION_DAYS": {
+      "description": "Days a notification stays in each user's in-app inbox before it is deleted (default: 30)",
+      "value": "30"
+    },
     "RETURN_DELAY_HOURS": {
       "description": "Default hours after outbound departure to pre-fill the return trip time (default: 2)",
       "value": "2"

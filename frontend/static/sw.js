@@ -13,7 +13,15 @@ self.addEventListener('push', (event) => {
     data: { url: data.url || '/' },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      // Let open tabs refresh the in-app inbox badge right away.
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        for (const client of clientList) client.postMessage({ type: 'inbox-updated' });
+      }),
+    ])
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

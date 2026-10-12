@@ -152,3 +152,33 @@ describe('api facade — query building', () => {
 		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0600000004');
 	});
 });
+
+describe('api facade — inbox', () => {
+	it('inbox.list(phone) GETs /api/inbox with X-Phone', async () => {
+		fetchMock.mockResolvedValue(mockResponse(200, { items: [], unread: 0 }));
+		const res = await api.inbox.list('0600000005');
+		expect(res).toEqual({ items: [], unread: 0 });
+		const { url, init } = lastCall();
+		expect(url).toBe('/api/inbox');
+		expect(init.method).toBe('GET');
+		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0600000005');
+	});
+
+	it('inbox.markRead(phone) POSTs empty ids (= all) with X-Phone and resolves null', async () => {
+		fetchMock.mockResolvedValue(mockResponse(204, undefined));
+		expect(await api.inbox.markRead('0600000006')).toBeNull();
+		const { url, init } = lastCall();
+		expect(url).toBe('/api/inbox/read');
+		expect(init.method).toBe('POST');
+		expect(JSON.parse(init.body as string)).toEqual({ ids: [] });
+		const headers = init.headers as Record<string, string>;
+		expect(headers['X-Phone']).toBe('0600000006');
+		expect(headers['Content-Type']).toBe('application/json');
+	});
+
+	it('inbox.markRead(phone, ids) sends the given ids', async () => {
+		fetchMock.mockResolvedValue(mockResponse(204, undefined));
+		await api.inbox.markRead('0600000006', ['n1', 'n2']);
+		expect(JSON.parse(lastCall().init.body as string)).toEqual({ ids: ['n1', 'n2'] });
+	});
+});

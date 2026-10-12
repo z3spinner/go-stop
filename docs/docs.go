@@ -1670,6 +1670,10 @@ const docTemplate = `{
         "handler.ConfigResponse": {
             "type": "object",
             "properties": {
+                "notificationRetentionDays": {
+                    "description": "How many days the in-app inbox keeps notifications.",
+                    "type": "integer"
+                },
                 "returnDelayHours": {
                     "type": "integer"
                 },
