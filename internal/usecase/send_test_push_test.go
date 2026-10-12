@@ -33,6 +33,12 @@ func TestSendTestPush_SendsLocalizedQuote(t *testing.T) {
 	if n.lastMsg.Body == "" {
 		t.Error("expected a non-empty quote body")
 	}
+	// Also kept in the user's inbox: one entry per test (no dedup key), not
+	// tied to any ride or request.
+	assertInbox(t, n, "555-1", domain.Message{Kind: domain.KindTest})
+	if r := n.recorded[0].msg; r.Title != "Citation du jour" || r.Body == "" {
+		t.Errorf("inbox copy should carry the quote, got title=%q body=%q", r.Title, r.Body)
+	}
 }
 
 func TestSendTestPush_ZeroWhenNoSubscription(t *testing.T) {
@@ -48,5 +54,8 @@ func TestSendTestPush_ZeroWhenNoSubscription(t *testing.T) {
 	}
 	if n.called {
 		t.Error("should not push when there is no subscription")
+	}
+	if len(n.recorded) != 0 {
+		t.Errorf("nothing was sent, so nothing should reach the inbox; got %d", len(n.recorded))
 	}
 }

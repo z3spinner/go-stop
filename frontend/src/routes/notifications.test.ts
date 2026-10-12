@@ -127,4 +127,15 @@ describe('notifications page', () => {
 		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
 		expect(container.querySelector('.inbox-no-phone')).toBeNull();
 	});
+
+	it('labels a test notification as such', async () => {
+		userPhone.set('0611111111');
+		fakeServer([item({ id: 't1', kind: 'test', contact_name: '', origin: '', destination: '', url: '/', title: 'Citation du jour', body: 'Un autre monde est possible.', read: true })]);
+		const { container } = render(Notifications);
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
+		const el = container.querySelector('.inbox-item')!;
+		expect(el.textContent).toContain('Citation du jour');
+		expect(el.textContent).toContain('Un autre monde est possible.');
+		expect(el.querySelector('.inbox-test-tag')?.textContent).toBe(m.inboxTestTag());
+	});
 });

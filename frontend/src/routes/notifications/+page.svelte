@@ -92,6 +92,7 @@
 						<span class="inbox-route text-sm text-gray-700" translate="no">{inboxRoute(item)}</span>
 						<span class="inbox-meta flex flex-wrap items-center gap-2 text-xs text-gray-500">
 							<span>{formatTime(item.created_at)}</span>
+							{#if item.kind === 'test'}<span class="tag inbox-test-tag">{m.inboxTestTag()}</span>{/if}
 							{#if isPastTrip(item)}<span class="tag">{m.inboxPast()}</span>{/if}
 						</span>
 					</span>

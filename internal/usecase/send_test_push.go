@@ -15,7 +15,10 @@ import (
 // SendTestPush lets a user verify their notifications end-to-end by pushing the
 // quote of the day to all of their registered devices. The content is chosen
 // server-side from a fixed set (the client only picks a language), so a caller
-// can never author the notification a device receives.
+// can never author the notification a device receives. Like every other
+// notification it also lands in the user's inbox (kind "test"), so the inbox
+// can be checked too. It isn't about a ride or request, so it stays until the
+// retention limit.
 type SendTestPush struct {
 	subs     repository.SubscriptionRepository
 	notifier notification.Notifier
@@ -36,6 +39,6 @@ func (uc *SendTestPush) Execute(phone, lang string) (int, error) {
 	}
 	title, body := quoteOfTheDay(lang, time.Now())
 	log.Printf("sending test push phone=***%s devices=%d", lastN(phone, 3), len(subList))
-	sendToAll(phone, domain.Message{Title: title, Body: body, URL: "/"}, uc.subs, uc.notifier)
+	sendToAll(phone, domain.Message{Title: title, Body: body, URL: "/", Kind: domain.KindTest}, uc.subs, uc.notifier)
 	return len(subList), nil
 }

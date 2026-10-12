@@ -117,6 +117,7 @@
   "inboxPushOff": "Gli avvisi non sono attivi su questo dispositivo: vedrai le nuove notifiche solo aprendo il sito.",
   "inboxPushSettings": "Impostazioni avvisi",
   "inboxRetention": "Una notifica scompare quando scade il viaggio o la richiesta a cui si riferisce (al massimo {days} giorni).",
+  "inboxTestTag": "Notifica di prova",
   "inboxTitle": "Notifiche",
   "inboxUnreadAria": "Notifiche, {count} non lette",
   "inboxUnreadLabel": "Non letta",

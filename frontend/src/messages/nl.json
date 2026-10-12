@@ -117,6 +117,7 @@
   "inboxPushOff": "Meldingen staan niet aan op dit apparaat: je ziet nieuwe meldingen alleen als je de site opent.",
   "inboxPushSettings": "Meldingsinstellingen",
   "inboxRetention": "Een melding verdwijnt wanneer de rit of het verzoek waar ze over gaat verloopt (na hooguit {days} dagen).",
+  "inboxTestTag": "Testmelding",
   "inboxTitle": "Meldingen",
   "inboxUnreadAria": "Meldingen, {count} ongelezen",
   "inboxUnreadLabel": "Ongelezen",

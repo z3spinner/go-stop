@@ -117,6 +117,7 @@
   "inboxPushOff": "Auf diesem Gerät sind keine Benachrichtigungen aktiviert: Neue Benachrichtigungen siehst du nur, wenn du die Seite öffnest.",
   "inboxPushSettings": "Benachrichtigungseinstellungen",
   "inboxRetention": "Eine Benachrichtigung verschwindet, wenn die betreffende Fahrt oder Anfrage abläuft (spätestens nach {days} Tagen).",
+  "inboxTestTag": "Testbenachrichtigung",
   "inboxTitle": "Benachrichtigungen",
   "inboxUnreadAria": "Benachrichtigungen, {count} ungelesen",
   "inboxUnreadLabel": "Ungelesen",

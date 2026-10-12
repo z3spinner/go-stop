@@ -136,6 +136,7 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/requests/:id/offers", reqH.ListContactOffers)
 	r.GET("/api/destinations", destH.List)
 	r.POST("/api/subscriptions", subH.Subscribe)
+	r.POST("/api/subscriptions/test", subH.TestPush)
 	r.DELETE("/api/subscriptions/:phone", subH.Unsubscribe)
 	r.GET("/api/stats", statsH.Get)
 	r.GET("/api/inbox", inboxH.List)

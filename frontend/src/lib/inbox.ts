@@ -85,10 +85,15 @@ const ICONS: Record<string, string> = {
 	interest_accepted: '✅',
 	driver_shared: '🚗',
 	contact_offered: '🤝',
-	feedback_reminder: '💬'
+	feedback_reminder: '💬',
+	test: '🔔'
 };
 
-/** Localized headline for an item; falls back to the server text for unknown kinds. */
+/**
+ * Localized headline for an item; falls back to the server text for unknown
+ * kinds. The test notification's server text is already in the user's language
+ * (the quote of the day it was sent with), so it uses that too.
+ */
 export function inboxTitle(item: InboxItem): string {
 	if (item.kind === 'feedback_reminder') return m.inboxKindFeedbackReminder();
 	const fn = TITLES[item.kind];
