@@ -126,6 +126,12 @@ export const api = {
 			unwrap<null>(gen.markInboxRead({ ids }, phoneHeader(phone))),
 		/** Mark every item read. */
 		markAllRead: (phone: string) =>
-			unwrap<null>(gen.markInboxRead({ all: true }, phoneHeader(phone)))
+			unwrap<null>(gen.markInboxRead({ all: true }, phoneHeader(phone))),
+		/** Delete one item (idempotent). */
+		remove: (phone: string, id: string) =>
+			unwrap<null>(gen.deleteInboxItem(id, phoneHeader(phone))),
+		/** Undo a recent delete; rejects with ApiError 404 when it's too late. */
+		restore: (phone: string, id: string) =>
+			unwrap<null>(gen.restoreInboxItem(id, phoneHeader(phone)))
 	}
 };

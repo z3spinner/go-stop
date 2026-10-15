@@ -1172,3 +1172,62 @@ test('home requested-rides feed shows share-contact button and UI flow works', a
   // The share-contact button should be visible on request cards.
   await expect(page.locator('.btn-share-contact').first()).toBeVisible();
 });
+
+// ── Inbox: delete a notification (swipe or button) and undo ───────────────────
+test('notifications page: swipe deletes, undo restores, delete button works', async ({ page }) => {
+  await setProfile(page, SEARCHER);
+  await page.goto(BASE);
+
+  // Two contact offers on two of SEARCHER's requests → two inbox items.
+  const origin = `InboxDel${Date.now()}`;
+  await page.evaluate(async ({ s, d, o }) => {
+    for (const dest of ['Crest', 'Die']) {
+      const r = await fetch('/api/requests', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ searcher_name: s.name, phone: s.phone, origin: o, destination: dest }),
+      });
+      const req = await r.json();
+      await fetch(`/api/requests/${req.ID}/offer-contact`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: d.phone, name: d.name }),
+      });
+    }
+  }, { s: SEARCHER, d: DRIVER, o: origin });
+
+  await page.goto(`${BASE}/notifications`);
+  const items = page.locator('.inbox-item', { hasText: origin });
+  await expect(items).toHaveCount(2);
+
+  // Swipe the first one to the left with the mouse (pointer events).
+  const box = await items.first().boundingBox();
+  if (!box) throw new Error('no bounding box');
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + box.width * 0.85, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.6, y, { steps: 4 });
+  await page.mouse.move(box.x + box.width * 0.1, y, { steps: 6 });
+  await page.mouse.up();
+  await expect(items).toHaveCount(1);
+  await expect(page.url()).toContain('/notifications'); // the swipe didn't open the link
+  await expect(page.locator('.inbox-undo')).toBeVisible();
+
+  // Undo brings it back.
+  await page.locator('.btn-inbox-undo').click();
+  await expect(items).toHaveCount(2);
+
+  // Delete with the hover button.
+  const row = page.locator('.swipe-front', { hasText: origin }).first();
+  await row.hover();
+  await row.locator('.swipe-delete-btn').click();
+  await expect(items).toHaveCount(1);
+
+  // The deletion is stored on the server.
+  await page.reload();
+  await expect(page.locator('.inbox-item', { hasText: origin })).toHaveCount(1);
+  const left = await page.evaluate(async ({ s, o }) => {
+    const r = await fetch('/api/inbox', { headers: { 'X-Phone': s.phone } });
+    const data = await r.json();
+    return data.items.filter((i) => i.origin === o).length;
+  }, { s: SEARCHER, o: origin });
+  expect(left).toBe(1);
+});

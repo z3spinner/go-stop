@@ -4,7 +4,7 @@
 -->
 
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { userPhone } from '$lib/stores';
 	import { pushState } from '$lib/pwa';
@@ -19,8 +19,12 @@
 		inboxTitle,
 		isPastTrip,
 		markInboxItemsRead,
-		refreshInbox
+		refreshInbox,
+		deleteInboxItem,
+		restoreInboxItem
 	} from '$lib/inbox';
+	import SwipeToDelete from '$lib/components/notifications/SwipeToDelete.svelte';
+	import type { InboxItem } from '$lib/types';
 	import { formatTime } from '$lib/utils';
 	import { m } from '$lib/paraglide/messages';
 
@@ -37,6 +41,29 @@
 	let shownUnread = $state<Set<string>>(new Set());
 	let days = $derived($config.notificationRetentionDays || DEFAULT_RETENTION_DAYS);
 	let pushOn = $derived($pushState === 'subscribed');
+
+	// "Notification deleted · Undo" bar for the most recent deletion.
+	const UNDO_MS = 6000;
+	let undo = $state<{ id: string; phone: string } | null>(null);
+	let undoTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function remove(item: InboxItem) {
+		const p = phone;
+		deleteInboxItem(p, item);
+		clearTimeout(undoTimer);
+		undo = { id: item.id, phone: p };
+		undoTimer = setTimeout(() => (undo = null), UNDO_MS);
+	}
+
+	async function undoDelete() {
+		if (!undo) return;
+		const { id, phone: p } = undo;
+		clearTimeout(undoTimer);
+		undo = null;
+		await restoreInboxItem(p, id);
+	}
+
+	onDestroy(() => clearTimeout(undoTimer));
 
 	function settings() {
 		const s = get(pushState);
@@ -85,21 +112,42 @@
 		{:else}
 			{#each items as item (item.id)}
 				{@const unread = !item.read || shownUnread.has(item.id)}
-				<a class="inbox-item card rounded border p-3" class:inbox-unread={unread} href={item.url || '/'} data-kind={item.kind}>
-					<span class="inbox-icon" aria-hidden="true">{inboxIcon(item)}</span>
-					<span class="flex min-w-0 flex-col gap-0.5">
-						<span class="inbox-title font-medium">{#if unread}<span class="sr-only">{m.inboxUnreadLabel()}: </span>{/if}{inboxTitle(item)}</span>
-						<span class="inbox-route text-sm text-gray-700" translate="no">{inboxRoute(item)}</span>
-						<span class="inbox-meta flex flex-wrap items-center gap-2 text-xs text-gray-500">
-							<span>{formatTime(item.created_at)}</span>
-							{#if item.kind === 'test'}<span class="tag inbox-test-tag">{m.inboxTestTag()}</span>{/if}
-							{#if isPastTrip(item)}<span class="tag">{m.inboxPast()}</span>{/if}
+				<SwipeToDelete ondelete={() => remove(item)} deleteLabel={m.inboxDeleteAria()} actionLabel={m.inboxDelete()}>
+					<a class="inbox-item card rounded border p-3" class:inbox-unread={unread} href={item.url || '/'} data-kind={item.kind} data-id={item.id} draggable="false">
+						<span class="inbox-icon" aria-hidden="true">{inboxIcon(item)}</span>
+						<span class="flex min-w-0 flex-col gap-0.5">
+							<span class="inbox-title font-medium">{#if unread}<span class="sr-only">{m.inboxUnreadLabel()}: </span>{/if}{inboxTitle(item)}</span>
+							<span class="inbox-route text-sm text-gray-700" translate="no">{inboxRoute(item)}</span>
+							<span class="inbox-meta flex flex-wrap items-center gap-2 text-xs text-gray-500">
+								<span>{formatTime(item.created_at)}</span>
+								{#if item.kind === 'test'}<span class="tag inbox-test-tag">{m.inboxTestTag()}</span>{/if}
+								{#if isPastTrip(item)}<span class="tag">{m.inboxPast()}</span>{/if}
+							</span>
 						</span>
-					</span>
-				</a>
+					</a>
+				</SwipeToDelete>
 			{/each}
 		{/if}
 	</div>
 
+	{#if items.length > 0}
+		<p class="inbox-swipe-hint mt-3 text-xs text-gray-500">{m.inboxSwipeHint()}</p>
+	{/if}
 	<p class="inbox-retention mt-4 text-xs text-gray-500">{m.inboxRetention({ days })}</p>
 {/if}
+
+{#if undo}
+	<div class="inbox-undo fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg bg-gray-900 px-4 py-3 text-sm text-white shadow-lg" style="bottom: calc(1rem + env(safe-area-inset-bottom, 0px))" role="status">
+		<span>{m.inboxDeleted()}</span>
+		<button type="button" class="btn-inbox-undo font-semibold text-green-300 underline" onclick={undoDelete}>{m.inboxUndo()}</button>
+	</div>
+{/if}
+
+<style>
+	/* The swipe hint is for touch screens; mouse users get the delete button. */
+	@media (hover: hover) {
+		.inbox-swipe-hint {
+			display: none;
+		}
+	}
+</style>
