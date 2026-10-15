@@ -4,6 +4,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -14,10 +15,12 @@ import (
 type InboxHandler struct {
 	getInbox *usecase.GetInbox
 	markRead *usecase.MarkInboxRead
+	remove   *usecase.DeleteInboxItem
+	restore  *usecase.RestoreInboxItem
 }
 
-func NewInboxHandler(getInbox *usecase.GetInbox, markRead *usecase.MarkInboxRead) *InboxHandler {
-	return &InboxHandler{getInbox: getInbox, markRead: markRead}
+func NewInboxHandler(getInbox *usecase.GetInbox, markRead *usecase.MarkInboxRead, remove *usecase.DeleteInboxItem, restore *usecase.RestoreInboxItem) *InboxHandler {
+	return &InboxHandler{getInbox: getInbox, markRead: markRead, remove: remove, restore: restore}
 }
 
 // List returns the caller's in-app inbox (newest first) and unread count.
@@ -91,4 +94,53 @@ func (h *InboxHandler) MarkRead(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// Delete removes one notification from the caller's inbox. Idempotent: an
+// unknown, already-deleted or someone else's id also returns 204.
+// @ID       deleteInboxItem
+// @Tags     notifications
+// @Param    id       path    string  true  "Inbox item ID"
+// @Param    X-Phone  header  string  true  "Recipient phone"
+// @Success  204
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /inbox/{id} [delete]
+func (h *InboxHandler) Delete(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	if err := h.remove.Execute(phone, c.Param("id")); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// Restore undoes a recent Delete (within 10 minutes).
+// @ID       restoreInboxItem
+// @Tags     notifications
+// @Param    id       path    string  true  "Inbox item ID"
+// @Param    X-Phone  header  string  true  "Recipient phone"
+// @Success  204
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /inbox/{id}/restore [post]
+func (h *InboxHandler) Restore(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	switch err := h.restore.Execute(phone, c.Param("id")); {
+	case err == nil:
+		c.Status(http.StatusNoContent)
+	case errors.Is(err, usecase.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "nothing to restore"})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 }

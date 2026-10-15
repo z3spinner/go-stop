@@ -250,3 +250,101 @@ func TestInboxRepo_DeleteForGonePosts(t *testing.T) {
 		t.Errorf("remaining = %v, want %v", left, want)
 	}
 }
+
+// A deleted (dismissed) item disappears from the list and the badge, a repeat
+// of the same event doesn't bring it back, undo works only inside the window,
+// and the content is blanked once the window has passed.
+func TestInboxRepo_DismissRestoreScrub(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewInboxRepo(testPool)
+	dep := time.Now().Add(24 * time.Hour).UTC().Truncate(time.Second)
+	match := domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, ContactName: "Alice",
+		Origin: "Saillans", Destination: "Crest", DepartureAt: dep, URL: "/rides/r1", DedupKey: "ride_match:r1"}
+	if err := repo.Add(match); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindInterestReceived, DedupKey: "other"}); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := repo.ListByPhone("0611", 10)
+	var id string
+	for _, it := range items {
+		if it.DedupKey == "ride_match:r1" {
+			id = it.ID
+		}
+	}
+
+	// Another phone can't delete it; malformed ids are ignored.
+	if err := repo.Dismiss("0622", id); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Dismiss("0611", "not-a-uuid"); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListByPhone("0611", 10); len(got) != 2 {
+		t.Fatalf("other phone / malformed id must not delete; got %d items", len(got))
+	}
+
+	if err := repo.Dismiss("0611", id); err != nil {
+		t.Fatalf("Dismiss: %v", err)
+	}
+	if got, _ := repo.ListByPhone("0611", 10); len(got) != 1 || got[0].DedupKey != "other" {
+		t.Errorf("dismissed item must be hidden, got %+v", got)
+	}
+	if n, _ := repo.CountUnread("0611", 10); n != 1 {
+		t.Errorf("dismissed item must not count as unread; got %d", n)
+	}
+	// A push retry of the same match must not resurrect it.
+	if err := repo.Add(match); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListByPhone("0611", 10); len(got) != 1 {
+		t.Errorf("retry resurrected a deleted item: %+v", got)
+	}
+
+	// Undo: not by another phone, not outside the window, yes inside it.
+	if ok, _ := repo.Restore("0622", id, time.Now().Add(-10*time.Minute)); ok {
+		t.Error("another phone must not restore")
+	}
+	if ok, _ := repo.Restore("0611", id, time.Now().Add(time.Minute)); ok {
+		t.Error("restore must respect the window")
+	}
+	if ok, err := repo.Restore("0611", id, time.Now().Add(-10*time.Minute)); err != nil || !ok {
+		t.Fatalf("Restore: ok=%v err=%v", ok, err)
+	}
+	got, _ := repo.ListByPhone("0611", 10)
+	if len(got) != 2 {
+		t.Fatalf("restored item should be back, got %d", len(got))
+	}
+	if ok, _ := repo.Restore("0611", id, time.Now().Add(-10*time.Minute)); ok {
+		t.Error("restoring a live item must report nothing restored")
+	}
+
+	// Delete again, let the undo window lapse, scrub.
+	if err := repo.Dismiss("0611", id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := testPool.Exec(context.Background(), `UPDATE notifications SET dismissed_at = NOW() - interval '1 hour' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := repo.ScrubDismissed(time.Now().Add(-10 * time.Minute)); err != nil || n != 1 {
+		t.Fatalf("ScrubDismissed: n=%d err=%v", n, err)
+	}
+	var name, origin, title, url, key string
+	var departure *time.Time
+	if err := testPool.QueryRow(context.Background(),
+		`SELECT contact_name, origin, title, url, departure_at, dedup_key FROM notifications WHERE id = $1`, id).
+		Scan(&name, &origin, &title, &url, &departure, &key); err != nil {
+		t.Fatal(err)
+	}
+	if name != "" || origin != "" || title != "" || url != "/" || departure != nil || key != "ride_match:r1" {
+		t.Errorf("scrub should blank content but keep the tombstone: name=%q origin=%q title=%q url=%q dep=%v key=%q",
+			name, origin, title, url, departure, key)
+	}
+	if ok, _ := repo.Restore("0611", id, time.Now().Add(-10*time.Minute)); ok {
+		t.Error("a scrubbed item must not be restorable")
+	}
+	if n, _ := repo.ScrubDismissed(time.Now().Add(-10 * time.Minute)); n != 0 {
+		t.Errorf("scrub should be idempotent, got %d", n)
+	}
+}

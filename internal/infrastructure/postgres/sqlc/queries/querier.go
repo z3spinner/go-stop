@@ -47,6 +47,9 @@ type Querier interface {
 	DeleteSubscription(ctx context.Context, phone string) error
 	// Removes a specific device subscription (e.g. when push returns 410 Gone).
 	DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error
+	// User deleted the item from their inbox (see migration 017). Also marks it
+	// read so it never counts towards the badge.
+	DismissNotification(ctx context.Context, arg DismissNotificationParams) error
 	// Returns rows affected: 1 when a new ride↔request pair is inserted, 0 when it
 	// already existed. Callers use this to notify only newly-matched searchers.
 	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) (int64, error)
@@ -121,6 +124,7 @@ type Querier interface {
 	// Returns all interests made by a searcher, joined with ride info for display.
 	// Includes rides that may have expired (so the searcher can see their full history).
 	ListInterestsBySearcher(ctx context.Context, searcherPhone string) ([]ListInterestsBySearcherRow, error)
+	// Dismissed (user-deleted) items are hidden.
 	ListNotificationsByPhone(ctx context.Context, arg ListNotificationsByPhoneParams) ([]Notification, error)
 	// Returns pending notifications for a searcher (for UI display).
 	ListNotificationsForSearcher(ctx context.Context, searcherPhone string) ([]NotificationQueue, error)
@@ -134,6 +138,11 @@ type Querier interface {
 	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSentByRideAndRequest(ctx context.Context, arg MarkNotificationSentByRideAndRequestParams) error
 	MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) error
+	// Undo of a recent dismissal; only while its content hasn't been blanked yet.
+	RestoreNotification(ctx context.Context, arg RestoreNotificationParams) (int64, error)
+	// Blanks the content of items dismissed before the cutoff, keeping only what
+	// the tombstone needs (phone, kind, dedup key, post ids, timestamps).
+	ScrubDismissedNotifications(ctx context.Context, dismissedAt pgtype.Timestamptz) (int64, error)
 	SearchRides(ctx context.Context, arg SearchRidesParams) ([]Ride, error)
 	SearchRidesByDate(ctx context.Context, arg SearchRidesByDateParams) ([]Ride, error)
 	// Returns rides on the given date whose departure window (±flexibility) overlaps

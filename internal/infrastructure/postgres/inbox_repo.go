@@ -81,6 +81,31 @@ func (r *InboxRepo) MarkRead(phone string, ids []string) error {
 	})
 }
 
+func (r *InboxRepo) Dismiss(phone, id string) error {
+	u := uuidFrom(id)
+	if !u.Valid {
+		return nil
+	}
+	return r.q.DismissNotification(context.Background(), queries.DismissNotificationParams{Phone: phone, ID: u})
+}
+
+func (r *InboxRepo) Restore(phone, id string, dismissedAfter time.Time) (bool, error) {
+	u := uuidFrom(id)
+	if !u.Valid {
+		return false, nil
+	}
+	n, err := r.q.RestoreNotification(context.Background(), queries.RestoreNotificationParams{
+		Phone:          phone,
+		ID:             u,
+		DismissedAfter: tsFrom(dismissedAfter),
+	})
+	return n > 0, err
+}
+
+func (r *InboxRepo) ScrubDismissed(cutoff time.Time) (int64, error) {
+	return r.q.ScrubDismissedNotifications(context.Background(), tsFrom(cutoff))
+}
+
 func (r *InboxRepo) DeleteForRide(rideID string) error {
 	u := uuidFrom(rideID)
 	if !u.Valid {

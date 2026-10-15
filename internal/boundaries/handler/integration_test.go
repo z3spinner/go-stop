@@ -111,7 +111,7 @@ func setupRouter() *gin.Engine {
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
 
-	inboxH := handler.NewInboxHandler(usecase.NewGetInbox(inboxRepo), usecase.NewMarkInboxRead(inboxRepo))
+	inboxH := handler.NewInboxHandler(usecase.NewGetInbox(inboxRepo), usecase.NewMarkInboxRead(inboxRepo), usecase.NewDeleteInboxItem(inboxRepo), usecase.NewRestoreInboxItem(inboxRepo))
 
 	r := gin.New()
 	r.POST("/api/rides", rideH.Post)
@@ -141,6 +141,8 @@ func setupRouter() *gin.Engine {
 	r.GET("/api/stats", statsH.Get)
 	r.GET("/api/inbox", inboxH.List)
 	r.POST("/api/inbox/read", inboxH.MarkRead)
+	r.DELETE("/api/inbox/:id", inboxH.Delete)
+	r.POST("/api/inbox/:id/restore", inboxH.Restore)
 	return r
 }
 

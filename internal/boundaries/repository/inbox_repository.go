@@ -29,6 +29,20 @@ type InboxRepository interface {
 	// MarkAllRead marks every item of phone as read.
 	MarkAllRead(phone string) error
 
+	// Dismiss hides one of phone's items from the inbox (the user deleted it)
+	// and marks it read. Unknown ids, other phones' ids and already-dismissed
+	// items are ignored. The row is kept as a tombstone so a repeat of the same
+	// event (same dedup key) doesn't bring it back.
+	Dismiss(phone, id string) error
+
+	// Restore un-dismisses phone's item if it was dismissed after
+	// dismissedAfter (the undo window). Reports whether anything was restored.
+	Restore(phone, id string, dismissedAfter time.Time) (bool, error)
+
+	// ScrubDismissed blanks the content of items dismissed before cutoff and
+	// returns how many were scrubbed.
+	ScrubDismissed(cutoff time.Time) (int64, error)
+
 	// DeleteForRide / DeleteForRequest remove every item about that post, in
 	// anyone's inbox (used when the owner deletes the post).
 	DeleteForRide(rideID string) error

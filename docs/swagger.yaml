@@ -473,6 +473,64 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:
       - notifications
+  /inbox/{id}:
+    delete:
+      operationId: deleteInboxItem
+      parameters:
+      - description: Inbox item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Recipient phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
+  /inbox/{id}/restore:
+    post:
+      operationId: restoreInboxItem
+      parameters:
+      - description: Inbox item ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Recipient phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
   /inbox/read:
     post:
       consumes:

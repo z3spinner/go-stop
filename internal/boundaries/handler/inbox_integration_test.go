@@ -240,3 +240,70 @@ func TestInbox_TestPushLandsInInbox(t *testing.T) {
 		t.Errorf("unexpected test item: %+v", it)
 	}
 }
+
+func deleteWithPhone(r *gin.Engine, path, phone string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodDelete, path, nil)
+	req.Header.Set("X-Phone", phone)
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestInbox_DeleteAndUndo(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "0622000099", "origin": "Saillans", "destination": "Crest",
+	})
+	var created map[string]interface{}
+	_ = json.NewDecoder(w.Body).Decode(&created)
+	postJSON(r, "/api/requests/"+created["ID"].(string)+"/offer-contact", map[string]interface{}{"phone": "0611000001", "name": "Alice"})
+	inbox := getInbox(t, r, "0622000099")
+	if len(inbox.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(inbox.Items))
+	}
+	id := inbox.Items[0].ID
+
+	// Auth required; someone else's delete is a no-op.
+	if w := deleteWithPhone(r, "/api/inbox/"+id, ""); w.Code != http.StatusUnauthorized {
+		t.Errorf("DELETE without X-Phone: expected 401, got %d", w.Code)
+	}
+	if w := deleteWithPhone(r, "/api/inbox/"+id, "0633333333"); w.Code != http.StatusNoContent {
+		t.Errorf("DELETE by another phone: expected 204 (no-op), got %d", w.Code)
+	}
+	if got := getInbox(t, r, "0622000099"); len(got.Items) != 1 {
+		t.Fatalf("another phone must not delete the item")
+	}
+
+	// Owner deletes it (twice: idempotent).
+	for i := 0; i < 2; i++ {
+		if w := deleteWithPhone(r, "/api/inbox/"+id, "06 22 00 00 99"); w.Code != http.StatusNoContent {
+			t.Fatalf("DELETE #%d expected 204, got %d: %s", i+1, w.Code, w.Body.String())
+		}
+	}
+	if got := getInbox(t, r, "0622000099"); len(got.Items) != 0 || got.Unread != 0 {
+		t.Fatalf("expected empty inbox after delete, got %d items / %d unread", len(got.Items), got.Unread)
+	}
+
+	// A repeat offer (same event) doesn't bring it back.
+	postJSON(r, "/api/requests/"+created["ID"].(string)+"/offer-contact", map[string]interface{}{"phone": "0611000001", "name": "Alice"})
+	if got := getInbox(t, r, "0622000099"); len(got.Items) != 0 {
+		t.Fatalf("a repeat of a deleted notification must stay deleted, got %d", len(got.Items))
+	}
+
+	// Undo.
+	if w := postWithPhone(r, "/api/inbox/"+id+"/restore", "0633333333", nil); w.Code != http.StatusNotFound {
+		t.Errorf("restore by another phone: expected 404, got %d", w.Code)
+	}
+	if w := postWithPhone(r, "/api/inbox/"+id+"/restore", "0622000099", nil); w.Code != http.StatusNoContent {
+		t.Fatalf("restore expected 204, got %d: %s", w.Code, w.Body.String())
+	}
+	got := getInbox(t, r, "0622000099")
+	if len(got.Items) != 1 || got.Items[0].ID != id || got.Unread != 0 {
+		t.Errorf("expected the item back (read), got %+v / unread %d", got.Items, got.Unread)
+	}
+	if w := postWithPhone(r, "/api/inbox/"+id+"/restore", "0622000099", nil); w.Code != http.StatusNotFound {
+		t.Errorf("restoring a live item: expected 404, got %d", w.Code)
+	}
+}
