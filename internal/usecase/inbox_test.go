@@ -5,6 +5,7 @@ package usecase_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -58,14 +59,36 @@ type mockInboxRepo struct {
 	restoreAfter     time.Time
 	restoreOK        bool
 	scrubCutoff      time.Time
+	ackedKeys        []string
+	due              []domain.InboxItem
+	dueCalled        bool
+	dueKinds         []string
+	dueCutoff        time.Time
+	dueLimit         int
+	reminded         []string
 	deleteForRideErr error
 }
 
-func (m *mockInboxRepo) Add(item domain.InboxItem) error {
+func (m *mockInboxRepo) Add(item domain.InboxItem) (string, error) {
 	if m.addErr != nil {
-		return m.addErr
+		return "", m.addErr
 	}
 	m.added = append(m.added, item)
+	return fmt.Sprintf("id-%d", len(m.added)), nil
+}
+func (m *mockInboxRepo) MarkReadByDedupKeys(phone string, keys []string) error {
+	for _, k := range keys {
+		m.ackedKeys = append(m.ackedKeys, phone+"/"+k)
+	}
+	return nil
+}
+func (m *mockInboxRepo) FindRemindersDue(kinds []string, cutoff time.Time, limit int) ([]domain.InboxItem, error) {
+	m.dueKinds, m.dueCutoff, m.dueLimit = kinds, cutoff, limit
+	m.dueCalled = true
+	return m.due, nil
+}
+func (m *mockInboxRepo) MarkReminded(id string) error {
+	m.reminded = append(m.reminded, id)
 	return nil
 }
 func (m *mockInboxRepo) ListByPhone(phone string, limit int) ([]domain.InboxItem, error) {

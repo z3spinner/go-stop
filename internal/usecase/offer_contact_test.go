@@ -189,7 +189,7 @@ func TestGetRequestContactOffers_ReturnsOffersForOwner(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewGetRequestContactOffers(reqRepo, offers)
+	uc := usecase.NewGetRequestContactOffers(reqRepo, offers, &mockNotifier{})
 	result, err := uc.Execute("req-1", "555-owner")
 
 	if err != nil {
@@ -208,7 +208,7 @@ func TestGetRequestContactOffers_RejectsNonOwner(t *testing.T) {
 	}
 	offers := &mockContactOfferRepo{}
 
-	uc := usecase.NewGetRequestContactOffers(reqRepo, offers)
+	uc := usecase.NewGetRequestContactOffers(reqRepo, offers, &mockNotifier{})
 	_, err := uc.Execute("req-1", "555-other")
 
 	if !errors.Is(err, usecase.ErrUnauthorized) {
@@ -220,7 +220,7 @@ func TestGetRequestContactOffers_ReturnsErrorIfRequestNotFound(t *testing.T) {
 	reqRepo := &mockRequestRepoByID{byID: map[string]domain.Request{}}
 	offers := &mockContactOfferRepo{}
 
-	uc := usecase.NewGetRequestContactOffers(reqRepo, offers)
+	uc := usecase.NewGetRequestContactOffers(reqRepo, offers, &mockNotifier{})
 	_, err := uc.Execute("nonexistent", "555-owner")
 
 	if !errors.Is(err, usecase.ErrNotFound) {

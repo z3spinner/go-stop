@@ -7,7 +7,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/z3spinner/go-stop/internal/boundaries/notification"
 	"github.com/z3spinner/go-stop/internal/boundaries/repository"
+	"github.com/z3spinner/go-stop/internal/domain"
 )
 
 type ContactInfo struct {
@@ -22,16 +24,31 @@ type ContactInfo struct {
 type GetInterestContact struct {
 	interests repository.InterestRepository
 	rides     repository.RideRepository
+	notifier  notification.Notifier
 }
 
 func NewGetInterestContact(
 	interests repository.InterestRepository,
 	rides repository.RideRepository,
+	notifier notification.Notifier,
 ) *GetInterestContact {
-	return &GetInterestContact{interests: interests, rides: rides}
+	return &GetInterestContact{interests: interests, rides: rides, notifier: notifier}
 }
 
+// Execute returns the other party's contact. When the searcher opens the
+// driver's contact, the notifications that announced it count as read (no
+// more reminders).
 func (uc *GetInterestContact) Execute(interestID, requesterPhone string) (ContactInfo, error) {
+	info, err := uc.contact(interestID, requesterPhone)
+	if err == nil && info.Role == "driver" {
+		uc.notifier.Acknowledge(requesterPhone,
+			domain.InboxKey(domain.KindInterestAccepted, interestID),
+			domain.InboxKey(domain.KindDriverShared, interestID))
+	}
+	return info, err
+}
+
+func (uc *GetInterestContact) contact(interestID, requesterPhone string) (ContactInfo, error) {
 	interest, err := uc.interests.FindByID(interestID)
 	if err != nil {
 		return ContactInfo{}, err

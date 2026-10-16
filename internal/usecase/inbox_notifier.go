@@ -30,9 +30,9 @@ func NewInboxNotifier(push notification.Pusher, inbox repository.InboxRepository
 // reminder broadcast) are push-only. The other
 // party's phone number (msg.Phone) is deliberately not stored. Best-effort: a
 // storage failure is logged and never blocks the push.
-func (n *InboxNotifier) Record(phone string, msg domain.Message) {
+func (n *InboxNotifier) Record(phone string, msg domain.Message) string {
 	if msg.Kind == "" || phone == "" {
-		return
+		return ""
 	}
 	departure := msg.DepartureAt
 	if departure.Year() == 1970 {
@@ -40,7 +40,7 @@ func (n *InboxNotifier) Record(phone string, msg domain.Message) {
 		// departure; storing it would make the item look like a past trip.
 		departure = time.Time{}
 	}
-	err := n.inbox.Add(domain.InboxItem{
+	id, err := n.inbox.Add(domain.InboxItem{
 		Phone:       phone,
 		Kind:        msg.Kind,
 		ContactName: msg.ContactName,
@@ -56,5 +56,17 @@ func (n *InboxNotifier) Record(phone string, msg domain.Message) {
 	})
 	if err != nil {
 		log.Printf("inbox record error phone=***%s kind=%s: %v", lastN(phone, 3), msg.Kind, err)
+		return ""
+	}
+	return id
+}
+
+// Acknowledge marks phone's items with these dedup keys read. Best-effort.
+func (n *InboxNotifier) Acknowledge(phone string, dedupKeys ...string) {
+	if phone == "" || len(dedupKeys) == 0 {
+		return
+	}
+	if err := n.inbox.MarkReadByDedupKeys(phone, dedupKeys); err != nil {
+		log.Printf("inbox acknowledge error phone=***%s: %v", lastN(phone, 3), err)
 	}
 }

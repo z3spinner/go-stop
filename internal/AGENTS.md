@@ -26,8 +26,10 @@ Ports are **defined in `boundaries`**, not where they're used or implemented:
   `InterestRepository`, `SubscriptionRepository`, `NotificationQueueRepository`,
   `StatRepository`, `DestinationRepository`, `SettingsRepository`).
 - `boundaries/notification/notifier.go` — `Pusher` (`Send` to one device) and
-  `Notifier` (`Pusher` + `Record` into the recipient's in-app inbox). Use cases
-  depend on `Notifier`; `usecase.InboxNotifier` is the production one.
+  `Notifier` (`Pusher` + `Record` into the recipient's in-app inbox, returning
+  the item id, + `Acknowledge` to mark items read by dedup key once the user has
+  acted on them). Use cases depend on `Notifier`; `usecase.InboxNotifier` is the
+  production one.
 
 They are **consumed by `usecase`** (constructor parameters) and **implemented by
 `infrastructure`** (`postgres`, `webpush`). `main.go` is the only place the

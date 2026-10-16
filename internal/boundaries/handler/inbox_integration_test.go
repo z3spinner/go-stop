@@ -307,3 +307,44 @@ func TestInbox_DeleteAndUndo(t *testing.T) {
 		t.Errorf("restoring a live item: expected 404, got %d", w.Code)
 	}
 }
+
+// A contact request stays unread (so it is reminded) until the driver accepts.
+func TestInbox_AcceptingARequestMarksItRead(t *testing.T) {
+	r := setupRouter()
+	truncateAll(t)
+
+	w := postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "0611000001", "origin": "Saillans", "destination": "Crest",
+		"departure_at": "2030-06-01T09:00:00Z", "flexibility": 30,
+	})
+	var ride map[string]interface{}
+	_ = json.NewDecoder(w.Body).Decode(&ride)
+	w = postJSON(r, "/api/rides/"+ride["ID"].(string)+"/interest", map[string]interface{}{"phone": "0622000099", "name": "Bob"})
+	if w.Code/100 != 2 {
+		t.Fatalf("express interest: %d %s", w.Code, w.Body.String())
+	}
+	var interest map[string]interface{}
+	_ = json.NewDecoder(w.Body).Decode(&interest)
+
+	before := getInbox(t, r, "0611000001")
+	if len(before.Items) != 1 || before.Items[0].Kind != "interest_received" || before.Unread != 1 {
+		t.Fatalf("expected one unread contact request for the driver, got %+v / %d", before.Items, before.Unread)
+	}
+	id, _ := interest["id"].(string)
+	if w := postJSON(r, "/api/interests/"+id+"/accept", map[string]interface{}{"phone": "0611000001"}); w.Code/100 != 2 {
+		t.Fatalf("accept: %d %s", w.Code, w.Body.String())
+	}
+	if after := getInbox(t, r, "0611000001"); after.Unread != 0 {
+		t.Errorf("accepting should mark the request read, unread=%d", after.Unread)
+	}
+	// The searcher got "accepted"; opening the contact marks it read.
+	if got := getInbox(t, r, "0622000099"); got.Unread != 1 || got.Items[0].Kind != "interest_accepted" {
+		t.Fatalf("searcher: expected unread interest_accepted, got %+v / %d", got.Items, got.Unread)
+	}
+	if w := getWithPhone(r, "/api/interests/"+id+"/contact", "0622000099"); w.Code != http.StatusOK {
+		t.Fatalf("contact: %d %s", w.Code, w.Body.String())
+	}
+	if got := getInbox(t, r, "0622000099"); got.Unread != 0 {
+		t.Errorf("opening the contact should mark it read, unread=%d", got.Unread)
+	}
+}

@@ -26,7 +26,7 @@ func TestGetInterestContact_DriverGetsSearcherPhone(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewGetInterestContact(interests, rides)
+	uc := usecase.NewGetInterestContact(interests, rides, &mockNotifier{})
 	info, err := uc.Execute("int-1", "555-driver")
 
 	if err != nil {
@@ -52,7 +52,7 @@ func TestGetInterestContact_SearcherGetsDriverPhone(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewGetInterestContact(interests, rides)
+	uc := usecase.NewGetInterestContact(interests, rides, &mockNotifier{})
 	info, err := uc.Execute("int-1", "555-searcher")
 
 	if err != nil {
@@ -78,7 +78,7 @@ func TestGetInterestContact_ReturnsErrorIfPending(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewGetInterestContact(interests, rides)
+	uc := usecase.NewGetInterestContact(interests, rides, &mockNotifier{})
 	_, err := uc.Execute("int-1", "555-driver")
 
 	if err == nil {
@@ -101,7 +101,7 @@ func TestGetInterestContact_RejectsUnauthorizedPhone(t *testing.T) {
 		},
 	}
 
-	uc := usecase.NewGetInterestContact(interests, rides)
+	uc := usecase.NewGetInterestContact(interests, rides, &mockNotifier{})
 	_, err := uc.Execute("int-1", "555-stranger")
 
 	if err == nil {

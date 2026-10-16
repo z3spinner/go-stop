@@ -12,11 +12,13 @@ import (
 
 type Querier interface {
 	AcceptInterest(ctx context.Context, id pgtype.UUID) error
-	// Records one inbox entry. A repeat of the same logical event (same phone and
-	// dedup_key: a push retry, a repeat ping or offer) is ignored, so it neither
-	// duplicates nor resurfaces as unread, and the first recorded details (e.g. a
-	// ride's time before an edit) are kept. Deliberate: one entry per event.
-	AddNotification(ctx context.Context, arg AddNotificationParams) error
+	// Records one inbox entry and returns its id. A repeat of the same logical
+	// event (same phone and dedup_key: a push retry, a repeat ping or offer) keeps
+	// the existing row untouched — it neither duplicates nor resurfaces as unread,
+	// and the first recorded details (e.g. a ride's time before an edit) are kept —
+	// and returns that row's id. (The no-op SET is only there so RETURNING yields
+	// the existing row.) Deliberate: one entry per event.
+	AddNotification(ctx context.Context, arg AddNotificationParams) (pgtype.UUID, error)
 	ClaimRideFeedback(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Returns interest counts for a set of ride IDs.
 	CountInterestsByRides(ctx context.Context, dollar_1 []pgtype.UUID) ([]CountInterestsByRidesRow, error)
@@ -60,6 +62,10 @@ type Querier interface {
 	EnqueueStartedRides(ctx context.Context, windowStartAfter pgtype.Timestamptz) error
 	// Tasks past their send time and still retry-eligible.
 	FindDueFeedback(ctx context.Context, arg FindDueFeedbackParams) ([]FeedbackQueue, error)
+	// Unread, not deleted items of the given kinds whose last push (the original
+	// one, or the last reminder) is older than the cutoff. Items about an expired
+	// or deleted post are already gone (see DeleteInboxForGonePosts).
+	FindNotificationRemindersDue(ctx context.Context, arg FindNotificationRemindersDueParams) ([]Notification, error)
 	// Returns entries due for (re-)notification.
 	// Excludes entries where the searcher has already expressed interest.
 	FindPendingNotifications(ctx context.Context, arg FindPendingNotificationsParams) ([]NotificationQueue, error)
@@ -135,9 +141,13 @@ type Querier interface {
 	ListSubscriptionsByPhone(ctx context.Context, phone string) ([]Subscription, error)
 	MarkAllNotificationsRead(ctx context.Context, phone string) error
 	MarkFeedbackSent(ctx context.Context, id pgtype.UUID) error
+	MarkNotificationReminded(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSentByRideAndRequest(ctx context.Context, arg MarkNotificationSentByRideAndRequestParams) error
 	MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) error
+	// The user acted on the thing these notifications are about (accepted a
+	// request, opened a shared contact, looked at offers), so they count as read.
+	MarkNotificationsReadByDedupKeys(ctx context.Context, arg MarkNotificationsReadByDedupKeysParams) error
 	// Undo of a recent dismissal; only while its content hasn't been blanked yet.
 	RestoreNotification(ctx context.Context, arg RestoreNotificationParams) (int64, error)
 	// Blanks the content of items dismissed before the cutoff, keeping only what

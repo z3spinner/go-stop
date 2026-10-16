@@ -19,8 +19,8 @@ func NewInboxRepo(pool *pgxpool.Pool) *InboxRepo {
 	return &InboxRepo{q: queries.New(pool)}
 }
 
-func (r *InboxRepo) Add(item domain.InboxItem) error {
-	return r.q.AddNotification(context.Background(), queries.AddNotificationParams{
+func (r *InboxRepo) Add(item domain.InboxItem) (string, error) {
+	id, err := r.q.AddNotification(context.Background(), queries.AddNotificationParams{
 		Phone:       item.Phone,
 		Kind:        item.Kind,
 		ContactName: item.ContactName,
@@ -34,6 +34,44 @@ func (r *InboxRepo) Add(item domain.InboxItem) error {
 		RequestID:   uuidFrom(item.RequestID),
 		DedupKey:    pgtype.Text{String: item.DedupKey, Valid: item.DedupKey != ""},
 	})
+	if err != nil {
+		return "", err
+	}
+	return uuidTo(id), nil
+}
+
+func (r *InboxRepo) MarkReadByDedupKeys(phone string, keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	return r.q.MarkNotificationsReadByDedupKeys(context.Background(), queries.MarkNotificationsReadByDedupKeysParams{
+		Phone: phone,
+		Keys:  keys,
+	})
+}
+
+func (r *InboxRepo) FindRemindersDue(kinds []string, cutoff time.Time, limit int) ([]domain.InboxItem, error) {
+	rows, err := r.q.FindNotificationRemindersDue(context.Background(), queries.FindNotificationRemindersDueParams{
+		Kinds:    kinds,
+		Cutoff:   tsFrom(cutoff),
+		MaxItems: int32(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.InboxItem, len(rows))
+	for i, row := range rows {
+		out[i] = inboxItemFromRow(row)
+	}
+	return out, nil
+}
+
+func (r *InboxRepo) MarkReminded(id string) error {
+	u := uuidFrom(id)
+	if !u.Valid {
+		return nil
+	}
+	return r.q.MarkNotificationReminded(context.Background(), u)
 }
 
 func (r *InboxRepo) ListByPhone(phone string, limit int) ([]domain.InboxItem, error) {

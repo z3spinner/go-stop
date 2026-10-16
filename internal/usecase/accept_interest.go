@@ -49,6 +49,9 @@ func (uc *AcceptInterest) Execute(interestID, driverPhone string) (searcherPhone
 	// A connection is "made" only when a still-pending interest is accepted; a
 	// driver_shared interest already counted when the driver pinged the searcher.
 	connected = interest.Status == "pending"
+	// The driver has answered the request: its notification counts as read, so
+	// they stop getting reminders about it.
+	uc.notifier.Acknowledge(driverPhone, domain.InboxKey(domain.KindInterestReceived, interestID))
 	// Notify searcher on all their devices (best-effort)
 	sendToAll(interest.SearcherPhone, domain.Message{
 		Title:       "Le conducteur accepte le contact",

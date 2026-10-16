@@ -18,5 +18,11 @@ type Pusher interface {
 // get the message in the app.
 type Notifier interface {
 	Pusher
-	Record(phone string, message domain.Message)
+	// Record keeps a copy of message in phone's inbox and returns the inbox
+	// item's id ("" when the message isn't kept: no Kind, or storage failed).
+	Record(phone string, message domain.Message) string
+	// Acknowledge marks phone's inbox items with these dedup keys as read: the
+	// user has acted on what they are about (see domain.InboxKey), so reminders
+	// stop.
+	Acknowledge(phone string, dedupKeys ...string)
 }

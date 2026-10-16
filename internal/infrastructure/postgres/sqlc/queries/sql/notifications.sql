@@ -1,19 +1,22 @@
--- name: AddNotification :exec
--- Records one inbox entry. A repeat of the same logical event (same phone and
--- dedup_key: a push retry, a repeat ping or offer) is ignored, so it neither
--- duplicates nor resurfaces as unread, and the first recorded details (e.g. a
--- ride's time before an edit) are kept. Deliberate: one entry per event.
+-- name: AddNotification :one
+-- Records one inbox entry and returns its id. A repeat of the same logical
+-- event (same phone and dedup_key: a push retry, a repeat ping or offer) keeps
+-- the existing row untouched — it neither duplicates nor resurfaces as unread,
+-- and the first recorded details (e.g. a ride's time before an edit) are kept —
+-- and returns that row's id. (The no-op SET is only there so RETURNING yields
+-- the existing row.) Deliberate: one entry per event.
 INSERT INTO notifications (phone, kind, contact_name, origin, destination,
                            departure_at, url, title, body, ride_id, request_id,
                            dedup_key)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-ON CONFLICT (phone, dedup_key) DO NOTHING;
+ON CONFLICT (phone, dedup_key) DO UPDATE SET phone = EXCLUDED.phone
+RETURNING id;
 
 -- name: ListNotificationsByPhone :many
 -- Dismissed (user-deleted) items are hidden.
 SELECT id, phone, kind, contact_name, origin, destination, departure_at,
        url, title, body, ride_id, request_id, dedup_key, created_at, read_at,
-       dismissed_at
+       dismissed_at, reminded_at, reminder_count
 FROM notifications
 WHERE phone = $1 AND dismissed_at IS NULL
 ORDER BY created_at DESC
@@ -84,3 +87,27 @@ SET contact_name = '', origin = '', destination = '', title = '', body = '',
 WHERE dismissed_at IS NOT NULL AND dismissed_at < $1
   AND (contact_name <> '' OR origin <> '' OR destination <> '' OR title <> ''
        OR body <> '' OR url <> '/' OR departure_at IS NOT NULL);
+
+-- name: MarkNotificationsReadByDedupKeys :exec
+-- The user acted on the thing these notifications are about (accepted a
+-- request, opened a shared contact, looked at offers), so they count as read.
+UPDATE notifications SET read_at = NOW()
+WHERE phone = $1 AND read_at IS NULL AND dedup_key = ANY(sqlc.arg(keys)::text[]);
+
+-- name: FindNotificationRemindersDue :many
+-- Unread, not deleted items of the given kinds whose last push (the original
+-- one, or the last reminder) is older than the cutoff. Items about an expired
+-- or deleted post are already gone (see DeleteInboxForGonePosts).
+SELECT id, phone, kind, contact_name, origin, destination, departure_at,
+       url, title, body, ride_id, request_id, dedup_key, created_at, read_at,
+       dismissed_at, reminded_at, reminder_count
+FROM notifications
+WHERE read_at IS NULL AND dismissed_at IS NULL
+  AND kind = ANY(sqlc.arg(kinds)::text[])
+  AND COALESCE(reminded_at, created_at) <= sqlc.arg(cutoff)::timestamptz
+ORDER BY COALESCE(reminded_at, created_at)
+LIMIT sqlc.arg(max_items)::int;
+
+-- name: MarkNotificationReminded :exec
+UPDATE notifications SET reminded_at = NOW(), reminder_count = reminder_count + 1
+WHERE id = $1;
