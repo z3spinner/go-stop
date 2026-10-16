@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/svelte';
+import { render, waitFor, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import Notifications from './notifications/+page.svelte';
 import { api } from '$lib/api';
@@ -23,22 +23,35 @@ function item(over: Partial<InboxItem>): InboxItem {
 const unreadBob = item({ id: 'n2', kind: 'interest_received', contact_name: 'Bob', destination: 'Die', url: '/my-rides' });
 const readPast = item({ id: 'n1', departure_at: '2020-01-01T08:00:00Z', created_at: '2026-10-11T10:00:00Z', read: true });
 
-/** Server double: list returns `server`; markRead flips those ids to read. */
+/** Server double: list returns `server`; markRead flips those ids to read; remove/restore hide/unhide. */
 function fakeServer(initial: InboxItem[]) {
 	let server = initial.map((i) => ({ ...i }));
+	const dismissed = new Set<string>();
+	const visible = () => server.filter((i) => !dismissed.has(i.id));
 	const list = vi.spyOn(api.inbox, 'list').mockImplementation(async () => ({
-		items: server.map((i) => ({ ...i })),
-		unread: server.filter((i) => !i.read).length
+		items: visible().map((i) => ({ ...i })),
+		unread: visible().filter((i) => !i.read).length
 	}));
 	const markRead = vi.spyOn(api.inbox, 'markRead').mockImplementation(async (_p, ids) => {
 		server = server.map((i) => (ids.includes(i.id) ? { ...i, read: true } : i));
 		return null;
 	});
 	const markAll = vi.spyOn(api.inbox, 'markAllRead');
+	const remove = vi.spyOn(api.inbox, 'remove').mockImplementation(async (_p, id) => {
+		dismissed.add(id);
+		server = server.map((i) => (i.id === id ? { ...i, read: true } : i));
+		return null;
+	});
+	const restore = vi.spyOn(api.inbox, 'restore').mockImplementation(async (_p, id) => {
+		dismissed.delete(id);
+		return null;
+	});
 	return {
 		list,
 		markRead,
 		markAll,
+		remove,
+		restore,
 		push(n: InboxItem) {
 			server = [n, ...server];
 		}
@@ -137,5 +150,98 @@ describe('notifications page', () => {
 		expect(el.textContent).toContain('Citation du jour');
 		expect(el.textContent).toContain('Un autre monde est possible.');
 		expect(el.querySelector('.inbox-test-tag')?.textContent).toBe(m.inboxTestTag());
+	});
+
+	it('deletes with the delete button, then undo brings it back', async () => {
+		userPhone.set('0611111111');
+		const srv = fakeServer([unreadBob, readPast]);
+		const { container } = render(Notifications);
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(2));
+
+		const btn = container.querySelector<HTMLButtonElement>('.swipe-delete-btn')!;
+		expect(btn.getAttribute('aria-label')).toBe(m.inboxDeleteAria());
+		await fireEvent.click(btn);
+
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
+		expect(srv.remove).toHaveBeenCalledWith('0611111111', 'n2');
+		expect(container.querySelector('[data-id="n2"]')).toBeNull();
+		const undo = container.querySelector<HTMLButtonElement>('.btn-inbox-undo')!;
+		expect(container.querySelector('.inbox-undo')?.textContent).toContain(m.inboxDeleted());
+
+		await fireEvent.click(undo);
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(2));
+		expect(srv.restore).toHaveBeenCalledWith('0611111111', 'n2');
+		expect(container.querySelector('.inbox-undo')).toBeNull();
+	});
+
+	it('the Delete key deletes the focused notification', async () => {
+		userPhone.set('0611111111');
+		const srv = fakeServer([readPast]);
+		const { container } = render(Notifications);
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
+		await fireEvent.keyDown(container.querySelector('.inbox-item')!, { key: 'Delete' });
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(0));
+		expect(srv.remove).toHaveBeenCalledWith('0611111111', 'n1');
+	});
+
+	describe('swipe', () => {
+		function pointer(el: Element, type: string, x: number, y = 100) {
+			const e = new MouseEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true, button: 0 });
+			Object.defineProperty(e, 'pointerId', { value: 1 });
+			Object.defineProperty(e, 'pointerType', { value: 'touch' });
+			el.dispatchEvent(e);
+		}
+		let now = 0;
+		beforeEach(() => {
+			now = 0;
+			vi.spyOn(performance, 'now').mockImplementation(() => now);
+		});
+
+		it('a quick horizontal swipe deletes the notification', async () => {
+			userPhone.set('0611111111');
+			const srv = fakeServer([readPast]);
+			const { container } = render(Notifications);
+			await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
+			const row = container.querySelector('.swipe-front')!;
+			pointer(row, 'pointerdown', 300);
+			pointer(row, 'pointermove', 280);
+			pointer(row, 'pointermove', 150);
+			now = 120; // 150px in 120ms: a flick
+			pointer(row, 'pointerup', 150);
+			await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(0));
+			expect(srv.remove).toHaveBeenCalledWith('0611111111', 'n1');
+		});
+
+		it('a short slow drag springs back', async () => {
+			userPhone.set('0611111111');
+			const srv = fakeServer([readPast]);
+			const { container } = render(Notifications);
+			await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
+			const row = container.querySelector<HTMLElement>('.swipe-front')!;
+			pointer(row, 'pointerdown', 300);
+			pointer(row, 'pointermove', 270);
+			now = 1000;
+			pointer(row, 'pointerup', 270);
+			await new Promise((r) => setTimeout(r, 400));
+			expect(container.querySelectorAll('.inbox-item')).toHaveLength(1);
+			expect(row.style.transform).toBe('translateX(0px)');
+			expect(srv.remove).not.toHaveBeenCalled();
+		});
+
+		it('vertical movement is a scroll, not a swipe', async () => {
+			userPhone.set('0611111111');
+			const srv = fakeServer([readPast]);
+			const { container } = render(Notifications);
+			await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
+			const row = container.querySelector<HTMLElement>('.swipe-front')!;
+			pointer(row, 'pointerdown', 300, 100);
+			pointer(row, 'pointermove', 290, 220);
+			pointer(row, 'pointermove', 100, 240); // sideways later doesn't turn it into a swipe
+			now = 100;
+			pointer(row, 'pointerup', 100, 240);
+			await new Promise((r) => setTimeout(r, 400));
+			expect(container.querySelectorAll('.inbox-item')).toHaveLength(1);
+			expect(srv.remove).not.toHaveBeenCalled();
+		});
 	});
 });

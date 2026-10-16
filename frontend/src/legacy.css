@@ -632,7 +632,7 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   text-align: center;
   pointer-events: none;
 }
-.inbox-item { display: flex; gap: 10px; align-items: flex-start; text-decoration: none; color: inherit; }
+.inbox-item { display: flex; gap: 10px; align-items: flex-start; text-decoration: none; color: inherit; padding-right: 36px; -webkit-user-drag: none; }
 .inbox-item:hover { background: var(--gray-100); }
 .inbox-unread { border-left: 3px solid var(--blue); background: #f0fdf4; }
 .inbox-icon { font-size: 1.1rem; line-height: 1.4; }

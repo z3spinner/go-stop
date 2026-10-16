@@ -181,4 +181,24 @@ describe('api facade — inbox', () => {
 		await api.inbox.markAllRead('0600000006');
 		expect(JSON.parse(lastCall().init.body as string)).toEqual({ all: true });
 	});
+
+	it('inbox.remove(phone, id) sends DELETE /api/inbox/{id} with X-Phone', async () => {
+		fetchMock.mockResolvedValue(mockResponse(204, undefined));
+		expect(await api.inbox.remove('0600000007', 'n1')).toBeNull();
+		const { url, init } = lastCall();
+		expect(url).toBe('/api/inbox/n1');
+		expect(init.method).toBe('DELETE');
+		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0600000007');
+	});
+
+	it('inbox.restore(phone, id) sends POST /api/inbox/{id}/restore and surfaces 404', async () => {
+		fetchMock.mockResolvedValue(mockResponse(204, undefined));
+		await api.inbox.restore('0600000007', 'n1');
+		const { url, init } = lastCall();
+		expect(url).toBe('/api/inbox/n1/restore');
+		expect(init.method).toBe('POST');
+		expect((init.headers as Record<string, string>)['X-Phone']).toBe('0600000007');
+		fetchMock.mockResolvedValue(mockResponse(404, { error: 'nothing to restore' }));
+		await expect(api.inbox.restore('0600000007', 'n1')).rejects.toMatchObject({ status: 404 });
+	});
 });

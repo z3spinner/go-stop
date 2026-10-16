@@ -64,6 +64,8 @@ func main() {
 	}
 	getInbox := usecase.NewGetInbox(inboxRepo)
 	markInboxRead := usecase.NewMarkInboxRead(inboxRepo)
+	deleteInboxItem := usecase.NewDeleteInboxItem(inboxRepo)
+	restoreInboxItem := usecase.NewRestoreInboxItem(inboxRepo)
 	purgeInbox := usecase.NewPurgeInbox(inboxRepo, inboxRetentionDays)
 
 	notifQueueRepo := postgres.NewNotificationQueueRepo(pool)
@@ -121,7 +123,7 @@ func main() {
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
-	inboxH := handler.NewInboxHandler(getInbox, markInboxRead)
+	inboxH := handler.NewInboxHandler(getInbox, markInboxRead, deleteInboxItem, restoreInboxItem)
 	vapidH := handler.NewVapidHandler(vapidKeys.Public)
 
 	siteName := os.Getenv("SITE_NAME")
@@ -227,6 +229,8 @@ func main() {
 		api.GET("/notifications", notifQueueH.List)
 		api.GET("/inbox", inboxH.List)
 		api.POST("/inbox/read", inboxH.MarkRead)
+		api.DELETE("/inbox/:id", inboxH.Delete)
+		api.POST("/inbox/:id/restore", inboxH.Restore)
 
 		api.GET("/vapid-public-key", vapidH.GetPublicKey)
 		api.GET("/config", configH.Get)

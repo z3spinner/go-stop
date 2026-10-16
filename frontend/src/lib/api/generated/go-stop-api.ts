@@ -465,6 +465,101 @@ export const markInboxRead = async (handlerMarkInboxReadBody: HandlerMarkInboxRe
 
 
 
+export type deleteInboxItemResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteInboxItemResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type deleteInboxItemResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type deleteInboxItemResponseSuccess = (deleteInboxItemResponse204) & {
+  headers: Headers;
+};
+export type deleteInboxItemResponseError = (deleteInboxItemResponse401 | deleteInboxItemResponse500) & {
+  headers: Headers;
+};
+
+export type deleteInboxItemResponse = (deleteInboxItemResponseSuccess | deleteInboxItemResponseError)
+
+export const getDeleteInboxItemUrl = (id: string,) => {
+
+
+
+
+  return `/inbox/${id}`
+}
+
+export const deleteInboxItem = async (id: string, options?: RequestInit): Promise<deleteInboxItemResponse> => {
+
+  return customFetch<deleteInboxItemResponse>(getDeleteInboxItemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+export type restoreInboxItemResponse204 = {
+  data: void
+  status: 204
+}
+
+export type restoreInboxItemResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type restoreInboxItemResponse404 = {
+  data: HandlerErrorResponse
+  status: 404
+}
+
+export type restoreInboxItemResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type restoreInboxItemResponseSuccess = (restoreInboxItemResponse204) & {
+  headers: Headers;
+};
+export type restoreInboxItemResponseError = (restoreInboxItemResponse401 | restoreInboxItemResponse404 | restoreInboxItemResponse500) & {
+  headers: Headers;
+};
+
+export type restoreInboxItemResponse = (restoreInboxItemResponseSuccess | restoreInboxItemResponseError)
+
+export const getRestoreInboxItemUrl = (id: string,) => {
+
+
+
+
+  return `/inbox/${id}/restore`
+}
+
+export const restoreInboxItem = async (id: string, options?: RequestInit): Promise<restoreInboxItemResponse> => {
+
+  return customFetch<restoreInboxItemResponse>(getRestoreInboxItemUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
 export type listMyInterestsResponse200 = {
   data: HandlerMyInterest[]
   status: 200

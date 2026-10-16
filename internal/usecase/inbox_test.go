@@ -54,6 +54,10 @@ type mockInboxRepo struct {
 	deleteCutoff     time.Time
 	deleted          int64
 	goneCalled       bool
+	dismissed        []string // "phone/id"
+	restoreAfter     time.Time
+	restoreOK        bool
+	scrubCutoff      time.Time
 	deleteForRideErr error
 }
 
@@ -87,6 +91,18 @@ func (m *mockInboxRepo) DeleteForRide(id string) error {
 func (m *mockInboxRepo) DeleteForRequest(id string) error {
 	m.deletedRequests = append(m.deletedRequests, id)
 	return nil
+}
+func (m *mockInboxRepo) Dismiss(phone, id string) error {
+	m.dismissed = append(m.dismissed, phone+"/"+id)
+	return nil
+}
+func (m *mockInboxRepo) Restore(_ string, _ string, after time.Time) (bool, error) {
+	m.restoreAfter = after
+	return m.restoreOK, nil
+}
+func (m *mockInboxRepo) ScrubDismissed(cutoff time.Time) (int64, error) {
+	m.scrubCutoff = cutoff
+	return 0, nil
 }
 func (m *mockInboxRepo) DeleteForGonePosts() (int64, error) {
 	m.goneCalled = true
@@ -390,5 +406,55 @@ func TestPurgeInbox_DeletesOlderThanRetention(t *testing.T) {
 		if !inbox.goneCalled {
 			t.Errorf("days=%d: items about expired/deleted posts must be purged too", tc.days)
 		}
+		wantScrub := before.Add(-usecase.InboxUndoWindow)
+		if d := inbox.scrubCutoff.Sub(wantScrub); d < 0 || d > time.Minute {
+			t.Errorf("days=%d: scrub cutoff %v, want ≈ %v (end of the undo window)", tc.days, inbox.scrubCutoff, wantScrub)
+		}
+	}
+}
+
+// ── DeleteInboxItem / RestoreInboxItem ────────────────────────────────────────
+
+func TestDeleteInboxItem_DismissesForThatPhone(t *testing.T) {
+	inbox := &mockInboxRepo{}
+	if err := usecase.NewDeleteInboxItem(inbox).Execute("0611111111", "n1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(inbox.dismissed) != 1 || inbox.dismissed[0] != "0611111111/n1" {
+		t.Errorf("dismissed = %v", inbox.dismissed)
+	}
+}
+
+func TestDeleteInboxItem_RequiresPhone(t *testing.T) {
+	inbox := &mockInboxRepo{}
+	err := usecase.NewDeleteInboxItem(inbox).Execute("", "n1")
+	if !errors.Is(err, usecase.ErrUnauthorized) || len(inbox.dismissed) != 0 {
+		t.Errorf("expected ErrUnauthorized and no repo call, got err=%v dismissed=%v", err, inbox.dismissed)
+	}
+}
+
+func TestRestoreInboxItem_WithinUndoWindow(t *testing.T) {
+	inbox := &mockInboxRepo{restoreOK: true}
+	before := time.Now()
+	if err := usecase.NewRestoreInboxItem(inbox).Execute("0611111111", "n1"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := before.Add(-usecase.InboxUndoWindow)
+	if d := inbox.restoreAfter.Sub(want); d < 0 || d > time.Minute {
+		t.Errorf("restore window start %v, want ≈ %v", inbox.restoreAfter, want)
+	}
+}
+
+func TestRestoreInboxItem_NothingToRestore(t *testing.T) {
+	err := usecase.NewRestoreInboxItem(&mockInboxRepo{restoreOK: false}).Execute("0611111111", "n1")
+	if !errors.Is(err, usecase.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestRestoreInboxItem_RequiresPhone(t *testing.T) {
+	err := usecase.NewRestoreInboxItem(&mockInboxRepo{restoreOK: true}).Execute("", "n1")
+	if !errors.Is(err, usecase.ErrUnauthorized) {
+		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
 }

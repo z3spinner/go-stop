@@ -59,7 +59,7 @@ func (q *Queries) AddNotification(ctx context.Context, arg AddNotificationParams
 const countUnreadNotifications = `-- name: CountUnreadNotifications :one
 SELECT COUNT(*)::int AS unread FROM (
     SELECT read_at FROM notifications
-    WHERE phone = $1
+    WHERE phone = $1 AND dismissed_at IS NULL
     ORDER BY created_at DESC
     LIMIT $2::int
 ) newest
@@ -134,11 +134,30 @@ func (q *Queries) DeleteNotificationsOlderThan(ctx context.Context, createdAt pg
 	return result.RowsAffected(), nil
 }
 
+const dismissNotification = `-- name: DismissNotification :exec
+UPDATE notifications
+SET dismissed_at = NOW(), read_at = COALESCE(read_at, NOW())
+WHERE phone = $1 AND id = $2 AND dismissed_at IS NULL
+`
+
+type DismissNotificationParams struct {
+	Phone string      `db:"phone"`
+	ID    pgtype.UUID `db:"id"`
+}
+
+// User deleted the item from their inbox (see migration 017). Also marks it
+// read so it never counts towards the badge.
+func (q *Queries) DismissNotification(ctx context.Context, arg DismissNotificationParams) error {
+	_, err := q.db.Exec(ctx, dismissNotification, arg.Phone, arg.ID)
+	return err
+}
+
 const listNotificationsByPhone = `-- name: ListNotificationsByPhone :many
 SELECT id, phone, kind, contact_name, origin, destination, departure_at,
-       url, title, body, ride_id, request_id, dedup_key, created_at, read_at
+       url, title, body, ride_id, request_id, dedup_key, created_at, read_at,
+       dismissed_at
 FROM notifications
-WHERE phone = $1
+WHERE phone = $1 AND dismissed_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2::int
 `
@@ -148,6 +167,7 @@ type ListNotificationsByPhoneParams struct {
 	MaxItems int32  `db:"max_items"`
 }
 
+// Dismissed (user-deleted) items are hidden.
 func (q *Queries) ListNotificationsByPhone(ctx context.Context, arg ListNotificationsByPhoneParams) ([]Notification, error) {
 	rows, err := q.db.Query(ctx, listNotificationsByPhone, arg.Phone, arg.MaxItems)
 	if err != nil {
@@ -173,6 +193,7 @@ func (q *Queries) ListNotificationsByPhone(ctx context.Context, arg ListNotifica
 			&i.DedupKey,
 			&i.CreatedAt,
 			&i.ReadAt,
+			&i.DismissedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -206,4 +227,45 @@ type MarkNotificationsReadParams struct {
 func (q *Queries) MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) error {
 	_, err := q.db.Exec(ctx, markNotificationsRead, arg.Phone, arg.Ids)
 	return err
+}
+
+const restoreNotification = `-- name: RestoreNotification :execrows
+UPDATE notifications
+SET dismissed_at = NULL
+WHERE phone = $1 AND id = $2
+  AND dismissed_at IS NOT NULL AND dismissed_at > $3::timestamptz
+`
+
+type RestoreNotificationParams struct {
+	Phone          string             `db:"phone"`
+	ID             pgtype.UUID        `db:"id"`
+	DismissedAfter pgtype.Timestamptz `db:"dismissed_after"`
+}
+
+// Undo of a recent dismissal; only while its content hasn't been blanked yet.
+func (q *Queries) RestoreNotification(ctx context.Context, arg RestoreNotificationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, restoreNotification, arg.Phone, arg.ID, arg.DismissedAfter)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const scrubDismissedNotifications = `-- name: ScrubDismissedNotifications :execrows
+UPDATE notifications
+SET contact_name = '', origin = '', destination = '', title = '', body = '',
+    url = '/', departure_at = NULL
+WHERE dismissed_at IS NOT NULL AND dismissed_at < $1
+  AND (contact_name <> '' OR origin <> '' OR destination <> '' OR title <> ''
+       OR body <> '' OR url <> '/' OR departure_at IS NOT NULL)
+`
+
+// Blanks the content of items dismissed before the cutoff, keeping only what
+// the tombstone needs (phone, kind, dedup key, post ids, timestamps).
+func (q *Queries) ScrubDismissedNotifications(ctx context.Context, dismissedAt pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, scrubDismissedNotifications, dismissedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

@@ -10,10 +10,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 ON CONFLICT (phone, dedup_key) DO NOTHING;
 
 -- name: ListNotificationsByPhone :many
+-- Dismissed (user-deleted) items are hidden.
 SELECT id, phone, kind, contact_name, origin, destination, departure_at,
-       url, title, body, ride_id, request_id, dedup_key, created_at, read_at
+       url, title, body, ride_id, request_id, dedup_key, created_at, read_at,
+       dismissed_at
 FROM notifications
-WHERE phone = $1
+WHERE phone = $1 AND dismissed_at IS NULL
 ORDER BY created_at DESC
 LIMIT sqlc.arg(max_items)::int;
 
@@ -22,7 +24,7 @@ LIMIT sqlc.arg(max_items)::int;
 -- the badge never counts items the inbox can't show.
 SELECT COUNT(*)::int AS unread FROM (
     SELECT read_at FROM notifications
-    WHERE phone = $1
+    WHERE phone = $1 AND dismissed_at IS NULL
     ORDER BY created_at DESC
     LIMIT sqlc.arg(max_items)::int
 ) newest
@@ -58,3 +60,27 @@ WHERE n.kind <> 'feedback_reminder'
     (n.request_id IS NOT NULL
      AND NOT EXISTS (SELECT 1 FROM requests q WHERE q.id = n.request_id))
   );
+
+-- name: DismissNotification :exec
+-- User deleted the item from their inbox (see migration 017). Also marks it
+-- read so it never counts towards the badge.
+UPDATE notifications
+SET dismissed_at = NOW(), read_at = COALESCE(read_at, NOW())
+WHERE phone = $1 AND id = $2 AND dismissed_at IS NULL;
+
+-- name: RestoreNotification :execrows
+-- Undo of a recent dismissal; only while its content hasn't been blanked yet.
+UPDATE notifications
+SET dismissed_at = NULL
+WHERE phone = $1 AND id = $2
+  AND dismissed_at IS NOT NULL AND dismissed_at > sqlc.arg(dismissed_after)::timestamptz;
+
+-- name: ScrubDismissedNotifications :execrows
+-- Blanks the content of items dismissed before the cutoff, keeping only what
+-- the tombstone needs (phone, kind, dedup key, post ids, timestamps).
+UPDATE notifications
+SET contact_name = '', origin = '', destination = '', title = '', body = '',
+    url = '/', departure_at = NULL
+WHERE dismissed_at IS NOT NULL AND dismissed_at < $1
+  AND (contact_name <> '' OR origin <> '' OR destination <> '' OR title <> ''
+       OR body <> '' OR url <> '/' OR departure_at IS NOT NULL);

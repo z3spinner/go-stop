@@ -13,7 +13,9 @@ import {
 	inboxUnread,
 	isPastTrip,
 	markInboxItemsRead,
-	refreshInbox
+	refreshInbox,
+	deleteInboxItem,
+	restoreInboxItem
 } from './inbox';
 import { m } from './paraglide/messages';
 import type { InboxItem } from './types';
@@ -167,5 +169,54 @@ describe('refreshInbox / markAllInboxRead', () => {
 		const mark = vi.spyOn(api.inbox, 'markRead');
 		await markInboxItemsRead('0611111111', []);
 		expect(mark).not.toHaveBeenCalled();
+	});
+
+	it('delete removes the item at once, then tells the server', async () => {
+		inboxItems.set([item({ id: 'a', read: true }), item({ id: 'b', read: false })]);
+		inboxUnread.set(1);
+		const remove = vi.spyOn(api.inbox, 'remove').mockResolvedValue(null);
+		const ok = await deleteInboxItem('0611111111', item({ id: 'b', read: false }));
+		expect(ok).toBe(true);
+		expect(remove).toHaveBeenCalledWith('0611111111', 'b');
+		expect(get(inboxItems).map((i) => i.id)).toEqual(['a']);
+		expect(get(inboxUnread)).toBe(0);
+	});
+
+	it('a load that raced the delete does not bring the item back', async () => {
+		inboxItems.set([item({ id: 'gone' })]);
+		let finishDelete!: () => void;
+		vi.spyOn(api.inbox, 'remove').mockImplementation(() => new Promise((r) => (finishDelete = () => r(null))));
+		const list = vi.spyOn(api.inbox, 'list').mockResolvedValue({ items: [item({ id: 'gone' }), item({ id: 'kept' })], unread: 2 });
+		const del = deleteInboxItem('0677777777', item({ id: 'gone' }));
+		await refreshInbox('0677777777', { force: true }); // answered before the delete landed
+		expect(get(inboxItems).map((i) => i.id)).toEqual(['kept']);
+		expect(get(inboxUnread)).toBe(1);
+		finishDelete();
+		await del;
+		// A load started after the delete reflects the server again.
+		list.mockResolvedValue({ items: [item({ id: 'kept' })], unread: 1 });
+		await refreshInbox('0677777777', { force: true });
+		expect(get(inboxItems).map((i) => i.id)).toEqual(['kept']);
+	});
+
+	it('a failed delete reloads the truth', async () => {
+		inboxItems.set([item({ id: 'x1' })]);
+		vi.spyOn(api.inbox, 'remove').mockRejectedValue(new Error('offline'));
+		const list = vi.spyOn(api.inbox, 'list').mockResolvedValue({ items: [item({ id: 'x1' })], unread: 1 });
+		const ok = await deleteInboxItem('0688888888', item({ id: 'x1' }));
+		expect(ok).toBe(false);
+		expect(list).toHaveBeenCalled();
+		expect(get(inboxItems).map((i) => i.id)).toEqual(['x1']);
+	});
+
+	it('undo restores on the server and reloads', async () => {
+		const restore = vi.spyOn(api.inbox, 'restore').mockResolvedValue(null);
+		vi.spyOn(api.inbox, 'remove').mockResolvedValue(null);
+		const list = vi.spyOn(api.inbox, 'list').mockResolvedValue({ items: [item({ id: 'u1', read: true })], unread: 0 });
+		await deleteInboxItem('0699999999', item({ id: 'u1' }));
+		expect(await restoreInboxItem('0699999999', 'u1')).toBe(true);
+		expect(restore).toHaveBeenCalledWith('0699999999', 'u1');
+		expect(list).toHaveBeenCalledWith('0699999999');
+		expect(get(inboxItems).map((i) => i.id)).toEqual(['u1']); // no longer hidden as pending
 	});
 });

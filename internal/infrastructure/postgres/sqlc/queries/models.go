@@ -66,6 +66,7 @@ type Notification struct {
 	DedupKey    pgtype.Text        `db:"dedup_key"`
 	CreatedAt   pgtype.Timestamptz `db:"created_at"`
 	ReadAt      pgtype.Timestamptz `db:"read_at"`
+	DismissedAt pgtype.Timestamptz `db:"dismissed_at"`
 }
 
 type NotificationQueue struct {

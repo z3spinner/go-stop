@@ -24,6 +24,17 @@ let last = { phone: '', ms: 0 };
 // The phone of the most recent request: a slower response for a previous phone
 // (the user just changed it) must not overwrite the current one.
 let current = '';
+// Items deleted here, so a load that raced the delete doesn't flash them back.
+// id → null while the delete is in flight, then the number of the last load
+// started before it completed. Loads started later reflect the delete.
+const pendingDeletes = new Map<string, number | null>();
+let loadSeq = 0;
+
+function hiddenByPendingDelete(id: string, seq: number): boolean {
+	if (!pendingDeletes.has(id)) return false;
+	const done = pendingDeletes.get(id);
+	return done === null || done === undefined || seq <= done;
+}
 
 /**
  * Reload the inbox for phone. Calls for the same phone within 30s of the
@@ -40,11 +51,16 @@ export async function refreshInbox(phone: string, { force = false } = {}): Promi
 	const now = Date.now();
 	if (!force && last.phone === phone && now - last.ms < THROTTLE_MS) return;
 	last = { phone, ms: now };
+	const seq = ++loadSeq;
 	try {
 		const res = await api.inbox.list(phone);
 		if (phone !== current) return;
-		inboxItems.set(res.items ?? []);
-		inboxUnread.set(res.unread ?? 0);
+		const all = res.items ?? [];
+		const items = all.filter((i) => !hiddenByPendingDelete(i.id, seq));
+		const hidden = all.filter((i) => hiddenByPendingDelete(i.id, seq) && !i.read).length;
+		for (const [id, done] of pendingDeletes) if (done !== null && seq > done) pendingDeletes.delete(id);
+		inboxItems.set(items);
+		inboxUnread.set(Math.max(0, (res.unread ?? 0) - hidden));
 	} catch {
 		last = { phone: '', ms: 0 }; // offline / server error: keep state, allow retry
 	}
@@ -63,6 +79,41 @@ export async function markInboxItemsRead(phone: string, ids: string[]): Promise<
 		return; // the badge just stays until the next successful refresh
 	}
 	await refreshInbox(phone, { force: true });
+}
+
+/**
+ * Delete an item: it disappears from the list right away, then the server is
+ * told. On failure the list is reloaded so it shows the truth again.
+ * Resolves to whether the server accepted it.
+ */
+export async function deleteInboxItem(phone: string, item: InboxItem): Promise<boolean> {
+	if (!phone) return false;
+	pendingDeletes.set(item.id, null);
+	inboxItems.update((list) => list.filter((i) => i.id !== item.id));
+	if (!item.read) inboxUnread.update((n) => Math.max(0, n - 1));
+	try {
+		await api.inbox.remove(phone, item.id);
+	} catch {
+		pendingDeletes.delete(item.id);
+		await refreshInbox(phone, { force: true });
+		return false;
+	}
+	if (pendingDeletes.has(item.id)) pendingDeletes.set(item.id, loadSeq);
+	return true;
+}
+
+/** Undo a delete ("Annuler"): restore on the server, then reload the list. */
+export async function restoreInboxItem(phone: string, id: string): Promise<boolean> {
+	if (!phone) return false;
+	pendingDeletes.delete(id);
+	let ok = true;
+	try {
+		await api.inbox.restore(phone, id);
+	} catch {
+		ok = false; // too late (or offline): the reload shows what the server has
+	}
+	await refreshInbox(phone, { force: true });
+	return ok;
 }
 
 type TitleFn = (name: string) => string;
