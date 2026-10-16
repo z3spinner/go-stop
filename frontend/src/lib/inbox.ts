@@ -116,6 +116,21 @@ export async function restoreInboxItem(phone: string, id: string): Promise<boole
 	return ok;
 }
 
+/** Query parameter the service worker adds when a push is tapped (sw.js). */
+export const PUSH_INBOX_PARAM = 'n';
+
+/**
+ * The inbox item id a tapped push opened this page with (`?n=<id>`), and the
+ * same URL without it. Pure, for the layout to mark the item read and tidy the
+ * address bar.
+ */
+export function inboxIdFromUrl(url: URL): { id: string | null; clean: URL } {
+	const clean = new URL(url.href);
+	const id = clean.searchParams.get(PUSH_INBOX_PARAM);
+	clean.searchParams.delete(PUSH_INBOX_PARAM);
+	return { id: id && id.trim() ? id.trim() : null, clean };
+}
+
 type TitleFn = (name: string) => string;
 
 const TITLES: Record<string, TitleFn> = {

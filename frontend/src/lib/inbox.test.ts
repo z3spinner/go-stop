@@ -7,6 +7,7 @@ import { api } from './api';
 import {
 	badgeText,
 	inboxIcon,
+	inboxIdFromUrl,
 	inboxItems,
 	inboxRoute,
 	inboxTitle,
@@ -218,5 +219,17 @@ describe('refreshInbox / markAllInboxRead', () => {
 		expect(restore).toHaveBeenCalledWith('0699999999', 'u1');
 		expect(list).toHaveBeenCalledWith('0699999999');
 		expect(get(inboxItems).map((i) => i.id)).toEqual(['u1']); // no longer hidden as pending
+	});
+});
+
+describe('inboxIdFromUrl', () => {
+	it('reads the tapped push\'s inbox id and strips it, keeping other params', () => {
+		const { id, clean } = inboxIdFromUrl(new URL('https://x.test/my-rides?tab=2&n=abc-123#top'));
+		expect(id).toBe('abc-123');
+		expect(clean.href).toBe('https://x.test/my-rides?tab=2#top');
+	});
+	it('is null without the parameter (or with an empty one)', () => {
+		expect(inboxIdFromUrl(new URL('https://x.test/my-rides')).id).toBeNull();
+		expect(inboxIdFromUrl(new URL('https://x.test/my-rides?n=')).id).toBeNull();
 	});
 });

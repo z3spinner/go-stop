@@ -8,14 +8,14 @@
 	import '../legacy.css'; // ported live-site styles; targets the preserved semantic class names
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, replaceState } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { registerLangStrategy } from '$lib/locale';
 	import { loadConfig } from '$lib/config';
 	import { userPhone } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import { updateBellState } from '$lib/pwa';
-	import { refreshInbox } from '$lib/inbox';
+	import { refreshInbox, markInboxItemsRead, inboxIdFromUrl } from '$lib/inbox';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
 	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
 	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
@@ -73,6 +73,18 @@
 				phoneTimer = setTimeout(() => refreshInbox(p.trim(), { force: true }), 600);
 			}
 		});
+		// Opened by tapping a push (sw.js adds ?n=<inbox id>): that notification
+		// has been seen, so mark it read (which stops its reminders) and drop the
+		// parameter from the address bar.
+		const fromPush = inboxIdFromUrl(new URL(location.href));
+		if (fromPush.id) {
+			try {
+				replaceState(fromPush.clean, page.state);
+			} catch {
+				/* router not ready: the leftover ?n= is harmless */
+			}
+			markInboxItemsRead(phone.trim(), [fromPush.id]);
+		}
 		// Leftover from the old toast polling, replaced by the inbox.
 		try {
 			localStorage.removeItem('poll_seen');
@@ -84,6 +96,10 @@
 		};
 		const onSwMessage = (e: MessageEvent) => {
 			if (e.data?.type === 'inbox-updated') refreshInbox(get(userPhone).trim(), { force: true });
+			// A push was tapped while this tab was already open.
+			if (e.data?.type === 'inbox-read' && typeof e.data.id === 'string') {
+				markInboxItemsRead(get(userPhone).trim(), [e.data.id]);
+			}
 		};
 		document.addEventListener('visibilitychange', onVis);
 		navigator.serviceWorker?.addEventListener('message', onSwMessage);

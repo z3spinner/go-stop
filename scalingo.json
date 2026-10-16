@@ -22,6 +22,14 @@
       "description": "Minutes after a ride's flex window closes before it disappears from search results (default: 60)",
       "value": "60"
     },
+    "INBOX_REMINDER_INTERVAL_HOURS": {
+      "description": "Hours between reminder pushes for an unread contact request, accepted request, shared number or contact offer (default: 3)",
+      "value": "3"
+    },
+    "INBOX_REMINDER_QUIET_HOURS": {
+      "description": "Local hours with no reminder pushes, e.g. 21-8 (default); 'none' to always send",
+      "value": "21-8"
+    },
     "NOTIFICATION_RETENTION_DAYS": {
       "description": "Max days a notification stays in the in-app inbox (default: 30); removed earlier when its ride or request expires or is deleted",
       "value": "30"
