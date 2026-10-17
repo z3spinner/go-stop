@@ -5,6 +5,7 @@ package usecase_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -17,6 +18,8 @@ type mockNotifier struct {
 	lastMsg  domain.Message
 	err      error
 	recorded []recordedMsg // every Record call (the inbox copy), in order
+	acked    []string      // every Acknowledge call: "phone/key"
+	sent     []domain.Message
 }
 
 type recordedMsg struct {
@@ -27,11 +30,23 @@ type recordedMsg struct {
 func (m *mockNotifier) Send(sub domain.Subscription, msg domain.Message) error {
 	m.called = true
 	m.lastMsg = msg
+	m.sent = append(m.sent, msg)
 	return m.err
 }
 
-func (m *mockNotifier) Record(phone string, msg domain.Message) {
+// Record returns a fake inbox id ("inbox-<n>") for messages with a Kind.
+func (m *mockNotifier) Record(phone string, msg domain.Message) string {
 	m.recorded = append(m.recorded, recordedMsg{phone: phone, msg: msg})
+	if msg.Kind == "" {
+		return ""
+	}
+	return fmt.Sprintf("inbox-%d", len(m.recorded))
+}
+
+func (m *mockNotifier) Acknowledge(phone string, keys ...string) {
+	for _, k := range keys {
+		m.acked = append(m.acked, phone+"/"+k)
+	}
 }
 
 type mockSubRepoNotify struct {
@@ -93,7 +108,8 @@ func (n *countingNotifier) Send(_ domain.Subscription, _ domain.Message) error {
 	return nil
 }
 
-func (n *countingNotifier) Record(string, domain.Message) {}
+func (n *countingNotifier) Record(string, domain.Message) string { return "" }
+func (n *countingNotifier) Acknowledge(string, ...string)        {}
 
 type goneNotifier struct{}
 
@@ -101,7 +117,8 @@ func (n *goneNotifier) Send(_ domain.Subscription, _ domain.Message) error {
 	return errors.New("push service returned status 410")
 }
 
-func (n *goneNotifier) Record(string, domain.Message) {}
+func (n *goneNotifier) Record(string, domain.Message) string { return "" }
+func (n *goneNotifier) Acknowledge(string, ...string)        {}
 
 type trackingSubRepo struct {
 	subs    []domain.Subscription

@@ -23,15 +23,24 @@ func lastN(s string, n int) string {
 // sendToAll delivers msg to every subscription for phone.
 // Stale subscriptions (push service returns 410) are removed automatically.
 // msg is recorded in the recipient's inbox first, so recipients without any
-// push subscription still get it in the app.
+// push subscription still get it in the app; the push then carries the inbox
+// item's id.
 func sendToAll(phone string, msg domain.Message, subs repository.SubscriptionRepository, notifier notification.Notifier) {
-	notifier.Record(phone, msg)
+	if id := notifier.Record(phone, msg); id != "" {
+		msg.InboxID = id
+	}
+	pushToDevices(phone, msg, subs, notifier)
+}
+
+// pushToDevices pushes msg to every device of phone without recording it in
+// the inbox (used directly by reminders, which must not add inbox items).
+func pushToDevices(phone string, msg domain.Message, subs repository.SubscriptionRepository, pusher notification.Pusher) {
 	subList, err := subs.FindByPhone(phone)
 	if err != nil {
 		return // no subscription — nothing to do
 	}
 	for _, sub := range subList {
-		if err := notifier.Send(sub, msg); err != nil {
+		if err := pusher.Send(sub, msg); err != nil {
 			log.Printf("push send error phone=***%s: %v", lastN(phone, 3), err)
 			if strings.Contains(err.Error(), "410") {
 				_ = subs.DeleteByEndpoint(sub.Endpoint)

@@ -52,8 +52,10 @@ func (uc *CancelInterest) Execute(interestID, searcherPhone string) error {
 	}
 
 	// Notify the driver on all their devices that the request was withdrawn
-	// (best-effort; cancellation already succeeded).
+	// (best-effort; cancellation already succeeded). The request no longer
+	// exists, so its notification counts as read: no more reminders about it.
 	if ride, err := uc.rides.FindByID(interest.RideID); err == nil {
+		uc.notifier.Acknowledge(ride.Phone, domain.InboxKey(domain.KindInterestReceived, interest.ID))
 		sendToAll(ride.Phone, domain.Message{
 			Title:       "Demande de contact annulée",
 			Body:        fmt.Sprintf("%s a annulé sa demande (%s → %s)", interest.SearcherName, ride.Origin, ride.Destination),

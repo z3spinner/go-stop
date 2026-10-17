@@ -11,9 +11,21 @@ import (
 
 // InboxRepository persists each user's notifications (the in-app inbox).
 type InboxRepository interface {
-	// Add records an item. An item whose (Phone, DedupKey) already exists is
-	// silently ignored; an empty DedupKey is never deduplicated.
-	Add(item domain.InboxItem) error
+	// Add records an item and returns its id. If an item with the same
+	// (Phone, DedupKey) already exists it is left untouched and its id is
+	// returned; an empty DedupKey is never deduplicated.
+	Add(item domain.InboxItem) (string, error)
+
+	// MarkReadByDedupKeys marks phone's items with these dedup keys as read.
+	MarkReadByDedupKeys(phone string, keys []string) error
+
+	// FindRemindersDue returns up to limit unread, not deleted items of these
+	// kinds whose last push (original or reminder) was at or before cutoff,
+	// oldest first.
+	FindRemindersDue(kinds []string, cutoff time.Time, limit int) ([]domain.InboxItem, error)
+
+	// MarkReminded records that a reminder was just pushed for the item.
+	MarkReminded(id string) error
 
 	// ListByPhone returns the newest items first, at most limit of them.
 	ListByPhone(phone string, limit int) ([]domain.InboxItem, error)

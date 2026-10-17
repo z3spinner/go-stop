@@ -8,14 +8,14 @@
 	import '../legacy.css'; // ported live-site styles; targets the preserved semantic class names
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, replaceState } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { registerLangStrategy } from '$lib/locale';
 	import { loadConfig } from '$lib/config';
 	import { userPhone } from '$lib/stores';
 	import { get } from 'svelte/store';
 	import { updateBellState } from '$lib/pwa';
-	import { refreshInbox } from '$lib/inbox';
+	import { refreshInbox, markInboxItemsRead, inboxIdFromUrl } from '$lib/inbox';
 	import TopBar from '$lib/components/layout/TopBar.svelte';
 	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
 	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
@@ -73,24 +73,53 @@
 				phoneTimer = setTimeout(() => refreshInbox(p.trim(), { force: true }), 600);
 			}
 		});
+		// Opened by tapping a push (sw.js adds ?n=<inbox id>): that notification
+		// has been seen, so mark it read (which stops its reminders) and drop the
+		// parameter from the address bar.
+		const fromPush = inboxIdFromUrl(new URL(location.href));
+		if (fromPush.id) {
+			try {
+				replaceState(fromPush.clean, page.state);
+			} catch {
+				/* router not ready: the leftover ?n= is harmless */
+			}
+			markInboxItemsRead(phone.trim(), [fromPush.id]);
+		}
 		// Leftover from the old toast polling, replaced by the inbox.
 		try {
 			localStorage.removeItem('poll_seen');
 		} catch {
 			/* storage unavailable */
 		}
-		const onVis = () => {
-			if (document.visibilityState === 'visible') refreshInbox(get(userPhone).trim());
+		// Coming back to the app (switching to it, or reopening the installed app
+		// from the home screen, which may restore the page without reloading it):
+		// always reload so the bell's count matches the home-screen badge. The
+		// three events often fire together, so only the first one in 2 s counts.
+		let lastResume = 0;
+		const onResume = () => {
+			if (document.visibilityState !== 'visible') return;
+			const now = Date.now();
+			if (now - lastResume < 2000) return;
+			lastResume = now;
+			refreshInbox(get(userPhone).trim(), { force: true });
 		};
 		const onSwMessage = (e: MessageEvent) => {
 			if (e.data?.type === 'inbox-updated') refreshInbox(get(userPhone).trim(), { force: true });
+			// A push was tapped while this tab was already open.
+			if (e.data?.type === 'inbox-read' && typeof e.data.id === 'string') {
+				markInboxItemsRead(get(userPhone).trim(), [e.data.id]);
+			}
 		};
-		document.addEventListener('visibilitychange', onVis);
+		document.addEventListener('visibilitychange', onResume);
+		window.addEventListener('pageshow', onResume);
+		window.addEventListener('focus', onResume);
 		navigator.serviceWorker?.addEventListener('message', onSwMessage);
 		return () => {
 			unsubPhone();
 			clearTimeout(phoneTimer);
-			document.removeEventListener('visibilitychange', onVis);
+			document.removeEventListener('visibilitychange', onResume);
+			window.removeEventListener('pageshow', onResume);
+			window.removeEventListener('focus', onResume);
 			navigator.serviceWorker?.removeEventListener('message', onSwMessage);
 		};
 	});

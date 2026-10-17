@@ -7,6 +7,7 @@ package postgres_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func TestInboxRepo_AddListDedupAndRead(t *testing.T) {
 
 	add := func(it domain.InboxItem) {
 		t.Helper()
-		if err := repo.Add(it); err != nil {
+		if _, err := repo.Add(it); err != nil {
 			t.Fatalf("Add: %v", err)
 		}
 	}
@@ -89,10 +90,10 @@ func TestInboxRepo_AddListDedupAndRead(t *testing.T) {
 func TestInboxRepo_DeleteOlderThan(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewInboxRepo(testPool)
-	if err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, DedupKey: "old"}); err != nil {
+	if _, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, DedupKey: "old"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, DedupKey: "new"}); err != nil {
+	if _, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, DedupKey: "new"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := testPool.Exec(context.Background(),
@@ -117,7 +118,7 @@ func TestInboxRepo_UnreadCountUsesListWindow(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewInboxRepo(testPool)
 	for i := 0; i < 3; i++ {
-		if err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch}); err != nil {
+		if _, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -150,7 +151,7 @@ func TestInboxRepo_DeleteForRideAndRequest(t *testing.T) {
 		{Phone: "0633", Kind: domain.KindContactOffered, RequestID: reqA},
 		{Phone: "0633", Kind: domain.KindInterestReceived}, // linked to nothing
 	} {
-		if err := repo.Add(it); err != nil {
+		if _, err := repo.Add(it); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -218,7 +219,7 @@ func TestInboxRepo_DeleteForGonePosts(t *testing.T) {
 		{Phone: "0612", Kind: domain.KindRequestMatch, RequestID: liveReq, DedupKey: "keep-request"},
 		{Phone: "0613", Kind: domain.KindInterestReceived, DedupKey: "keep-unlinked"},
 	} {
-		if err := inbox.Add(it); err != nil {
+		if _, err := inbox.Add(it); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -260,10 +261,10 @@ func TestInboxRepo_DismissRestoreScrub(t *testing.T) {
 	dep := time.Now().Add(24 * time.Hour).UTC().Truncate(time.Second)
 	match := domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, ContactName: "Alice",
 		Origin: "Saillans", Destination: "Crest", DepartureAt: dep, URL: "/rides/r1", DedupKey: "ride_match:r1"}
-	if err := repo.Add(match); err != nil {
+	if _, err := repo.Add(match); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindInterestReceived, DedupKey: "other"}); err != nil {
+	if _, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindInterestReceived, DedupKey: "other"}); err != nil {
 		t.Fatal(err)
 	}
 	items, _ := repo.ListByPhone("0611", 10)
@@ -295,7 +296,7 @@ func TestInboxRepo_DismissRestoreScrub(t *testing.T) {
 		t.Errorf("dismissed item must not count as unread; got %d", n)
 	}
 	// A push retry of the same match must not resurrect it.
-	if err := repo.Add(match); err != nil {
+	if _, err := repo.Add(match); err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := repo.ListByPhone("0611", 10); len(got) != 1 {
@@ -346,5 +347,114 @@ func TestInboxRepo_DismissRestoreScrub(t *testing.T) {
 	}
 	if n, _ := repo.ScrubDismissed(time.Now().Add(-10 * time.Minute)); n != 0 {
 		t.Errorf("scrub should be idempotent, got %d", n)
+	}
+}
+
+// Add returns the item's id, and the existing id for a repeat of the event.
+func TestInboxRepo_AddReturnsID(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewInboxRepo(testPool)
+	id1, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, Title: "first", DedupKey: "k"})
+	if err != nil || id1 == "" {
+		t.Fatalf("Add: id=%q err=%v", id1, err)
+	}
+	id2, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, Title: "second", DedupKey: "k"})
+	if err != nil || id2 != id1 {
+		t.Fatalf("repeat should return the existing id %q, got %q (err %v)", id1, id2, err)
+	}
+	items, _ := repo.ListByPhone("0611", 10)
+	if len(items) != 1 || items[0].Title != "first" {
+		t.Errorf("repeat must leave the row untouched, got %+v", items)
+	}
+	id3, _ := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindTest})
+	if id3 == "" || id3 == id1 {
+		t.Errorf("an item without dedup key gets its own id, got %q", id3)
+	}
+}
+
+func TestInboxRepo_MarkReadByDedupKeys(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewInboxRepo(testPool)
+	for _, it := range []domain.InboxItem{
+		{Phone: "0611", Kind: domain.KindInterestReceived, DedupKey: "interest_received:a"},
+		{Phone: "0611", Kind: domain.KindInterestReceived, DedupKey: "interest_received:b"},
+		{Phone: "0622", Kind: domain.KindInterestReceived, DedupKey: "interest_received:a"},
+	} {
+		if _, err := repo.Add(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := repo.MarkReadByDedupKeys("0611", []string{"interest_received:a"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.MarkReadByDedupKeys("0611", nil); err != nil { // no keys: no-op
+		t.Fatal(err)
+	}
+	if n, _ := repo.CountUnread("0611", 10); n != 1 {
+		t.Errorf("0611 unread = %d, want 1", n)
+	}
+	if n, _ := repo.CountUnread("0622", 10); n != 1 {
+		t.Errorf("another phone's item with the same key must stay unread, got %d", n)
+	}
+}
+
+// Due = unread, not deleted, a reminder kind, last push at or before cutoff.
+func TestInboxRepo_FindRemindersDueAndMarkReminded(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewInboxRepo(testPool)
+	add := func(it domain.InboxItem, age time.Duration) string {
+		t.Helper()
+		id, err := repo.Add(it)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := testPool.Exec(context.Background(), `UPDATE notifications SET created_at = NOW() - $2::interval WHERE id = $1`,
+			id, fmt.Sprintf("%d seconds", int(age.Seconds()))); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	kinds := []string{domain.KindInterestReceived, domain.KindContactOffered}
+	due := add(domain.InboxItem{Phone: "0611", Kind: domain.KindInterestReceived, Title: "t", DedupKey: "due"}, 4*time.Hour)
+	add(domain.InboxItem{Phone: "0611", Kind: domain.KindInterestReceived, DedupKey: "too-recent"}, time.Hour)
+	add(domain.InboxItem{Phone: "0611", Kind: domain.KindRideMatch, DedupKey: "other-kind"}, 4*time.Hour)
+	read := add(domain.InboxItem{Phone: "0611", Kind: domain.KindContactOffered, DedupKey: "read"}, 4*time.Hour)
+	gone := add(domain.InboxItem{Phone: "0611", Kind: domain.KindContactOffered, DedupKey: "deleted"}, 4*time.Hour)
+	if err := repo.MarkRead("0611", []string{read}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Dismiss("0611", gone); err != nil {
+		t.Fatal(err)
+	}
+
+	cutoff := time.Now().Add(-3 * time.Hour)
+	got, err := repo.FindRemindersDue(kinds, cutoff, 10)
+	if err != nil {
+		t.Fatalf("FindRemindersDue: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != due || got[0].Title != "t" || got[0].Phone != "0611" {
+		t.Fatalf("expected only the due item, got %+v", got)
+	}
+
+	// After a reminder it isn't due again until another interval passes.
+	if err := repo.MarkReminded(due); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := repo.FindRemindersDue(kinds, cutoff, 10); len(again) != 0 {
+		t.Errorf("just reminded: expected nothing due, got %d", len(again))
+	}
+	if _, err := testPool.Exec(context.Background(), `UPDATE notifications SET reminded_at = NOW() - interval '4 hours' WHERE id = $1`, due); err != nil {
+		t.Fatal(err)
+	}
+	later, _ := repo.FindRemindersDue(kinds, cutoff, 10)
+	if len(later) != 1 || later[0].ReminderCount != 1 || later[0].RemindedAt.IsZero() {
+		t.Errorf("expected it due again with count 1, got %+v", later)
+	}
+	// Reading it stops the reminders.
+	if err := repo.MarkRead("0611", []string{due}); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := repo.FindRemindersDue(kinds, cutoff, 10); len(after) != 0 {
+		t.Errorf("read items must not be reminded, got %d", len(after))
 	}
 }

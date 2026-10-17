@@ -51,22 +51,24 @@ type Interest struct {
 }
 
 type Notification struct {
-	ID          pgtype.UUID        `db:"id"`
-	Phone       string             `db:"phone"`
-	Kind        string             `db:"kind"`
-	ContactName string             `db:"contact_name"`
-	Origin      string             `db:"origin"`
-	Destination string             `db:"destination"`
-	DepartureAt pgtype.Timestamptz `db:"departure_at"`
-	Url         string             `db:"url"`
-	Title       string             `db:"title"`
-	Body        string             `db:"body"`
-	RideID      pgtype.UUID        `db:"ride_id"`
-	RequestID   pgtype.UUID        `db:"request_id"`
-	DedupKey    pgtype.Text        `db:"dedup_key"`
-	CreatedAt   pgtype.Timestamptz `db:"created_at"`
-	ReadAt      pgtype.Timestamptz `db:"read_at"`
-	DismissedAt pgtype.Timestamptz `db:"dismissed_at"`
+	ID            pgtype.UUID        `db:"id"`
+	Phone         string             `db:"phone"`
+	Kind          string             `db:"kind"`
+	ContactName   string             `db:"contact_name"`
+	Origin        string             `db:"origin"`
+	Destination   string             `db:"destination"`
+	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
+	Url           string             `db:"url"`
+	Title         string             `db:"title"`
+	Body          string             `db:"body"`
+	RideID        pgtype.UUID        `db:"ride_id"`
+	RequestID     pgtype.UUID        `db:"request_id"`
+	DedupKey      pgtype.Text        `db:"dedup_key"`
+	CreatedAt     pgtype.Timestamptz `db:"created_at"`
+	ReadAt        pgtype.Timestamptz `db:"read_at"`
+	DismissedAt   pgtype.Timestamptz `db:"dismissed_at"`
+	RemindedAt    pgtype.Timestamptz `db:"reminded_at"`
+	ReminderCount int32              `db:"reminder_count"`
 }
 
 type NotificationQueue struct {

@@ -117,6 +117,24 @@ func main() {
 	settingsRepo := postgres.NewSettingsRepo(pool)
 	sendEngagementReminder := usecase.NewSendEngagementReminder(rideRepo, subRepo, settingsRepo, notifier, serviceTZ)
 
+	// Reminder pushes for unread notifications about another person's action.
+	reminderHours := usecase.DefaultInboxReminderIntervalHours
+	if v := os.Getenv("INBOX_REMINDER_INTERVAL_HOURS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			reminderHours = n
+		}
+	}
+	quietSetting := usecase.DefaultInboxReminderQuietHours
+	if v, ok := os.LookupEnv("INBOX_REMINDER_QUIET_HOURS"); ok {
+		quietSetting = v
+	}
+	quiet, err := usecase.ParseQuietHours(quietSetting)
+	if err != nil {
+		log.Printf("warning: %v; using %s", err, usecase.DefaultInboxReminderQuietHours)
+		quiet, _ = usecase.ParseQuietHours(usecase.DefaultInboxReminderQuietHours)
+	}
+	sendInboxReminders := usecase.NewSendInboxReminders(inboxRepo, subRepo, notifier, reminderHours, quiet, serviceTZ)
+
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getContactOfferStatus, getRequestContactOffers, requestRepo, statRepo)
@@ -166,6 +184,10 @@ func main() {
 			}
 			if err := purgeInbox.Execute(); err != nil {
 				log.Printf("purge inbox: %v", err)
+			}
+			// After the purge, so nothing is re-pushed about an expired post.
+			if err := sendInboxReminders.Execute(); err != nil {
+				log.Printf("inbox reminders: %v", err)
 			}
 		}
 		runCronCycle() // tick at startup — don't wait an hour for the first cycle

@@ -24,4 +24,9 @@ type Message struct {
 	// copies can be deleted when its owner deletes the post. Server-side only.
 	RideID    string `json:"-"`
 	RequestID string `json:"-"`
+	// InboxID is the inbox item this push is about (set by sendToAll after
+	// recording, and by reminders). The service worker uses it to mark the item
+	// read when the push is tapped and to replace an earlier push for the same
+	// item instead of stacking a new one.
+	InboxID string `json:"inbox_id,omitempty"`
 }

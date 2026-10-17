@@ -21,22 +21,39 @@ const (
 	KindTest              = "test"               // the user's own "send a test notification"
 )
 
+// ReminderKinds are the kinds about another person's action that get
+// periodic reminder pushes while unread (see usecase.SendInboxReminders).
+// Matches and feedback reminders have their own retry schedules; a cancelled
+// request and test pushes need no follow-up.
+var ReminderKinds = []string{
+	KindInterestReceived,
+	KindInterestAccepted,
+	KindDriverShared,
+	KindContactOffered,
+}
+
+// InboxKey is the dedup key of the inbox item of the given kind about id
+// (an interest, offer, ride or request id), e.g. "interest_received:<id>".
+func InboxKey(kind, id string) string { return kind + ":" + id }
+
 // InboxItem is one persisted notification in a user's in-app inbox.
 // It never carries the other party's phone number.
 type InboxItem struct {
-	ID          string
-	Phone       string // recipient
-	Kind        string
-	ContactName string
-	Origin      string
-	Destination string
-	DepartureAt time.Time // zero = unknown
-	URL         string
-	Title       string // server-rendered fallback for clients that don't know Kind
-	Body        string
-	DedupKey    string // "" = never deduplicated
-	RideID      string // post this item is about ("" = none); deleting it deletes the item
-	RequestID   string
-	CreatedAt   time.Time
-	ReadAt      time.Time // zero = unread
+	ID            string
+	Phone         string // recipient
+	Kind          string
+	ContactName   string
+	Origin        string
+	Destination   string
+	DepartureAt   time.Time // zero = unknown
+	URL           string
+	Title         string // server-rendered fallback for clients that don't know Kind
+	Body          string
+	DedupKey      string // "" = never deduplicated
+	RideID        string // post this item is about ("" = none); deleting it deletes the item
+	RequestID     string
+	CreatedAt     time.Time
+	ReadAt        time.Time // zero = unread
+	RemindedAt    time.Time // last reminder push; zero = none yet
+	ReminderCount int
 }

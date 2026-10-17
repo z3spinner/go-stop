@@ -7,6 +7,7 @@ import { api } from './api';
 import {
 	badgeText,
 	inboxIcon,
+	inboxIdFromUrl,
 	inboxItems,
 	inboxRoute,
 	inboxTitle,
@@ -165,6 +166,20 @@ describe('refreshInbox / markAllInboxRead', () => {
 		expect(get(inboxUnread)).toBe(0);
 	});
 
+	it('drops the badge before the server answers', async () => {
+		inboxItems.set([item({ id: 'q1', read: false }), item({ id: 'q2', read: false })]);
+		inboxUnread.set(2);
+		let finish!: () => void;
+		vi.spyOn(api.inbox, 'markRead').mockImplementation(() => new Promise((r) => (finish = () => r(null))));
+		vi.spyOn(api.inbox, 'list').mockResolvedValue({ items: [], unread: 1 });
+		const p = markInboxItemsRead('0612121212', ['q1']);
+		expect(get(inboxUnread)).toBe(1);
+		expect(get(inboxItems).find((i) => i.id === 'q1')?.read).toBe(true);
+		expect(get(inboxItems).find((i) => i.id === 'q2')?.read).toBe(false);
+		finish();
+		await p;
+	});
+
 	it('does nothing for an empty id list', async () => {
 		const mark = vi.spyOn(api.inbox, 'markRead');
 		await markInboxItemsRead('0611111111', []);
@@ -218,5 +233,17 @@ describe('refreshInbox / markAllInboxRead', () => {
 		expect(restore).toHaveBeenCalledWith('0699999999', 'u1');
 		expect(list).toHaveBeenCalledWith('0699999999');
 		expect(get(inboxItems).map((i) => i.id)).toEqual(['u1']); // no longer hidden as pending
+	});
+});
+
+describe('inboxIdFromUrl', () => {
+	it('reads the tapped push\'s inbox id and strips it, keeping other params', () => {
+		const { id, clean } = inboxIdFromUrl(new URL('https://x.test/my-rides?tab=2&n=abc-123#top'));
+		expect(id).toBe('abc-123');
+		expect(clean.href).toBe('https://x.test/my-rides?tab=2#top');
+	});
+	it('is null without the parameter (or with an empty one)', () => {
+		expect(inboxIdFromUrl(new URL('https://x.test/my-rides')).id).toBeNull();
+		expect(inboxIdFromUrl(new URL('https://x.test/my-rides?n=')).id).toBeNull();
 	});
 });
