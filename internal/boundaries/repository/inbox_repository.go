@@ -20,9 +20,10 @@ type InboxRepository interface {
 	MarkReadByDedupKeys(phone string, keys []string) error
 
 	// FindRemindersDue returns up to limit unread, not deleted items of these
-	// kinds whose last push (original or reminder) was at or before cutoff,
-	// oldest first.
-	FindRemindersDue(kinds []string, cutoff time.Time, limit int) ([]domain.InboxItem, error)
+	// kinds whose last push (original or reminder) was at or before cutoff and
+	// that have had fewer than maxReminders reminders (0 = no limit), oldest
+	// first.
+	FindRemindersDue(kinds []string, maxReminders int, cutoff time.Time, limit int) ([]domain.InboxItem, error)
 
 	// MarkReminded records that a reminder was just pushed for the item.
 	MarkReminded(id string) error

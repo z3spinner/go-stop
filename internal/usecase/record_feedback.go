@@ -7,21 +7,25 @@ import (
 	"log"
 	"time"
 
+	"github.com/z3spinner/go-stop/internal/boundaries/notification"
 	"github.com/z3spinner/go-stop/internal/boundaries/repository"
+	"github.com/z3spinner/go-stop/internal/domain"
 )
 
 type RecordFeedback struct {
-	rides repository.RideRepository
-	stats repository.StatRepository
-	queue repository.FeedbackQueueRepository
+	rides    repository.RideRepository
+	stats    repository.StatRepository
+	queue    repository.FeedbackQueueRepository
+	notifier notification.Notifier
 }
 
 func NewRecordFeedback(
 	rides repository.RideRepository,
 	stats repository.StatRepository,
 	queue repository.FeedbackQueueRepository,
+	notifier notification.Notifier,
 ) *RecordFeedback {
-	return &RecordFeedback{rides: rides, stats: stats, queue: queue}
+	return &RecordFeedback{rides: rides, stats: stats, queue: queue, notifier: notifier}
 }
 
 // Execute records the driver's answer to "did someone come along?". It is
@@ -31,6 +35,15 @@ func NewRecordFeedback(
 // The "claim" (conditional feedback_given flip, or queue-row delete) happens
 // before the stat write, so only one concurrent caller records a stat.
 func (uc *RecordFeedback) Execute(rideID, phone string, taken bool) error {
+	err := uc.execute(rideID, phone, taken)
+	if err == nil {
+		// Answered (now or before): the prompt is settled, so its reminders stop.
+		uc.notifier.Acknowledge(phone, domain.InboxKey(domain.KindFeedbackReminder, rideID))
+	}
+	return err
+}
+
+func (uc *RecordFeedback) execute(rideID, phone string, taken bool) error {
 	if ride, err := uc.rides.FindByID(rideID); err == nil {
 		// Ride still exists: verify ownership, then claim by flipping feedback_given.
 		if ride.Phone != phone {

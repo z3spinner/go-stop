@@ -183,8 +183,9 @@ func TestInboxRepo_DeleteForRideAndRequest(t *testing.T) {
 }
 
 // Items about a ride/request disappear once it expires (the expiry job deletes
-// the row), except the driver's own feedback reminder, which is sent after the
-// trip on purpose. Live posts and unlinked items are untouched.
+// the row), except the driver's own feedback prompt while it can still be
+// answered (its feedback task exists). Live posts and unlinked items are
+// untouched.
 func TestInboxRepo_DeleteForGonePosts(t *testing.T) {
 	truncate(t)
 	inbox := postgres.NewInboxRepo(testPool)
@@ -222,6 +223,16 @@ func TestInboxRepo_DeleteForGonePosts(t *testing.T) {
 		if _, err := inbox.Add(it); err != nil {
 			t.Fatal(err)
 		}
+	}
+
+	// The expired ride's feedback prompt can still be answered: its task exists.
+	if _, err := testPool.Exec(context.Background(), `TRUNCATE feedback_queue`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := testPool.Exec(context.Background(),
+		`INSERT INTO feedback_queue (ride_id, phone, origin, destination, ride_date, departure_at, send_after)
+		 VALUES ($1, '0601', 'A', 'B', CURRENT_DATE, NOW() - interval '48 hours', NOW() - interval '47 hours')`, expiredRide); err != nil {
+		t.Fatal(err)
 	}
 
 	// What the hourly cron does: expiry jobs first, then the inbox purge.
@@ -428,7 +439,7 @@ func TestInboxRepo_FindRemindersDueAndMarkReminded(t *testing.T) {
 	}
 
 	cutoff := time.Now().Add(-3 * time.Hour)
-	got, err := repo.FindRemindersDue(kinds, cutoff, 10)
+	got, err := repo.FindRemindersDue(kinds, 0, cutoff, 10)
 	if err != nil {
 		t.Fatalf("FindRemindersDue: %v", err)
 	}
@@ -440,13 +451,13 @@ func TestInboxRepo_FindRemindersDueAndMarkReminded(t *testing.T) {
 	if err := repo.MarkReminded(due); err != nil {
 		t.Fatal(err)
 	}
-	if again, _ := repo.FindRemindersDue(kinds, cutoff, 10); len(again) != 0 {
+	if again, _ := repo.FindRemindersDue(kinds, 0, cutoff, 10); len(again) != 0 {
 		t.Errorf("just reminded: expected nothing due, got %d", len(again))
 	}
 	if _, err := testPool.Exec(context.Background(), `UPDATE notifications SET reminded_at = NOW() - interval '4 hours' WHERE id = $1`, due); err != nil {
 		t.Fatal(err)
 	}
-	later, _ := repo.FindRemindersDue(kinds, cutoff, 10)
+	later, _ := repo.FindRemindersDue(kinds, 0, cutoff, 10)
 	if len(later) != 1 || later[0].ReminderCount != 1 || later[0].RemindedAt.IsZero() {
 		t.Errorf("expected it due again with count 1, got %+v", later)
 	}
@@ -454,7 +465,72 @@ func TestInboxRepo_FindRemindersDueAndMarkReminded(t *testing.T) {
 	if err := repo.MarkRead("0611", []string{due}); err != nil {
 		t.Fatal(err)
 	}
-	if after, _ := repo.FindRemindersDue(kinds, cutoff, 10); len(after) != 0 {
+	if after, _ := repo.FindRemindersDue(kinds, 0, cutoff, 10); len(after) != 0 {
 		t.Errorf("read items must not be reminded, got %d", len(after))
+	}
+}
+
+// A capped kind stops being due once it has had its reminders.
+func TestInboxRepo_FindRemindersDueRespectsTheCap(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewInboxRepo(testPool)
+	id, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindFeedbackReminder, DedupKey: "feedback_reminder:r1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kinds := []string{domain.KindFeedbackReminder}
+	age := func() {
+		t.Helper()
+		if _, err := testPool.Exec(context.Background(),
+			`UPDATE notifications SET created_at = NOW() - interval '10 hours', reminded_at = CASE WHEN reminded_at IS NULL THEN NULL ELSE NOW() - interval '4 hours' END WHERE id = $1`, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cutoff := time.Now().Add(-3 * time.Hour)
+	for i := 0; i < 2; i++ {
+		age()
+		got, _ := repo.FindRemindersDue(kinds, 2, cutoff, 10)
+		if len(got) != 1 {
+			t.Fatalf("reminder %d: expected due, got %d", i+1, len(got))
+		}
+		if err := repo.MarkReminded(id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	age()
+	if got, _ := repo.FindRemindersDue(kinds, 2, cutoff, 10); len(got) != 0 {
+		t.Errorf("after 2 reminders the capped item must not be due, got %d", len(got))
+	}
+	if got, _ := repo.FindRemindersDue(kinds, 0, cutoff, 10); len(got) != 1 {
+		t.Errorf("without a cap it would still be due, got %d", len(got))
+	}
+}
+
+// The feedback prompt outlives its ride while it can still be answered (its
+// feedback task exists) and goes with the task.
+func TestInboxRepo_FeedbackPromptGoesWithItsTask(t *testing.T) {
+	truncate(t)
+	if _, err := testPool.Exec(context.Background(), `TRUNCATE feedback_queue`); err != nil {
+		t.Fatal(err)
+	}
+	repo := postgres.NewInboxRepo(testPool)
+	withTask, withoutTask := uuid.New().String(), uuid.New().String()
+	for _, rid := range []string{withTask, withoutTask} {
+		if _, err := repo.Add(domain.InboxItem{Phone: "0611", Kind: domain.KindFeedbackReminder, RideID: rid, DedupKey: "feedback_reminder:" + rid}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Neither ride exists any more; only one still has its feedback task.
+	if _, err := testPool.Exec(context.Background(),
+		`INSERT INTO feedback_queue (ride_id, phone, origin, destination, ride_date, departure_at, send_after)
+		 VALUES ($1, '0611', 'A', 'B', CURRENT_DATE, NOW() - interval '3 hours', NOW() - interval '1 hour')`, withTask); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.DeleteForGonePosts(); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := repo.ListByPhone("0611", 10)
+	if len(items) != 1 || items[0].RideID != withTask {
+		t.Errorf("expected only the prompt with a task to remain, got %+v", items)
 	}
 }

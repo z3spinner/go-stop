@@ -15,9 +15,9 @@ type FeedbackQueueRepository interface {
 	// and is not already queued. Idempotent via ride_id UNIQUE.
 	EnqueueStartedRides(windowStartAfter time.Time) error
 
-	// FindDue returns tasks past send_after that are still retry-eligible
-	// (sent_count < maxRetries AND (last_sent_at IS NULL OR last_sent_at < retryAfter)).
-	FindDue(retryAfter time.Time, maxRetries int) ([]domain.FeedbackTask, error)
+	// FindUnsent returns tasks past send_after whose prompt hasn't been pushed
+	// yet (the prompt is pushed once; repeats are inbox reminders).
+	FindUnsent() ([]domain.FeedbackTask, error)
 
 	// FindByRideID returns the task for a ride; a non-nil error means absent.
 	FindByRideID(rideID string) (domain.FeedbackTask, error)
@@ -31,6 +31,7 @@ type FeedbackQueueRepository interface {
 	// task (returns true) writes the stat; concurrent callers get false and no-op.
 	DeleteByRideID(rideID string) (bool, error)
 
-	// DeleteExhausted removes tasks that hit maxRetries or are older than ttl.
-	DeleteExhausted(maxRetries int, ttl time.Duration) error
+	// DeleteStale removes tasks created more than ttl ago. Unanswered tasks are
+	// kept until then so the driver can still answer after the ride expired.
+	DeleteStale(ttl time.Duration) error
 }

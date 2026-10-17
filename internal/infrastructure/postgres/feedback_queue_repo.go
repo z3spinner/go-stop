@@ -22,11 +22,8 @@ func (r *FeedbackQueueRepo) EnqueueStartedRides(windowStartAfter time.Time) erro
 	return r.q.EnqueueStartedRides(context.Background(), tsFrom(windowStartAfter))
 }
 
-func (r *FeedbackQueueRepo) FindDue(retryAfter time.Time, maxRetries int) ([]domain.FeedbackTask, error) {
-	rows, err := r.q.FindDueFeedback(context.Background(), queries.FindDueFeedbackParams{
-		MaxRetries:  int32(maxRetries),
-		RetryBefore: tsFrom(retryAfter),
-	})
+func (r *FeedbackQueueRepo) FindUnsent() ([]domain.FeedbackTask, error) {
+	rows, err := r.q.FindUnsentFeedback(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -54,9 +51,6 @@ func (r *FeedbackQueueRepo) DeleteByRideID(rideID string) (bool, error) {
 	return n > 0, err
 }
 
-func (r *FeedbackQueueRepo) DeleteExhausted(maxRetries int, ttl time.Duration) error {
-	return r.q.DeleteExhaustedFeedback(context.Background(), queries.DeleteExhaustedFeedbackParams{
-		MaxRetries: int32(maxRetries),
-		TtlBefore:  tsFrom(time.Now().Add(-ttl)),
-	})
+func (r *FeedbackQueueRepo) DeleteStale(ttl time.Duration) error {
+	return r.q.DeleteStaleFeedback(context.Background(), tsFrom(time.Now().Add(-ttl)))
 }

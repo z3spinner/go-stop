@@ -12,15 +12,16 @@ import (
 
 // mockFeedbackQueue is the shared in-memory FeedbackQueueRepository for usecase tests.
 type mockFeedbackQueue struct {
-	enqueueCalled     bool
-	enqueueWindowArg  time.Time
-	enqueueErr        error
-	due               []domain.FeedbackTask
-	byRideID          map[string]domain.FeedbackTask
-	claimedRides      map[string]bool // ride IDs already claimed via DeleteByRideID
-	marked            []string
-	deletedByRideID   []string
-	deleteExhaustedOK bool
+	enqueueCalled    bool
+	enqueueWindowArg time.Time
+	enqueueErr       error
+	due              []domain.FeedbackTask
+	byRideID         map[string]domain.FeedbackTask
+	claimedRides     map[string]bool // ride IDs already claimed via DeleteByRideID
+	marked           []string
+	deletedByRideID  []string
+	deleteStaleTTL   time.Duration
+	findCalled       bool
 }
 
 func (m *mockFeedbackQueue) EnqueueStartedRides(windowStartAfter time.Time) error {
@@ -28,7 +29,8 @@ func (m *mockFeedbackQueue) EnqueueStartedRides(windowStartAfter time.Time) erro
 	m.enqueueWindowArg = windowStartAfter
 	return m.enqueueErr
 }
-func (m *mockFeedbackQueue) FindDue(retryAfter time.Time, maxRetries int) ([]domain.FeedbackTask, error) {
+func (m *mockFeedbackQueue) FindUnsent() ([]domain.FeedbackTask, error) {
+	m.findCalled = true
 	return m.due, nil
 }
 func (m *mockFeedbackQueue) FindByRideID(rideID string) (domain.FeedbackTask, error) {
@@ -65,7 +67,7 @@ func (m *mockFeedbackQueue) DeleteByRideID(rideID string) (bool, error) {
 	m.claimedRides[rideID] = true
 	return true, nil
 }
-func (m *mockFeedbackQueue) DeleteExhausted(maxRetries int, ttl time.Duration) error {
-	m.deleteExhaustedOK = true
+func (m *mockFeedbackQueue) DeleteStale(ttl time.Duration) error {
+	m.deleteStaleTTL = ttl
 	return nil
 }

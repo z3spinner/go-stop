@@ -50,11 +50,12 @@ func (r *InboxRepo) MarkReadByDedupKeys(phone string, keys []string) error {
 	})
 }
 
-func (r *InboxRepo) FindRemindersDue(kinds []string, cutoff time.Time, limit int) ([]domain.InboxItem, error) {
+func (r *InboxRepo) FindRemindersDue(kinds []string, maxReminders int, cutoff time.Time, limit int) ([]domain.InboxItem, error) {
 	rows, err := r.q.FindNotificationRemindersDue(context.Background(), queries.FindNotificationRemindersDueParams{
-		Kinds:    kinds,
-		Cutoff:   tsFrom(cutoff),
-		MaxItems: int32(limit),
+		Kinds:        kinds,
+		MaxReminders: int32(maxReminders),
+		Cutoff:       tsFrom(cutoff),
+		MaxItems:     int32(limit),
 	})
 	if err != nil {
 		return nil, err

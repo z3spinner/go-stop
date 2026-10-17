@@ -87,20 +87,23 @@ func (q *Queries) CountUnreadNotifications(ctx context.Context, arg CountUnreadN
 
 const deleteInboxForGonePosts = `-- name: DeleteInboxForGonePosts :execrows
 DELETE FROM notifications n
-WHERE n.kind <> 'feedback_reminder'
-  AND (
-    (n.ride_id IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM rides r WHERE r.id = n.ride_id))
-    OR
-    (n.request_id IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM requests q WHERE q.id = n.request_id))
+WHERE (
+    n.ride_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM rides r WHERE r.id = n.ride_id)
+    AND (n.kind <> 'feedback_reminder'
+         OR NOT EXISTS (SELECT 1 FROM feedback_queue fq WHERE fq.ride_id = n.ride_id))
+  )
+  OR (
+    n.request_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM requests q WHERE q.id = n.request_id)
   )
 `
 
 // Removes items about rides/requests that no longer exist — expired (deleted
 // by the hourly expiry job) or deleted by their owner — so a post's details
-// don't outlive it in other people's inboxes. Feedback reminders are kept:
-// they are sent after the ride is over, on purpose.
+// don't outlive it in other people's inboxes. The driver's feedback prompt is
+// sent after the ride is over, on purpose: it stays while it can still be
+// answered (its feedback task exists), and goes with the task.
 func (q *Queries) DeleteInboxForGonePosts(ctx context.Context) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteInboxForGonePosts)
 	if err != nil {
@@ -164,22 +167,30 @@ SELECT id, phone, kind, contact_name, origin, destination, departure_at,
 FROM notifications
 WHERE read_at IS NULL AND dismissed_at IS NULL
   AND kind = ANY($1::text[])
-  AND COALESCE(reminded_at, created_at) <= $2::timestamptz
+  AND ($2::int = 0 OR reminder_count < $2::int)
+  AND COALESCE(reminded_at, created_at) <= $3::timestamptz
 ORDER BY COALESCE(reminded_at, created_at)
-LIMIT $3::int
+LIMIT $4::int
 `
 
 type FindNotificationRemindersDueParams struct {
-	Kinds    []string           `db:"kinds"`
-	Cutoff   pgtype.Timestamptz `db:"cutoff"`
-	MaxItems int32              `db:"max_items"`
+	Kinds        []string           `db:"kinds"`
+	MaxReminders int32              `db:"max_reminders"`
+	Cutoff       pgtype.Timestamptz `db:"cutoff"`
+	MaxItems     int32              `db:"max_items"`
 }
 
 // Unread, not deleted items of the given kinds whose last push (the original
-// one, or the last reminder) is older than the cutoff. Items about an expired
-// or deleted post are already gone (see DeleteInboxForGonePosts).
+// one, or the last reminder) is older than the cutoff, and which have had
+// fewer than max_reminders reminders (0 = no limit). Items about an expired or
+// deleted post are already gone (see DeleteInboxForGonePosts).
 func (q *Queries) FindNotificationRemindersDue(ctx context.Context, arg FindNotificationRemindersDueParams) ([]Notification, error) {
-	rows, err := q.db.Query(ctx, findNotificationRemindersDue, arg.Kinds, arg.Cutoff, arg.MaxItems)
+	rows, err := q.db.Query(ctx, findNotificationRemindersDue,
+		arg.Kinds,
+		arg.MaxReminders,
+		arg.Cutoff,
+		arg.MaxItems,
+	)
 	if err != nil {
 		return nil, err
 	}

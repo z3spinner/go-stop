@@ -52,16 +52,19 @@ DELETE FROM notifications WHERE created_at < $1;
 -- name: DeleteInboxForGonePosts :execrows
 -- Removes items about rides/requests that no longer exist — expired (deleted
 -- by the hourly expiry job) or deleted by their owner — so a post's details
--- don't outlive it in other people's inboxes. Feedback reminders are kept:
--- they are sent after the ride is over, on purpose.
+-- don't outlive it in other people's inboxes. The driver's feedback prompt is
+-- sent after the ride is over, on purpose: it stays while it can still be
+-- answered (its feedback task exists), and goes with the task.
 DELETE FROM notifications n
-WHERE n.kind <> 'feedback_reminder'
-  AND (
-    (n.ride_id IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM rides r WHERE r.id = n.ride_id))
-    OR
-    (n.request_id IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM requests q WHERE q.id = n.request_id))
+WHERE (
+    n.ride_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM rides r WHERE r.id = n.ride_id)
+    AND (n.kind <> 'feedback_reminder'
+         OR NOT EXISTS (SELECT 1 FROM feedback_queue fq WHERE fq.ride_id = n.ride_id))
+  )
+  OR (
+    n.request_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM requests q WHERE q.id = n.request_id)
   );
 
 -- name: DismissNotification :exec
@@ -96,14 +99,16 @@ WHERE phone = $1 AND read_at IS NULL AND dedup_key = ANY(sqlc.arg(keys)::text[])
 
 -- name: FindNotificationRemindersDue :many
 -- Unread, not deleted items of the given kinds whose last push (the original
--- one, or the last reminder) is older than the cutoff. Items about an expired
--- or deleted post are already gone (see DeleteInboxForGonePosts).
+-- one, or the last reminder) is older than the cutoff, and which have had
+-- fewer than max_reminders reminders (0 = no limit). Items about an expired or
+-- deleted post are already gone (see DeleteInboxForGonePosts).
 SELECT id, phone, kind, contact_name, origin, destination, departure_at,
        url, title, body, ride_id, request_id, dedup_key, created_at, read_at,
        dismissed_at, reminded_at, reminder_count
 FROM notifications
 WHERE read_at IS NULL AND dismissed_at IS NULL
   AND kind = ANY(sqlc.arg(kinds)::text[])
+  AND (sqlc.arg(max_reminders)::int = 0 OR reminder_count < sqlc.arg(max_reminders)::int)
   AND COALESCE(reminded_at, created_at) <= sqlc.arg(cutoff)::timestamptz
 ORDER BY COALESCE(reminded_at, created_at)
 LIMIT sqlc.arg(max_items)::int;

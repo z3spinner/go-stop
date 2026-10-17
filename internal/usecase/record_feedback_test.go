@@ -104,7 +104,7 @@ func TestRecordFeedback_SavesStatAndMarksFeedbackGiven(t *testing.T) {
 	stats := &mockStatRepo{}
 	queue := &mockFeedbackQueue{}
 
-	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	uc := usecase.NewRecordFeedback(rides, stats, queue, &mockNotifier{})
 	if err := uc.Execute("ride-1", "555-0001", true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestRecordFeedback_RecordsViaQueueWhenRideGone(t *testing.T) {
 			RideDate: time.Date(2030, 6, 1, 0, 0, 0, 0, time.UTC)},
 	}}
 
-	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	uc := usecase.NewRecordFeedback(rides, stats, queue, &mockNotifier{})
 	if err := uc.Execute("ride-9", "555-0001", true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestRecordFeedback_SavesNegativeFeedback(t *testing.T) {
 		"ride-2": {ID: "ride-2", Phone: "555-0001", Origin: "A", Destination: "B", Date: time.Now()},
 	}}
 	stats := &mockStatRepo{}
-	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{}, &mockNotifier{})
 	if err := uc.Execute("ride-2", "555-0001", false); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestRecordFeedback_SavesNegativeFeedback(t *testing.T) {
 func TestRecordFeedback_RejectsWrongPhone(t *testing.T) {
 	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-0001"}}}
 	stats := &mockStatRepo{}
-	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{}, &mockNotifier{})
 	if err := uc.Execute("ride-1", "555-9999", true); !errors.Is(err, usecase.ErrUnauthorized) {
 		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
@@ -174,7 +174,7 @@ func TestRecordFeedback_RejectsWrongPhoneViaQueue(t *testing.T) {
 	queue := &mockFeedbackQueue{byRideID: map[string]domain.FeedbackTask{
 		"ride-9": {RideID: "ride-9", Phone: "555-0001", Origin: "Die", Destination: "Crest"},
 	}}
-	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	uc := usecase.NewRecordFeedback(rides, stats, queue, &mockNotifier{})
 	if err := uc.Execute("ride-9", "555-9999", true); !errors.Is(err, usecase.ErrUnauthorized) {
 		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
@@ -183,7 +183,7 @@ func TestRecordFeedback_RejectsWrongPhoneViaQueue(t *testing.T) {
 func TestRecordFeedback_ReturnsNotFoundWhenNeitherExists(t *testing.T) {
 	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{}}
 	stats := &mockStatRepo{}
-	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{}, &mockNotifier{})
 	if err := uc.Execute("nonexistent", "555-0001", true); !errors.Is(err, usecase.ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %v", err)
 	}
@@ -194,7 +194,7 @@ func TestRecordFeedback_DoubleSubmitLiveRideRecordsOnce(t *testing.T) {
 		"ride-1": {ID: "ride-1", Phone: "p", Origin: "A", Destination: "B", Date: time.Now()},
 	}}
 	stats := &mockStatRepo{}
-	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{})
+	uc := usecase.NewRecordFeedback(rides, stats, &mockFeedbackQueue{}, &mockNotifier{})
 	_ = uc.Execute("ride-1", "p", true)
 	_ = uc.Execute("ride-1", "p", true) // second call loses the claim
 	if len(stats.saved) != 1 {
@@ -208,10 +208,32 @@ func TestRecordFeedback_DoubleSubmitGoneRideRecordsOnce(t *testing.T) {
 	queue := &mockFeedbackQueue{byRideID: map[string]domain.FeedbackTask{
 		"ride-9": {RideID: "ride-9", Phone: "p", Origin: "Die", Destination: "Crest"},
 	}}
-	uc := usecase.NewRecordFeedback(rides, stats, queue)
+	uc := usecase.NewRecordFeedback(rides, stats, queue, &mockNotifier{})
 	_ = uc.Execute("ride-9", "p", true)
 	_ = uc.Execute("ride-9", "p", true) // second call loses the claim (DeleteByRideID returns false)
 	if len(stats.saved) != 1 {
 		t.Errorf("expected exactly 1 stat, got %d", len(stats.saved))
+	}
+}
+
+// Answering settles the prompt: its notification is marked read, so the
+// reminders stop. A refused answer (someone else's ride) settles nothing.
+func TestRecordFeedback_AnsweringStopsTheReminders(t *testing.T) {
+	rides := &mockRideRepoFeedback{rides: map[string]domain.Ride{
+		"ride-1": {ID: "ride-1", Phone: "555-0001", Origin: "A", Destination: "B"},
+	}}
+	n := &mockNotifier{}
+	uc := usecase.NewRecordFeedback(rides, &mockStatRepo{}, &mockFeedbackQueue{}, n)
+	if err := uc.Execute("ride-1", "555-0001", false); err != nil {
+		t.Fatal(err)
+	}
+	if len(n.acked) != 1 || n.acked[0] != "555-0001/feedback_reminder:ride-1" {
+		t.Errorf("acked = %v", n.acked)
+	}
+
+	n2 := &mockNotifier{}
+	_ = usecase.NewRecordFeedback(rides, &mockStatRepo{}, &mockFeedbackQueue{}, n2).Execute("ride-1", "555-9999", true)
+	if len(n2.acked) != 0 {
+		t.Errorf("unauthorized answer must not acknowledge, got %v", n2.acked)
 	}
 }

@@ -92,10 +92,9 @@ func main() {
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, requestRepo)
 	retryNotifications := usecase.NewRetryNotifications(notifQueueRepo, rideRepo, subRepo, notifier, 2, 3)
 	getPendingNotifications := usecase.NewGetPendingNotifications(notifQueueRepo, rideRepo)
-	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, feedbackQueueRepo)
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, feedbackQueueRepo, notifier)
 	getStats := usecase.NewGetStats(statRepo)
 	enqueueFeedback := usecase.NewEnqueueFeedback(feedbackQueueRepo)
-	sendFeedbackReminders := usecase.NewSendFeedbackReminders(feedbackQueueRepo, subRepo, notifier, 2, 3)
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
 	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
@@ -134,6 +133,9 @@ func main() {
 		quiet, _ = usecase.ParseQuietHours(usecase.DefaultInboxReminderQuietHours)
 	}
 	sendInboxReminders := usecase.NewSendInboxReminders(inboxRepo, subRepo, notifier, reminderHours, quiet, serviceTZ)
+	// The post-ride feedback prompt is pushed once (not during quiet hours);
+	// its repeats are inbox reminders.
+	sendFeedbackPrompts := usecase.NewSendFeedbackPrompts(feedbackQueueRepo, subRepo, notifier, quiet, serviceTZ)
 
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
@@ -173,8 +175,8 @@ func main() {
 			if err := expireRequests.Execute(); err != nil {
 				log.Printf("expire requests: %v", err)
 			}
-			if err := sendFeedbackReminders.Execute(); err != nil {
-				log.Printf("send feedback reminders: %v", err)
+			if err := sendFeedbackPrompts.Execute(); err != nil {
+				log.Printf("send feedback prompts: %v", err)
 			}
 			if err := retryNotifications.Execute(); err != nil {
 				log.Printf("retry notifications: %v", err)

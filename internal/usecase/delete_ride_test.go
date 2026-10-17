@@ -91,10 +91,8 @@ func (n *noopNotifQueue) ListForSearcher(string) ([]domain.NotificationQueueEntr
 // mockFeedbackQueue records which ride ids had their feedback task removed.
 type mockFeedbackQueueDelete struct{ deletedByRideID []string }
 
-func (m *mockFeedbackQueueDelete) EnqueueStartedRides(time.Time) error { return nil }
-func (m *mockFeedbackQueueDelete) FindDue(time.Time, int) ([]domain.FeedbackTask, error) {
-	return nil, nil
-}
+func (m *mockFeedbackQueueDelete) EnqueueStartedRides(time.Time) error        { return nil }
+func (m *mockFeedbackQueueDelete) FindUnsent() ([]domain.FeedbackTask, error) { return nil, nil }
 func (m *mockFeedbackQueueDelete) FindByRideID(string) (domain.FeedbackTask, error) {
 	return domain.FeedbackTask{}, errors.New("not found")
 }
@@ -103,7 +101,7 @@ func (m *mockFeedbackQueueDelete) DeleteByRideID(rideID string) (bool, error) {
 	m.deletedByRideID = append(m.deletedByRideID, rideID)
 	return true, nil
 }
-func (m *mockFeedbackQueueDelete) DeleteExhausted(int, time.Duration) error { return nil }
+func (m *mockFeedbackQueueDelete) DeleteStale(time.Duration) error { return nil }
 
 func TestDeleteRide_DeletesWhenPhoneMatches(t *testing.T) {
 	rides := &mockRideRepoDelete{
