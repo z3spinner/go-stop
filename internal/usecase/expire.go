@@ -28,3 +28,17 @@ func NewExpireRequests(requests repository.RequestRepository) *ExpireRequests {
 func (uc *ExpireRequests) Execute() error {
 	return uc.requests.DeleteExpired()
 }
+
+// ExpireMatchQueue drops ride↔request match records whose ride or request has
+// expired (the records only exist to avoid re-notifying a match).
+type ExpireMatchQueue struct {
+	queue repository.NotificationQueueRepository
+}
+
+func NewExpireMatchQueue(queue repository.NotificationQueueRepository) *ExpireMatchQueue {
+	return &ExpireMatchQueue{queue: queue}
+}
+
+func (uc *ExpireMatchQueue) Execute() error {
+	return uc.queue.DeleteExpired()
+}

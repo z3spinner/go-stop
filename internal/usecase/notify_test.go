@@ -74,7 +74,7 @@ func TestNotifySearcher_SendsToAllDevices(t *testing.T) {
 	}
 	counter := &countingNotifier{}
 	repo := &mockSubRepoNotify{subs: []domain.Subscription{sub1, sub2}}
-	usecase.NotifySearcher("555-0001", ride, repo, counter)
+	usecase.NotifySearcher(domain.Request{ID: "req-1", Phone: "555-0001"}, ride, repo, counter)
 	if counter.count != 2 {
 		t.Errorf("expected 2 sends (one per device), got %d", counter.count)
 	}
@@ -83,7 +83,7 @@ func TestNotifySearcher_SendsToAllDevices(t *testing.T) {
 func TestNotifySearcher_NoSubscription_DoesNothing(t *testing.T) {
 	n := &countingNotifier{}
 	repo := &mockSubRepoNotify{} // empty
-	usecase.NotifySearcher("555-0001", domain.Ride{ID: "x"}, repo, n)
+	usecase.NotifySearcher(domain.Request{ID: "req-1", Phone: "555-0001"}, domain.Ride{ID: "x"}, repo, n)
 	if n.count != 0 {
 		t.Errorf("expected 0 sends, got %d", n.count)
 	}
@@ -93,7 +93,7 @@ func TestNotifySearcher_Removes410GoneSubscription(t *testing.T) {
 	sub := domain.Subscription{Phone: "555-0001", Endpoint: "https://fcm.example/stale"}
 	gone := &goneNotifier{}
 	repo := &trackingSubRepo{subs: []domain.Subscription{sub}}
-	usecase.NotifySearcher("555-0001", domain.Ride{ID: "x"}, repo, gone)
+	usecase.NotifySearcher(domain.Request{ID: "req-1", Phone: "555-0001"}, domain.Ride{ID: "x"}, repo, gone)
 	if !repo.deleted {
 		t.Error("expected stale subscription to be deleted after 410 Gone")
 	}

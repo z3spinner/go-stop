@@ -45,8 +45,8 @@ Rules:
   `Kind` (domain/inbox.go), a `DedupKey` for one logical event, and the
   `RideID`/`RequestID` it is about (so deleting the post cleans inboxes); a
   message without a `Kind` is push-only. Kinds in `domain.ReminderRules` are
-  re-pushed while unread (`send_inbox_reminders.go`), some with a cap (the
-  feedback prompt: 2 reminders). Don't build another retry loop for a new
+  re-pushed while unread (`send_inbox_reminders.go`), some with a cap (ride
+  matches and the feedback prompt: 2 reminders). Don't build another retry loop for a new
   notification: push it once with a `Kind` and add a rule. A notification is read
   when the user taps it (push or list) — not when something is merely viewed.
   When a use case *settles* what such a notification is about (accepting a

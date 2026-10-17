@@ -23,7 +23,7 @@
       "value": "60"
     },
     "INBOX_REMINDER_INTERVAL_HOURS": {
-      "description": "Hours between reminder pushes for an unread contact request, accepted request, shared number or contact offer (default: 3)",
+      "description": "Hours between reminder pushes for unread contact requests, accepted requests, shared numbers and contact offers, and (at most 2 reminders) matching rides and the post-ride prompt (default: 3)",
       "value": "3"
     },
     "INBOX_REMINDER_QUIET_HOURS": {

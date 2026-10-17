@@ -37,10 +37,6 @@ func (n *editNotifQueue) MarkSentByRideAndRequest(rideID, reqID string) error {
 	n.marked = append(n.marked, nqKey(rideID, reqID))
 	return nil
 }
-func (n *editNotifQueue) FindPending(time.Time, int) ([]domain.NotificationQueueEntry, error) {
-	return nil, nil
-}
-func (n *editNotifQueue) MarkSent(string) error      { return nil }
 func (n *editNotifQueue) DeleteForRide(string) error { return nil }
 func (n *editNotifQueue) DeleteExpired() error       { return nil }
 func (n *editNotifQueue) ListForSearcher(string) ([]domain.NotificationQueueEntry, error) {

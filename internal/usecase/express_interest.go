@@ -58,6 +58,8 @@ func (uc *ExpressInterest) Execute(rideID, searcherPhone, searcherName string) (
 		interest = existing
 	}
 
+	// The searcher has acted on the match: no more reminders about it.
+	uc.notifier.Acknowledge(searcherPhone, domain.InboxKey(domain.KindRideMatch, rideID))
 	// Notify driver on all their devices (best-effort)
 	sendToAll(ride.Phone, domain.Message{
 		Title:       "Quelqu'un demande votre contact",

@@ -76,11 +76,7 @@ func (m *mockRequestRepoDelete) DeleteExpired() error { return nil }
 
 type noopNotifQueue struct{}
 
-func (n *noopNotifQueue) Enqueue(string, string, string) (bool, error) { return true, nil }
-func (n *noopNotifQueue) FindPending(time.Time, int) ([]domain.NotificationQueueEntry, error) {
-	return nil, nil
-}
-func (n *noopNotifQueue) MarkSent(string) error                         { return nil }
+func (n *noopNotifQueue) Enqueue(string, string, string) (bool, error)  { return true, nil }
 func (n *noopNotifQueue) MarkSentByRideAndRequest(string, string) error { return nil }
 func (n *noopNotifQueue) DeleteForRide(string) error                    { return nil }
 func (n *noopNotifQueue) DeleteExpired() error                          { return nil }

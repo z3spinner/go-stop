@@ -90,7 +90,7 @@ func main() {
 	expireRides := usecase.NewExpireRides(rideRepo)
 	expireRequests := usecase.NewExpireRequests(requestRepo)
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, requestRepo)
-	retryNotifications := usecase.NewRetryNotifications(notifQueueRepo, rideRepo, subRepo, notifier, 2, 3)
+	expireMatchQueue := usecase.NewExpireMatchQueue(notifQueueRepo)
 	getPendingNotifications := usecase.NewGetPendingNotifications(notifQueueRepo, rideRepo)
 	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, feedbackQueueRepo, notifier)
 	getStats := usecase.NewGetStats(statRepo)
@@ -175,11 +175,11 @@ func main() {
 			if err := expireRequests.Execute(); err != nil {
 				log.Printf("expire requests: %v", err)
 			}
+			if err := expireMatchQueue.Execute(); err != nil {
+				log.Printf("expire match queue: %v", err)
+			}
 			if err := sendFeedbackPrompts.Execute(); err != nil {
 				log.Printf("send feedback prompts: %v", err)
-			}
-			if err := retryNotifications.Execute(); err != nil {
-				log.Printf("retry notifications: %v", err)
 			}
 			if err := sendEngagementReminder.Execute(); err != nil {
 				log.Printf("engagement reminder: %v", err)

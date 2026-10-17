@@ -246,14 +246,14 @@ func TestNotifySearcher_RecordsRideMatchWithStableDedupKey(t *testing.T) {
 	ride := domain.Ride{ID: "r1", DriverName: "Bob", Origin: "A", Destination: "B"}
 	subs := &mockSubRepo{subs: map[string]domain.Subscription{}}
 
-	usecase.NotifySearcher("0611111111", ride, subs, n)
-	usecase.NotifySearcher("0611111111", ride, subs, n) // a retry
+	usecase.NotifySearcher(domain.Request{ID: "req-1", Phone: "0611111111"}, ride, subs, n)
+	usecase.NotifySearcher(domain.Request{ID: "req-1", Phone: "0611111111"}, ride, subs, n) // a retry
 
 	if len(n.recorded) != 2 || n.recorded[0].msg.DedupKey != n.recorded[1].msg.DedupKey {
 		t.Fatalf("retries must share a dedup key, got %+v", n.recorded)
 	}
 	assertInboxMsg(t, n.recorded[0], "0611111111", domain.Message{
-		Kind: domain.KindRideMatch, DedupKey: "ride_match:r1", ContactName: "Bob", RideID: "r1",
+		Kind: domain.KindRideMatch, DedupKey: "ride_match:r1", ContactName: "Bob", RideID: "r1", RequestID: "req-1",
 	})
 }
 
@@ -291,7 +291,7 @@ func TestInboxNotifier_StorageErrorDoesNotBlockPush(t *testing.T) {
 	subs := &mockSubRepo{subs: map[string]domain.Subscription{
 		"0611111111": {Phone: "0611111111", Endpoint: "https://push.example.com"},
 	}}
-	usecase.NotifySearcher("0611111111", domain.Ride{ID: "r1"}, subs, n)
+	usecase.NotifySearcher(domain.Request{ID: "req-1", Phone: "0611111111"}, domain.Ride{ID: "r1"}, subs, n)
 	if !push.called {
 		t.Error("push must still be sent when the inbox write fails")
 	}
