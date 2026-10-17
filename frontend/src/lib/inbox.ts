@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // In-app notification inbox: every push a user receives is also kept on the
-// server for a month (GET /api/inbox), so a missed or swiped-away notification
-// can still be read here. The bell shows the unread count; /notifications lists
-// them. Text is rendered from the item's `kind` in the reader's language.
+// server (GET /api/inbox), so a missed or swiped-away notification can still be
+// read here. The bell shows the unread count; /notifications lists them. A
+// notification is read only once it is tapped — in the list or as a push — not
+// because it was on screen. Text is rendered from the item's `kind` in the
+// reader's language.
 
 import { writable } from 'svelte/store';
 import { api } from './api';
@@ -67,12 +69,21 @@ export async function refreshInbox(phone: string, { force = false } = {}): Promi
 }
 
 /**
- * Mark exactly these items read — the ones the user has actually been shown —
- * then reload so the badge reflects anything that arrived meanwhile.
- * Best-effort.
+ * Mark exactly these items read — the ones the user tapped (in the list, or as
+ * a push). The badge drops at once; then the inbox is reloaded so it reflects
+ * anything that arrived meanwhile. Best-effort.
  */
 export async function markInboxItemsRead(phone: string, ids: string[]): Promise<void> {
 	if (!phone || ids.length === 0) return;
+	let newlyRead = 0;
+	inboxItems.update((list) =>
+		list.map((i) => {
+			if (!ids.includes(i.id) || i.read) return i;
+			newlyRead++;
+			return { ...i, read: true };
+		})
+	);
+	if (newlyRead > 0) inboxUnread.update((n) => Math.max(0, n - newlyRead));
 	try {
 		await api.inbox.markRead(phone, ids);
 	} catch {

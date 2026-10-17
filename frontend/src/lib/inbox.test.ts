@@ -166,6 +166,20 @@ describe('refreshInbox / markAllInboxRead', () => {
 		expect(get(inboxUnread)).toBe(0);
 	});
 
+	it('drops the badge before the server answers', async () => {
+		inboxItems.set([item({ id: 'q1', read: false }), item({ id: 'q2', read: false })]);
+		inboxUnread.set(2);
+		let finish!: () => void;
+		vi.spyOn(api.inbox, 'markRead').mockImplementation(() => new Promise((r) => (finish = () => r(null))));
+		vi.spyOn(api.inbox, 'list').mockResolvedValue({ items: [], unread: 1 });
+		const p = markInboxItemsRead('0612121212', ['q1']);
+		expect(get(inboxUnread)).toBe(1);
+		expect(get(inboxItems).find((i) => i.id === 'q1')?.read).toBe(true);
+		expect(get(inboxItems).find((i) => i.id === 'q2')?.read).toBe(false);
+		finish();
+		await p;
+	});
+
 	it('does nothing for an empty id list', async () => {
 		const mark = vi.spyOn(api.inbox, 'markRead');
 		await markInboxItemsRead('0611111111', []);

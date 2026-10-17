@@ -91,8 +91,17 @@
 		} catch {
 			/* storage unavailable */
 		}
-		const onVis = () => {
-			if (document.visibilityState === 'visible') refreshInbox(get(userPhone).trim());
+		// Coming back to the app (switching to it, or reopening the installed app
+		// from the home screen, which may restore the page without reloading it):
+		// always reload so the bell's count matches the home-screen badge. The
+		// three events often fire together, so only the first one in 2 s counts.
+		let lastResume = 0;
+		const onResume = () => {
+			if (document.visibilityState !== 'visible') return;
+			const now = Date.now();
+			if (now - lastResume < 2000) return;
+			lastResume = now;
+			refreshInbox(get(userPhone).trim(), { force: true });
 		};
 		const onSwMessage = (e: MessageEvent) => {
 			if (e.data?.type === 'inbox-updated') refreshInbox(get(userPhone).trim(), { force: true });
@@ -101,12 +110,16 @@
 				markInboxItemsRead(get(userPhone).trim(), [e.data.id]);
 			}
 		};
-		document.addEventListener('visibilitychange', onVis);
+		document.addEventListener('visibilitychange', onResume);
+		window.addEventListener('pageshow', onResume);
+		window.addEventListener('focus', onResume);
 		navigator.serviceWorker?.addEventListener('message', onSwMessage);
 		return () => {
 			unsubPhone();
 			clearTimeout(phoneTimer);
-			document.removeEventListener('visibilitychange', onVis);
+			document.removeEventListener('visibilitychange', onResume);
+			window.removeEventListener('pageshow', onResume);
+			window.removeEventListener('focus', onResume);
 			navigator.serviceWorker?.removeEventListener('message', onSwMessage);
 		};
 	});

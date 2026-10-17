@@ -36,9 +36,6 @@
 	let items = $derived($inboxItems);
 	let loadedFor = $state<string | null>(null);
 	let loaded = $derived(phone !== '' && loadedFor === phone);
-	// Ids that were unread when shown during this visit. They stay highlighted
-	// after being marked read on the server, so the user can see what was new.
-	let shownUnread = $state<Set<string>>(new Set());
 	let days = $derived($config.notificationRetentionDays || DEFAULT_RETENTION_DAYS);
 	let pushOn = $derived($pushState === 'subscribed');
 
@@ -80,17 +77,11 @@
 		});
 	});
 
-	// Mark read exactly the unread items now on screen — never items the page
-	// hasn't displayed (a notification arriving later gets its own pass).
-	$effect(() => {
-		const p = phone;
-		const list = items;
-		if (!loaded) return;
-		const fresh = untrack(() => list.filter((i) => !i.read && !shownUnread.has(i.id)).map((i) => i.id));
-		if (fresh.length === 0) return;
-		shownUnread = new Set([...untrack(() => shownUnread), ...fresh]);
-		markInboxItemsRead(p, fresh);
-	});
+	// A notification becomes read only when it is tapped (here, or as a push) —
+	// never just because it is on screen. Navigation to its link continues.
+	function open(item: InboxItem) {
+		if (!item.read) markInboxItemsRead(phone, [item.id]);
+	}
 </script>
 
 <h2 class="mb-3 text-xl font-semibold">{m.inboxTitle()}</h2>
@@ -111,9 +102,9 @@
 			<p class="empty text-gray-500">{m.inboxEmpty()}</p>
 		{:else}
 			{#each items as item (item.id)}
-				{@const unread = !item.read || shownUnread.has(item.id)}
+				{@const unread = !item.read}
 				<SwipeToDelete ondelete={() => remove(item)} deleteLabel={m.inboxDeleteAria()} actionLabel={m.inboxDelete()}>
-					<a class="inbox-item card rounded border p-3" class:inbox-unread={unread} href={item.url || '/'} data-kind={item.kind} data-id={item.id} draggable="false">
+					<a class="inbox-item card rounded border p-3" class:inbox-unread={unread} href={item.url || '/'} data-kind={item.kind} data-id={item.id} draggable="false" onclick={() => open(item)}>
 						<span class="inbox-icon" aria-hidden="true">{inboxIcon(item)}</span>
 						<span class="flex min-w-0 flex-col gap-0.5">
 							<span class="inbox-title font-medium">{#if unread}<span class="sr-only">{m.inboxUnreadLabel()}: </span>{/if}{inboxTitle(item)}</span>

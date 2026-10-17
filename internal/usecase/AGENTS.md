@@ -45,8 +45,10 @@ Rules:
   `Kind` (domain/inbox.go), a `DedupKey` for one logical event, and the
   `RideID`/`RequestID` it is about (so deleting the post cleans inboxes); a
   message without a `Kind` is push-only. Kinds in `domain.ReminderKinds` are
-  re-pushed while unread (`send_inbox_reminders.go`); when a use case handles
-  what such a notification is about, call `notifier.Acknowledge` with its
+  re-pushed while unread (`send_inbox_reminders.go`). A notification is read
+  when the user taps it (push or list) — not when something is merely viewed.
+  When a use case *settles* what such a notification is about (accepting a
+  request, the request being cancelled), call `notifier.Acknowledge` with its
   `domain.InboxKey` so the reminders stop.
 
 Authorization is done **inside** the use case (e.g. `DeleteRide`/`AcceptInterest`

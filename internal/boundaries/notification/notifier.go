@@ -21,8 +21,9 @@ type Notifier interface {
 	// Record keeps a copy of message in phone's inbox and returns the inbox
 	// item's id ("" when the message isn't kept: no Kind, or storage failed).
 	Record(phone string, message domain.Message) string
-	// Acknowledge marks phone's inbox items with these dedup keys as read: the
-	// user has acted on what they are about (see domain.InboxKey), so reminders
-	// stop.
+	// Acknowledge marks phone's inbox items with these dedup keys as read
+	// because what they are about has been settled — a request accepted or
+	// withdrawn (see domain.InboxKey) — so reminders stop. Not for "the user
+	// looked at something": a notification is read when it is tapped.
 	Acknowledge(phone string, dedupKeys ...string)
 }

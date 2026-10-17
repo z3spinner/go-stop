@@ -98,11 +98,11 @@ func main() {
 	sendFeedbackReminders := usecase.NewSendFeedbackReminders(feedbackQueueRepo, subRepo, notifier, 2, 3)
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, notifier)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, notifier)
-	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo, notifier)
+	getInterestContact := usecase.NewGetInterestContact(interestRepo, rideRepo)
 	cancelInterest := usecase.NewCancelInterest(interestRepo, rideRepo, subRepo, notifier)
 	offerContact := usecase.NewOfferContact(requestRepo, contactOfferRepo, subRepo, notifier)
 	getContactOfferStatus := usecase.NewGetRequestContactOfferStatus(requestRepo, contactOfferRepo)
-	getRequestContactOffers := usecase.NewGetRequestContactOffers(requestRepo, contactOfferRepo, notifier)
+	getRequestContactOffers := usecase.NewGetRequestContactOffers(requestRepo, contactOfferRepo)
 
 	serviceTZ := time.UTC
 	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {

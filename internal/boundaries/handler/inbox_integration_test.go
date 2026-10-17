@@ -337,14 +337,23 @@ func TestInbox_AcceptingARequestMarksItRead(t *testing.T) {
 	if after := getInbox(t, r, "0611000001"); after.Unread != 0 {
 		t.Errorf("accepting should mark the request read, unread=%d", after.Unread)
 	}
-	// The searcher got "accepted"; opening the contact marks it read.
+	// The searcher got "accepted". Merely viewing the contact doesn't make the
+	// notification read — only tapping it (push or list) does.
 	if got := getInbox(t, r, "0622000099"); got.Unread != 1 || got.Items[0].Kind != "interest_accepted" {
 		t.Fatalf("searcher: expected unread interest_accepted, got %+v / %d", got.Items, got.Unread)
 	}
 	if w := getWithPhone(r, "/api/interests/"+id+"/contact", "0622000099"); w.Code != http.StatusOK {
 		t.Fatalf("contact: %d %s", w.Code, w.Body.String())
 	}
-	if got := getInbox(t, r, "0622000099"); got.Unread != 0 {
-		t.Errorf("opening the contact should mark it read, unread=%d", got.Unread)
+	got := getInbox(t, r, "0622000099")
+	if got.Unread != 1 {
+		t.Errorf("viewing the contact must not mark the notification read, unread=%d", got.Unread)
+	}
+	// Tapping it in the list (what the page does) marks it read.
+	if w := postWithPhone(r, "/api/inbox/read", "0622000099", map[string]interface{}{"ids": []string{got.Items[0].ID}}); w.Code != http.StatusNoContent {
+		t.Fatalf("mark read: %d", w.Code)
+	}
+	if after := getInbox(t, r, "0622000099"); after.Unread != 0 {
+		t.Errorf("tapped notification should be read, unread=%d", after.Unread)
 	}
 }

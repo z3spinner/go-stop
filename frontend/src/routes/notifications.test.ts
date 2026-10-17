@@ -68,7 +68,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('notifications page', () => {
-	it('lists items, highlights unread, and marks read only the ids shown', async () => {
+	it('lists items and highlights unread ones without marking them read', async () => {
 		userPhone.set('0611111111');
 		const srv = fakeServer([unreadBob, readPast]);
 
@@ -78,41 +78,52 @@ describe('notifications page', () => {
 		const [first, second] = Array.from(container.querySelectorAll<HTMLAnchorElement>('.inbox-item'));
 		expect(first.getAttribute('href')).toBe('/my-rides');
 		expect(first.textContent).toContain(m.inboxKindInterestReceived({ name: 'Bob' }));
+		expect(first.classList.contains('inbox-unread')).toBe(true);
 		expect(first.querySelector('.sr-only')?.textContent).toContain(m.inboxUnreadLabel());
 		expect(second.classList.contains('inbox-unread')).toBe(false);
 		expect(second.querySelector('.sr-only')).toBeNull();
 		expect(second.textContent).toContain('Saillans → Crest');
 		expect(second.querySelector('.tag')?.textContent).toBe(m.inboxPast());
 
-		await waitFor(() => expect(srv.markRead).toHaveBeenCalledWith('0611111111', ['n2']));
+		// Being on screen is not reading: the count (the bell's badge) stays.
+		await new Promise((r) => setTimeout(r, 50));
+		expect(srv.markRead).not.toHaveBeenCalled();
 		expect(srv.markAll).not.toHaveBeenCalled();
-		await waitFor(() => expect(get(inboxUnread)).toBe(0));
-		// Still highlighted for this visit after the server marked it read.
-		expect(container.querySelector('.inbox-item')?.classList.contains('inbox-unread')).toBe(true);
+		expect(get(inboxUnread)).toBe(1);
 	});
 
-	it('shows a notification that arrives while open, then marks just that one', async () => {
+	it('tapping a notification marks just that one read', async () => {
+		userPhone.set('0611111111');
+		const srv = fakeServer([unreadBob, item({ id: 'n4', contact_name: 'Dana' }), readPast]);
+		const { container } = render(Notifications);
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(3));
+		expect(get(inboxUnread)).toBe(2);
+		container.addEventListener('click', (e) => e.preventDefault()); // jsdom can't navigate
+
+		await fireEvent.click(container.querySelector('[data-id="n2"]')!);
+		expect(get(inboxUnread)).toBe(1); // the badge drops at once
+		await waitFor(() => expect(srv.markRead).toHaveBeenCalledWith('0611111111', ['n2']));
+		expect(container.querySelector('[data-id="n4"]')?.classList.contains('inbox-unread')).toBe(true);
+
+		// Tapping an already-read one doesn't call the server.
+		await fireEvent.click(container.querySelector('[data-id="n1"]')!);
+		expect(srv.markRead).toHaveBeenCalledTimes(1);
+	});
+
+	it('a notification arriving while open is shown and stays unread', async () => {
 		userPhone.set('0611111111');
 		const srv = fakeServer([readPast]);
 		const { container } = render(Notifications);
 		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
-		expect(srv.markRead).not.toHaveBeenCalled();
 
 		srv.push(item({ id: 'n3', contact_name: 'Carla' }));
 		await refreshInbox('0611111111', { force: true }); // what the layout does on 'inbox-updated'
 
 		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(2));
 		expect(container.querySelector('.inbox-item')?.textContent).toContain(m.inboxKindRideMatch({ name: 'Carla' }));
-		await waitFor(() => expect(srv.markRead).toHaveBeenCalledWith('0611111111', ['n3']));
-		expect(srv.markRead).toHaveBeenCalledTimes(1);
-	});
-
-	it('does not call mark-read when everything is already read', async () => {
-		userPhone.set('0611111111');
-		const srv = fakeServer([readPast]);
-		const { container } = render(Notifications);
-		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(1));
+		expect(container.querySelector('.inbox-item')?.classList.contains('inbox-unread')).toBe(true);
 		expect(srv.markRead).not.toHaveBeenCalled();
+		expect(get(inboxUnread)).toBe(1);
 	});
 
 	it('shows an empty state', async () => {
@@ -170,6 +181,8 @@ describe('notifications page', () => {
 
 		await fireEvent.click(undo);
 		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(2));
+		// Deleting made it read; it comes back read.
+		expect(container.querySelector('[data-id="n2"]')?.classList.contains('inbox-unread')).toBe(false);
 		expect(srv.restore).toHaveBeenCalledWith('0611111111', 'n2');
 		expect(container.querySelector('.inbox-undo')).toBeNull();
 	});

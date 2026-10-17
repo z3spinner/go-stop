@@ -138,7 +138,7 @@ func (f *failingDueRepo) FindRemindersDue([]string, time.Time, int) ([]domain.In
 	return nil, errors.New("db down")
 }
 
-// ── The original push carries the inbox id; acting on things acknowledges ─────
+// ── The original push carries the inbox id; acting on a request acknowledges ──
 
 func TestSendToAll_PushCarriesInboxID(t *testing.T) {
 	n := &mockNotifier{}
@@ -171,54 +171,6 @@ func TestCancelInterest_AcknowledgesTheDriversNotification(t *testing.T) {
 	}
 	if len(n.acked) != 1 || n.acked[0] != "555-driver/interest_received:int-1" {
 		t.Errorf("acked = %v", n.acked)
-	}
-}
-
-func TestGetInterestContact_SearcherOpeningContactAcknowledges(t *testing.T) {
-	for _, status := range []string{"accepted", "driver_shared"} {
-		interest := domain.Interest{ID: "int-1", RideID: "ride-1", SearcherPhone: "555-searcher", Status: status}
-		interests := &mockInterestRepo{byID: map[string]domain.Interest{"int-1": interest}, saved: []domain.Interest{interest}}
-		rides := &mockRideRepo{byID: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-driver"}}}
-		n := &mockNotifier{}
-		if _, err := usecase.NewGetInterestContact(interests, rides, n).Execute("int-1", "555-searcher"); err != nil {
-			t.Fatalf("%s: %v", status, err)
-		}
-		if len(n.acked) != 2 || n.acked[0] != "555-searcher/interest_accepted:int-1" || n.acked[1] != "555-searcher/driver_shared:int-1" {
-			t.Errorf("%s: acked = %v", status, n.acked)
-		}
-	}
-}
-
-func TestGetInterestContact_DriverOrFailureAcknowledgesNothing(t *testing.T) {
-	interest := domain.Interest{ID: "int-1", RideID: "ride-1", SearcherPhone: "555-searcher", Status: "accepted"}
-	interests := &mockInterestRepo{byID: map[string]domain.Interest{"int-1": interest}, saved: []domain.Interest{interest}}
-	rides := &mockRideRepo{byID: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-driver"}}}
-	n := &mockNotifier{}
-	uc := usecase.NewGetInterestContact(interests, rides, n)
-	_, _ = uc.Execute("int-1", "555-driver")   // the driver: nothing of theirs to acknowledge here
-	_, _ = uc.Execute("int-1", "555-stranger") // unauthorized
-	if len(n.acked) != 0 {
-		t.Errorf("acked = %v", n.acked)
-	}
-}
-
-func TestGetRequestContactOffers_AcknowledgesShownOffers(t *testing.T) {
-	reqRepo := &mockRequestRepoByID{byID: map[string]domain.Request{"req-1": {ID: "req-1", Phone: "555-owner"}}}
-	offers := &mockContactOfferRepo{saved: []domain.ContactOffer{
-		{ID: "off-1", RequestID: "req-1"}, {ID: "off-2", RequestID: "req-1"},
-	}}
-	n := &mockNotifier{}
-	if _, err := usecase.NewGetRequestContactOffers(reqRepo, offers, n).Execute("req-1", "555-owner"); err != nil {
-		t.Fatal(err)
-	}
-	if len(n.acked) != 2 || n.acked[0] != "555-owner/contact_offered:off-1" || n.acked[1] != "555-owner/contact_offered:off-2" {
-		t.Errorf("acked = %v", n.acked)
-	}
-	// Someone else listing (403) acknowledges nothing.
-	n2 := &mockNotifier{}
-	_, _ = usecase.NewGetRequestContactOffers(reqRepo, offers, n2).Execute("req-1", "555-other")
-	if len(n2.acked) != 0 {
-		t.Errorf("acked = %v", n2.acked)
 	}
 }
 
