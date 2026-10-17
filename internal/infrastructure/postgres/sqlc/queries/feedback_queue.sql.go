@@ -11,22 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteExhaustedFeedback = `-- name: DeleteExhaustedFeedback :exec
-DELETE FROM feedback_queue
-WHERE sent_count >= $1::int
-   OR created_at < $2::timestamptz
-`
-
-type DeleteExhaustedFeedbackParams struct {
-	MaxRetries int32              `db:"max_retries"`
-	TtlBefore  pgtype.Timestamptz `db:"ttl_before"`
-}
-
-func (q *Queries) DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error {
-	_, err := q.db.Exec(ctx, deleteExhaustedFeedback, arg.MaxRetries, arg.TtlBefore)
-	return err
-}
-
 const deleteFeedbackByRideID = `-- name: DeleteFeedbackByRideID :execrows
 DELETE FROM feedback_queue WHERE ride_id = $1
 `
@@ -39,6 +23,17 @@ func (q *Queries) DeleteFeedbackByRideID(ctx context.Context, rideID pgtype.UUID
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const deleteStaleFeedback = `-- name: DeleteStaleFeedback :exec
+DELETE FROM feedback_queue WHERE created_at < $1
+`
+
+// Unanswered tasks are kept until the TTL, so the driver can still answer
+// (from a push, a reminder or the inbox) after the ride itself has expired.
+func (q *Queries) DeleteStaleFeedback(ctx context.Context, createdAt pgtype.Timestamptz) error {
+	_, err := q.db.Exec(ctx, deleteStaleFeedback, createdAt)
+	return err
 }
 
 const enqueueStartedRides = `-- name: EnqueueStartedRides :exec
@@ -62,23 +57,18 @@ func (q *Queries) EnqueueStartedRides(ctx context.Context, windowStartAfter pgty
 	return err
 }
 
-const findDueFeedback = `-- name: FindDueFeedback :many
+const findUnsentFeedback = `-- name: FindUnsentFeedback :many
 SELECT id, ride_id, phone, origin, destination, ride_date, departure_at, send_after, sent_count, last_sent_at, created_at
 FROM feedback_queue
 WHERE send_after <= NOW()
-  AND sent_count < $1::int
-  AND (last_sent_at IS NULL OR last_sent_at < $2::timestamptz)
+  AND sent_count = 0
 ORDER BY send_after ASC
 `
 
-type FindDueFeedbackParams struct {
-	MaxRetries  int32              `db:"max_retries"`
-	RetryBefore pgtype.Timestamptz `db:"retry_before"`
-}
-
-// Tasks past their send time and still retry-eligible.
-func (q *Queries) FindDueFeedback(ctx context.Context, arg FindDueFeedbackParams) ([]FeedbackQueue, error) {
-	rows, err := q.db.Query(ctx, findDueFeedback, arg.MaxRetries, arg.RetryBefore)
+// Tasks past their send time whose prompt hasn't been pushed yet. The prompt
+// is pushed once; its repeats are inbox reminders (SendInboxReminders).
+func (q *Queries) FindUnsentFeedback(ctx context.Context) ([]FeedbackQueue, error) {
+	rows, err := q.db.Query(ctx, findUnsentFeedback)
 	if err != nil {
 		return nil, err
 	}

@@ -46,6 +46,14 @@ func ParseQuietHours(s string) (QuietHours, error) {
 	return QuietHours{Start: start, End: end}, nil
 }
 
+// ContainsTime reports whether t, in tz, falls in the quiet window.
+func (q QuietHours) ContainsTime(t time.Time, tz *time.Location) bool {
+	if tz == nil {
+		tz = time.UTC
+	}
+	return q.Contains(t.In(tz).Hour())
+}
+
 // Contains reports whether local hour h falls in the quiet window.
 func (q QuietHours) Contains(h int) bool {
 	switch {
@@ -58,9 +66,10 @@ func (q QuietHours) Contains(h int) bool {
 	}
 }
 
-// SendInboxReminders re-pushes unread inbox items about another person's
-// action (domain.ReminderKinds) every interval until they are read, deleted,
-// or gone (their ride/request expired or was deleted, which removes them).
+// SendInboxReminders re-pushes unread inbox items (domain.ReminderRules: those
+// about another person's action, and the feedback prompt) every interval
+// until they are read, deleted, gone (their ride/request expired or was
+// deleted, which removes them) or, for capped kinds, reminded enough times.
 // Reminders are push-only: they never add inbox items. Each one carries the
 // item's id, so the device replaces the earlier push and tapping it marks
 // the item read. Runs in the hourly cron.
@@ -97,12 +106,16 @@ func NewSendInboxReminders(
 
 func (uc *SendInboxReminders) Execute() error {
 	now := uc.now()
-	if uc.quiet.Contains(now.In(uc.tz).Hour()) {
+	if uc.quiet.ContainsTime(now, uc.tz) {
 		return nil
 	}
-	due, err := uc.inbox.FindRemindersDue(domain.ReminderKinds, now.Add(-uc.interval), inboxReminderBatch)
-	if err != nil {
-		return err
+	var due []domain.InboxItem
+	for _, rule := range domain.ReminderRules {
+		items, err := uc.inbox.FindRemindersDue(rule.Kinds, rule.MaxReminders, now.Add(-uc.interval), inboxReminderBatch)
+		if err != nil {
+			return err
+		}
+		due = append(due, items...)
 	}
 	for _, it := range due {
 		// No Kind: a reminder must not be recorded as a new inbox item.

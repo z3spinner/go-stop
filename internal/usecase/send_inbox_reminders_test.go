@@ -67,9 +67,9 @@ func TestSendInboxReminders_PushesDueItemsWithoutRecording(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Asked only for the interaction kinds, due 3h after their last push.
-	if len(inbox.dueKinds) != len(domain.ReminderKinds) {
-		t.Errorf("kinds = %v, want %v", inbox.dueKinds, domain.ReminderKinds)
+	// One query per rule, due 3h after their last push.
+	if len(inbox.dueCalls) != len(domain.ReminderRules) {
+		t.Errorf("calls = %v, want one per rule", inbox.dueCalls)
 	}
 	want := before.Add(-3 * time.Hour)
 	if d := inbox.dueCutoff.Sub(want); d < 0 || d > time.Minute {
@@ -91,13 +91,54 @@ func TestSendInboxReminders_PushesDueItemsWithoutRecording(t *testing.T) {
 	}
 }
 
-func TestSendInboxReminders_KindsExcludeMatchesCancellationsAndTests(t *testing.T) {
-	for _, k := range domain.ReminderKinds {
-		switch k {
-		case domain.KindRideMatch, domain.KindRequestMatch, domain.KindInterestCancelled,
-			domain.KindFeedbackReminder, domain.KindTest:
+func TestReminderRules(t *testing.T) {
+	rules := map[string]int{}
+	for _, r := range domain.ReminderRules {
+		for _, k := range r.Kinds {
+			rules[k] = r.MaxReminders
+		}
+	}
+	// Notifications about another person's action: until handled.
+	for _, k := range []string{domain.KindInterestReceived, domain.KindInterestAccepted, domain.KindDriverShared, domain.KindContactOffered} {
+		if max, ok := rules[k]; !ok || max != 0 {
+			t.Errorf("%s: want unlimited reminders, got ok=%v max=%d", k, ok, max)
+		}
+	}
+	// The feedback prompt: 2 reminders, 3 pushes in all (as before).
+	if max := rules[domain.KindFeedbackReminder]; max != 2 {
+		t.Errorf("feedback prompt: want 2 reminders, got %d", max)
+	}
+	// No reminders for matches (own retries), cancellations and tests.
+	for _, k := range []string{domain.KindRideMatch, domain.KindRequestMatch, domain.KindInterestCancelled, domain.KindTest} {
+		if _, ok := rules[k]; ok {
 			t.Errorf("%s must not get inbox reminders", k)
 		}
+	}
+}
+
+func TestSendInboxReminders_RemindsTheFeedbackPromptWithItsCap(t *testing.T) {
+	inbox := &mockInboxRepo{due: []domain.InboxItem{
+		{ID: "f1", Phone: "0611", Kind: domain.KindFeedbackReminder, Title: "Votre trajet est-il parti avec des passagers ?", URL: "/rides/r1/feedback"},
+	}}
+	subs := &mockSubRepo{subs: map[string]domain.Subscription{"0611": {Phone: "0611", Endpoint: "https://push.example.com/1"}}}
+	n := &mockNotifier{}
+	if err := usecase.NewSendInboxReminders(inbox, subs, n, 3, usecase.QuietHours{}, time.UTC).Execute(); err != nil {
+		t.Fatal(err)
+	}
+	var capped *dueCall
+	for i, c := range inbox.dueCalls {
+		if len(c.kinds) == 1 && c.kinds[0] == domain.KindFeedbackReminder {
+			capped = &inbox.dueCalls[i]
+		}
+	}
+	if capped == nil || capped.max != domain.FeedbackPromptMaxReminders {
+		t.Fatalf("feedback prompt must be queried with its cap, calls=%v", inbox.dueCalls)
+	}
+	if len(n.sent) != 1 || n.sent[0].Title != "Rappel : Votre trajet est-il parti avec des passagers ?" || n.sent[0].InboxID != "f1" {
+		t.Errorf("unexpected pushes: %+v", n.sent)
+	}
+	if len(n.recorded) != 0 {
+		t.Errorf("reminders must not create inbox items")
 	}
 }
 
@@ -134,7 +175,7 @@ func TestSendInboxReminders_PropagatesQueryError(t *testing.T) {
 
 type failingDueRepo struct{ mockInboxRepo }
 
-func (f *failingDueRepo) FindRemindersDue([]string, time.Time, int) ([]domain.InboxItem, error) {
+func (f *failingDueRepo) FindRemindersDue([]string, int, time.Time, int) ([]domain.InboxItem, error) {
 	return nil, errors.New("db down")
 }
 

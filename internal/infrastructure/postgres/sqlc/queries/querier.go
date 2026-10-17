@@ -27,7 +27,6 @@ type Querier interface {
 	// Counts over the same newest-N window ListNotificationsByPhone returns, so
 	// the badge never counts items the inbox can't show.
 	CountUnreadNotifications(ctx context.Context, arg CountUnreadNotificationsParams) (int32, error)
-	DeleteExhaustedFeedback(ctx context.Context, arg DeleteExhaustedFeedbackParams) error
 	DeleteExpiredNotifications(ctx context.Context) error
 	DeleteExpiredRequests(ctx context.Context) error
 	DeleteExpiredRides(ctx context.Context) error
@@ -36,8 +35,9 @@ type Querier interface {
 	DeleteFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (int64, error)
 	// Removes items about rides/requests that no longer exist — expired (deleted
 	// by the hourly expiry job) or deleted by their owner — so a post's details
-	// don't outlive it in other people's inboxes. Feedback reminders are kept:
-	// they are sent after the ride is over, on purpose.
+	// don't outlive it in other people's inboxes. The driver's feedback prompt is
+	// sent after the ride is over, on purpose: it stays while it can still be
+	// answered (its feedback task exists), and goes with the task.
 	DeleteInboxForGonePosts(ctx context.Context) (int64, error)
 	DeleteInboxForRequest(ctx context.Context, requestID pgtype.UUID) error
 	DeleteInboxForRide(ctx context.Context, rideID pgtype.UUID) error
@@ -46,6 +46,9 @@ type Querier interface {
 	DeleteNotificationsOlderThan(ctx context.Context, createdAt pgtype.Timestamptz) (int64, error)
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
 	DeleteRide(ctx context.Context, id pgtype.UUID) error
+	// Unanswered tasks are kept until the TTL, so the driver can still answer
+	// (from a push, a reminder or the inbox) after the ride itself has expired.
+	DeleteStaleFeedback(ctx context.Context, createdAt pgtype.Timestamptz) error
 	DeleteSubscription(ctx context.Context, phone string) error
 	// Removes a specific device subscription (e.g. when push returns 410 Gone).
 	DeleteSubscriptionByEndpoint(ctx context.Context, endpoint string) error
@@ -60,11 +63,10 @@ type Querier interface {
 	// queued. send_after = window end (departure + flexibility minutes) + 1 hour.
 	// Idempotent via ride_id UNIQUE.
 	EnqueueStartedRides(ctx context.Context, windowStartAfter pgtype.Timestamptz) error
-	// Tasks past their send time and still retry-eligible.
-	FindDueFeedback(ctx context.Context, arg FindDueFeedbackParams) ([]FeedbackQueue, error)
 	// Unread, not deleted items of the given kinds whose last push (the original
-	// one, or the last reminder) is older than the cutoff. Items about an expired
-	// or deleted post are already gone (see DeleteInboxForGonePosts).
+	// one, or the last reminder) is older than the cutoff, and which have had
+	// fewer than max_reminders reminders (0 = no limit). Items about an expired or
+	// deleted post are already gone (see DeleteInboxForGonePosts).
 	FindNotificationRemindersDue(ctx context.Context, arg FindNotificationRemindersDueParams) ([]Notification, error)
 	// Returns entries due for (re-)notification.
 	// Excludes entries where the searcher has already expressed interest.
@@ -79,6 +81,9 @@ type Querier interface {
 	FindRidesMatchingDailyRequest(ctx context.Context, arg FindRidesMatchingDailyRequestParams) ([]Ride, error)
 	FindRidesMatchingDayRequest(ctx context.Context, arg FindRidesMatchingDayRequestParams) ([]Ride, error)
 	FindRidesMatchingTimeRequest(ctx context.Context, arg FindRidesMatchingTimeRequestParams) ([]Ride, error)
+	// Tasks past their send time whose prompt hasn't been pushed yet. The prompt
+	// is pushed once; its repeats are inbox reminders (SendInboxReminders).
+	FindUnsentFeedback(ctx context.Context) ([]FeedbackQueue, error)
 	GetConnectionEventCounts(ctx context.Context) (GetConnectionEventCountsRow, error)
 	GetContactOfferByRequestAndOfferer(ctx context.Context, arg GetContactOfferByRequestAndOffererParams) (ContactOffer, error)
 	GetFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (FeedbackQueue, error)

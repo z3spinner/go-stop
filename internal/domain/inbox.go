@@ -21,15 +21,26 @@ const (
 	KindTest              = "test"               // the user's own "send a test notification"
 )
 
-// ReminderKinds are the kinds about another person's action that get
-// periodic reminder pushes while unread (see usecase.SendInboxReminders).
-// Matches and feedback reminders have their own retry schedules; a cancelled
-// request and test pushes need no follow-up.
-var ReminderKinds = []string{
-	KindInterestReceived,
-	KindInterestAccepted,
-	KindDriverShared,
-	KindContactOffered,
+// ReminderRule says which kinds get periodic reminder pushes while unread
+// (see usecase.SendInboxReminders) and at most how many (0 = no limit: until
+// read, deleted or expired).
+type ReminderRule struct {
+	Kinds        []string
+	MaxReminders int
+}
+
+// FeedbackPromptMaxReminders caps the "did your ride leave with passengers?"
+// prompt at 2 reminders (3 pushes in all): it outlives the ride on purpose,
+// and isn't worth more nagging.
+const FeedbackPromptMaxReminders = 2
+
+// ReminderRules: notifications about another person's action are reminded
+// until handled; the feedback prompt a limited number of times. Ride/request
+// matches have their own retries; a cancelled request and test pushes need
+// no follow-up.
+var ReminderRules = []ReminderRule{
+	{Kinds: []string{KindInterestReceived, KindInterestAccepted, KindDriverShared, KindContactOffered}},
+	{Kinds: []string{KindFeedbackReminder}, MaxReminders: FeedbackPromptMaxReminders},
 }
 
 // InboxKey is the dedup key of the inbox item of the given kind about id

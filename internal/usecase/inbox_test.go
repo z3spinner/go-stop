@@ -66,6 +66,7 @@ type mockInboxRepo struct {
 	dueCutoff        time.Time
 	dueLimit         int
 	reminded         []string
+	dueCalls         []dueCall
 	deleteForRideErr error
 }
 
@@ -82,11 +83,29 @@ func (m *mockInboxRepo) MarkReadByDedupKeys(phone string, keys []string) error {
 	}
 	return nil
 }
-func (m *mockInboxRepo) FindRemindersDue(kinds []string, cutoff time.Time, limit int) ([]domain.InboxItem, error) {
+
+// FindRemindersDue returns the items of m.due whose kind is asked for, and
+// records each call (kinds and cap) in dueCalls.
+func (m *mockInboxRepo) FindRemindersDue(kinds []string, maxReminders int, cutoff time.Time, limit int) ([]domain.InboxItem, error) {
 	m.dueKinds, m.dueCutoff, m.dueLimit = kinds, cutoff, limit
 	m.dueCalled = true
-	return m.due, nil
+	m.dueCalls = append(m.dueCalls, dueCall{kinds: kinds, max: maxReminders})
+	var out []domain.InboxItem
+	for _, it := range m.due {
+		for _, k := range kinds {
+			if it.Kind == k {
+				out = append(out, it)
+			}
+		}
+	}
+	return out, nil
 }
+
+type dueCall struct {
+	kinds []string
+	max   int
+}
+
 func (m *mockInboxRepo) MarkReminded(id string) error {
 	m.reminded = append(m.reminded, id)
 	return nil

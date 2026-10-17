@@ -91,7 +91,7 @@ func setupRouter() *gin.Engine {
 	statRepo := postgres.NewStatRepo(handlerPool)
 	interestRepo := postgres.NewInterestRepo(handlerPool)
 	getMatchingRequests := usecase.NewGetMatchingRequests(rideRepo, reqRepo)
-	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, postgres.NewFeedbackQueueRepo(handlerPool))
+	recordFeedback := usecase.NewRecordFeedback(rideRepo, statRepo, postgres.NewFeedbackQueueRepo(handlerPool), n)
 	getStats := usecase.NewGetStats(statRepo)
 	expressInterest := usecase.NewExpressInterest(rideRepo, interestRepo, subRepo, n)
 	acceptInterest := usecase.NewAcceptInterest(interestRepo, rideRepo, subRepo, n)
