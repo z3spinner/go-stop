@@ -45,64 +45,13 @@ type EnqueueNotificationParams struct {
 
 // Returns rows affected: 1 when a new ride↔request pair is inserted, 0 when it
 // already existed. Callers use this to notify only newly-matched searchers.
+// (The match is pushed once; repeats are inbox reminders.)
 func (q *Queries) EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) (int64, error) {
 	result, err := q.db.Exec(ctx, enqueueNotification, arg.RideID, arg.RequestID, arg.SearcherPhone)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const findPendingNotifications = `-- name: FindPendingNotifications :many
-SELECT nq.id, nq.ride_id, nq.request_id, nq.searcher_phone,
-       nq.sent_count, nq.last_sent_at, nq.created_at
-FROM notification_queue nq
-JOIN rides    r ON r.id = nq.ride_id    AND r.expires_at > NOW()
-JOIN requests q ON q.id = nq.request_id AND q.expires_at > NOW()
-WHERE nq.sent_count < $1::int
-  AND (nq.last_sent_at IS NULL
-       OR nq.last_sent_at < $2::timestamptz)
-  AND NOT EXISTS (
-      SELECT 1 FROM interests i
-      WHERE i.ride_id = nq.ride_id
-        AND i.searcher_phone = nq.searcher_phone
-  )
-ORDER BY nq.last_sent_at ASC NULLS FIRST
-`
-
-type FindPendingNotificationsParams struct {
-	MaxRetries  int32              `db:"max_retries"`
-	RetryBefore pgtype.Timestamptz `db:"retry_before"`
-}
-
-// Returns entries due for (re-)notification.
-// Excludes entries where the searcher has already expressed interest.
-func (q *Queries) FindPendingNotifications(ctx context.Context, arg FindPendingNotificationsParams) ([]NotificationQueue, error) {
-	rows, err := q.db.Query(ctx, findPendingNotifications, arg.MaxRetries, arg.RetryBefore)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []NotificationQueue{}
-	for rows.Next() {
-		var i NotificationQueue
-		if err := rows.Scan(
-			&i.ID,
-			&i.RideID,
-			&i.RequestID,
-			&i.SearcherPhone,
-			&i.SentCount,
-			&i.LastSentAt,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listNotificationsForSearcher = `-- name: ListNotificationsForSearcher :many
@@ -141,18 +90,6 @@ func (q *Queries) ListNotificationsForSearcher(ctx context.Context, searcherPhon
 		return nil, err
 	}
 	return items, nil
-}
-
-const markNotificationSent = `-- name: MarkNotificationSent :exec
-UPDATE notification_queue
-SET sent_count  = sent_count + 1,
-    last_sent_at = NOW()
-WHERE id = $1
-`
-
-func (q *Queries) MarkNotificationSent(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, markNotificationSent, id)
-	return err
 }
 
 const markNotificationSentByRideAndRequest = `-- name: MarkNotificationSentByRideAndRequest :exec

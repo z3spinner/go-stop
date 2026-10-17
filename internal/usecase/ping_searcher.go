@@ -88,5 +88,8 @@ func (uc *PingSearcher) Execute(requestID, rideID, driverPhone string) (connecte
 		RideID:   ride.ID,
 	}
 	sendToAll(req.Phone, msg, uc.subs, uc.notifier)
+	// The driver reached out: the plain "a ride matches" notification is
+	// superseded by this one, so it stops being reminded.
+	uc.notifier.Acknowledge(req.Phone, domain.InboxKey(domain.KindRideMatch, ride.ID))
 	return connected, nil
 }

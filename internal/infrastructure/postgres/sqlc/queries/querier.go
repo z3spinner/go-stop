@@ -57,6 +57,7 @@ type Querier interface {
 	DismissNotification(ctx context.Context, arg DismissNotificationParams) error
 	// Returns rows affected: 1 when a new ride↔request pair is inserted, 0 when it
 	// already existed. Callers use this to notify only newly-matched searchers.
+	// (The match is pushed once; repeats are inbox reminders.)
 	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) (int64, error)
 	// Inserts a feedback task for every ride whose window has started (departure in
 	// the past, but within the bound), that hasn't been answered, and isn't already
@@ -68,9 +69,6 @@ type Querier interface {
 	// fewer than max_reminders reminders (0 = no limit). Items about an expired or
 	// deleted post are already gone (see DeleteInboxForGonePosts).
 	FindNotificationRemindersDue(ctx context.Context, arg FindNotificationRemindersDueParams) ([]Notification, error)
-	// Returns entries due for (re-)notification.
-	// Excludes entries where the searcher has already expressed interest.
-	FindPendingNotifications(ctx context.Context, arg FindPendingNotificationsParams) ([]NotificationQueue, error)
 	// Matches all alert modes inferred from NULL state of date/departure_at:
 	//   anytime: date IS NULL AND departure_at IS NULL
 	//   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match)
@@ -147,7 +145,6 @@ type Querier interface {
 	MarkAllNotificationsRead(ctx context.Context, phone string) error
 	MarkFeedbackSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationReminded(ctx context.Context, id pgtype.UUID) error
-	MarkNotificationSent(ctx context.Context, id pgtype.UUID) error
 	MarkNotificationSentByRideAndRequest(ctx context.Context, arg MarkNotificationSentByRideAndRequestParams) error
 	MarkNotificationsRead(ctx context.Context, arg MarkNotificationsReadParams) error
 	// The user acted on the thing these notifications are about (accepted a

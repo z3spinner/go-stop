@@ -104,12 +104,15 @@ func TestReminderRules(t *testing.T) {
 			t.Errorf("%s: want unlimited reminders, got ok=%v max=%d", k, ok, max)
 		}
 	}
-	// The feedback prompt: 2 reminders, 3 pushes in all (as before).
-	if max := rules[domain.KindFeedbackReminder]; max != 2 {
-		t.Errorf("feedback prompt: want 2 reminders, got %d", max)
+	// Ride matches and the feedback prompt: 2 reminders, 3 pushes in all (as
+	// their old retries did).
+	for _, k := range []string{domain.KindRideMatch, domain.KindFeedbackReminder} {
+		if max := rules[k]; max != 2 {
+			t.Errorf("%s: want 2 reminders, got %d", k, max)
+		}
 	}
-	// No reminders for matches (own retries), cancellations and tests.
-	for _, k := range []string{domain.KindRideMatch, domain.KindRequestMatch, domain.KindInterestCancelled, domain.KindTest} {
+	// No reminders for a driver's match (informational), cancellations, tests.
+	for _, k := range []string{domain.KindRequestMatch, domain.KindInterestCancelled, domain.KindTest} {
 		if _, ok := rules[k]; ok {
 			t.Errorf("%s must not get inbox reminders", k)
 		}
@@ -184,7 +187,7 @@ func (f *failingDueRepo) FindRemindersDue([]string, int, time.Time, int) ([]doma
 func TestSendToAll_PushCarriesInboxID(t *testing.T) {
 	n := &mockNotifier{}
 	subs := &mockSubRepo{subs: map[string]domain.Subscription{"0611": {Phone: "0611", Endpoint: "https://push.example.com"}}}
-	usecase.NotifySearcher("0611", domain.Ride{ID: "r1", DriverName: "Bob"}, subs, n)
+	usecase.NotifySearcher(domain.Request{ID: "req-1", Phone: "0611"}, domain.Ride{ID: "r1", DriverName: "Bob"}, subs, n)
 	if len(n.sent) != 1 || n.sent[0].InboxID != "inbox-1" {
 		t.Errorf("push should carry the recorded inbox id, got %+v", n.sent)
 	}
@@ -220,5 +223,39 @@ func TestInboxNotifier_AcknowledgeMarksByKey(t *testing.T) {
 	usecase.NewInboxNotifier(&mockNotifier{}, inbox).Acknowledge("0611", "interest_received:i1")
 	if len(inbox.ackedKeys) != 1 || inbox.ackedKeys[0] != "0611/interest_received:i1" {
 		t.Errorf("ackedKeys = %v", inbox.ackedKeys)
+	}
+}
+
+// ── Ride matches: pushed once, reminded by the inbox, stopped by acting ───────
+
+func TestNotifySearcher_LinksTheMatchToRideAndRequest(t *testing.T) {
+	n := &mockNotifier{}
+	subs := &mockSubRepo{subs: map[string]domain.Subscription{}}
+	usecase.NotifySearcher(domain.Request{ID: "req-7", Phone: "0611"}, domain.Ride{ID: "r1", DriverName: "Bob"}, subs, n)
+	assertInbox(t, n, "0611", domain.Message{
+		Kind: domain.KindRideMatch, DedupKey: "ride_match:r1", ContactName: "Bob", RideID: "r1", RequestID: "req-7",
+	})
+}
+
+func TestExpressInterest_AcknowledgesTheMatch(t *testing.T) {
+	rides := &mockRideRepo{byID: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-driver"}}}
+	n := &mockNotifier{}
+	if _, err := usecase.NewExpressInterest(rides, &mockInterestRepo{}, &mockSubRepo{subs: map[string]domain.Subscription{}}, n).Execute("ride-1", "555-searcher", "Bob"); err != nil {
+		t.Fatal(err)
+	}
+	if len(n.acked) != 1 || n.acked[0] != "555-searcher/ride_match:ride-1" {
+		t.Errorf("acked = %v", n.acked)
+	}
+}
+
+func TestPingSearcher_AcknowledgesTheMatch(t *testing.T) {
+	reqs := &mockRequestRepoByID{byID: map[string]domain.Request{"req-1": {ID: "req-1", Phone: "555-searcher"}}}
+	rides := &mockRideRepo{byID: map[string]domain.Ride{"ride-1": {ID: "ride-1", Phone: "555-driver", DriverName: "Bob"}}}
+	n := &mockNotifier{}
+	if _, err := usecase.NewPingSearcher(reqs, rides, &mockInterestRepo{}, &mockSubRepo{subs: map[string]domain.Subscription{}}, n).Execute("req-1", "ride-1", "555-driver"); err != nil {
+		t.Fatal(err)
+	}
+	if len(n.acked) != 1 || n.acked[0] != "555-searcher/ride_match:ride-1" {
+		t.Errorf("acked = %v", n.acked)
 	}
 }

@@ -54,20 +54,23 @@ func pushToDevices(phone string, msg domain.Message, subs repository.Subscriptio
 // enqueueAndNotifyMatches pushes a "ride available" notification to each matching
 // searcher not already notified for this ride. Enqueue reports whether the
 // ride↔request pair was newly recorded; only new pairs are pushed, so re-running
-// matching after a ride edit never re-pings an earlier match. On a fresh post
-// every match is new, so behaviour is unchanged.
+// matching after a ride edit never re-pings an earlier match. The push is sent
+// once; its repeats are inbox reminders (domain.ReminderRules).
 func enqueueAndNotifyMatches(ride domain.Ride, matches []domain.Request, queue repository.NotificationQueueRepository, subs repository.SubscriptionRepository, notifier notification.Notifier) {
 	for _, req := range matches {
 		inserted, _ := queue.Enqueue(ride.ID, req.ID, req.Phone)
 		if !inserted {
 			continue // already notified for this ride
 		}
-		NotifySearcher(req.Phone, ride, subs, notifier)
+		NotifySearcher(req, ride, subs, notifier)
 		_ = queue.MarkSentByRideAndRequest(ride.ID, req.ID)
 	}
 }
 
-func NotifySearcher(phone string, ride domain.Ride, subs repository.SubscriptionRepository, notifier notification.Notifier) {
+// NotifySearcher tells the owner of req that ride matches it. The inbox item is
+// linked to both, so it goes when either the ride or the request expires or is
+// deleted (a searcher who dropped their alert isn't reminded about it).
+func NotifySearcher(req domain.Request, ride domain.Ride, subs repository.SubscriptionRepository, notifier notification.Notifier) {
 	msg := domain.Message{
 		Title:       "Ride available!",
 		Body:        fmt.Sprintf("%s is driving from %s to %s", ride.DriverName, ride.Origin, ride.Destination),
@@ -78,11 +81,13 @@ func NotifySearcher(phone string, ride domain.Ride, subs repository.Subscription
 		Destination: ride.Destination,
 		DepartureAt: ride.DepartureAt,
 		Kind:        domain.KindRideMatch,
-		// Retries of the same match (RetryNotifications) stay one inbox entry.
-		DedupKey: domain.KindRideMatch + ":" + ride.ID,
-		RideID:   ride.ID,
+		// One inbox entry per ride, even if several of the searcher's requests
+		// match it.
+		DedupKey:  domain.InboxKey(domain.KindRideMatch, ride.ID),
+		RideID:    ride.ID,
+		RequestID: req.ID,
 	}
-	sendToAll(phone, msg, subs, notifier)
+	sendToAll(req.Phone, msg, subs, notifier)
 }
 
 func NotifyDriver(phone string, req domain.Request, subs repository.SubscriptionRepository, notifier notification.Notifier) {

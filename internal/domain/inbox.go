@@ -34,12 +34,18 @@ type ReminderRule struct {
 // and isn't worth more nagging.
 const FeedbackPromptMaxReminders = 2
 
+// RideMatchMaxReminders caps "a ride matches your request" at 2 reminders
+// (3 pushes in all, as the old match retries did): a match is an opportunity,
+// not someone waiting on an answer.
+const RideMatchMaxReminders = 2
+
 // ReminderRules: notifications about another person's action are reminded
-// until handled; the feedback prompt a limited number of times. Ride/request
-// matches have their own retries; a cancelled request and test pushes need
-// no follow-up.
+// until handled; ride matches and the feedback prompt a limited number of
+// times. A match for a driver (request_match) is informational, a cancelled
+// request and test pushes need no follow-up.
 var ReminderRules = []ReminderRule{
 	{Kinds: []string{KindInterestReceived, KindInterestAccepted, KindDriverShared, KindContactOffered}},
+	{Kinds: []string{KindRideMatch}, MaxReminders: RideMatchMaxReminders},
 	{Kinds: []string{KindFeedbackReminder}, MaxReminders: FeedbackPromptMaxReminders},
 }
 

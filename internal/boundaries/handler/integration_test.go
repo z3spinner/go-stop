@@ -1320,34 +1320,47 @@ func TestHTTP_NotificationQueue_NotRetriedAfterInterest(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &ride)
 	rideID := ride["ID"].(string)
 
-	// Bob expresses interest
+	// The match is in Bob's inbox, unread (so it would be reminded).
+	before := getInbox(t, r, "5593001")
+	if len(before.Items) != 1 || before.Items[0].Kind != "ride_match" || before.Unread != 1 {
+		t.Fatalf("expected Bob's unread ride_match, got %+v / %d", before.Items, before.Unread)
+	}
+
+	// Bob expresses interest: he has acted on the match, so it is no longer
+	// reminded (marked read).
 	postJSON(r, "/api/rides/"+rideID+"/interest", map[string]interface{}{
 		"phone": "5593001", "name": "Bob",
 	})
+	if after := getInbox(t, r, "5593001"); after.Unread != 0 {
+		t.Errorf("expected the match acknowledged after interest, unread=%d", after.Unread)
+	}
+}
 
-	// FindPending should return 0 (interest exists)
-	rows, err := handlerPool.Query(context.Background(),
-		`SELECT nq.id FROM notification_queue nq
-		 JOIN rides r ON r.id = nq.ride_id AND r.expires_at > NOW()
-		 JOIN requests q ON q.id = nq.request_id AND q.expires_at > NOW()
-		 WHERE nq.sent_count < 3
-		   AND (nq.last_sent_at IS NULL OR nq.last_sent_at < NOW() - INTERVAL '2 hours')
-		   AND NOT EXISTS (
-		     SELECT 1 FROM interests i
-		     WHERE i.ride_id = nq.ride_id AND i.searcher_phone = nq.searcher_phone
-		   )`)
-	if err != nil {
-		t.Fatalf("query: %v", err)
+// Deleting the alert removes the matches it produced from the searcher's
+// inbox: they are no longer wanted, so they must not be reminded either.
+func TestHTTP_RideMatch_GoesWithTheRequest(t *testing.T) {
+	truncateAll(t)
+	r := setupRouter()
+
+	w := postJSON(r, "/api/requests", map[string]interface{}{
+		"searcher_name": "Bob", "phone": "5593001",
+		"origin": "Saillans", "destination": "Crest",
+	})
+	var req map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &req)
+	postJSON(r, "/api/rides", map[string]interface{}{
+		"driver_name": "Alice", "phone": "5593002",
+		"origin": "Saillans", "destination": "Crest",
+		"departure_at": "2032-01-01T09:00:00Z", "flexibility": 0,
+	})
+	if got := getInbox(t, r, "5593001"); len(got.Items) != 1 {
+		t.Fatalf("expected a ride_match, got %d items", len(got.Items))
 	}
-	defer rows.Close()
-	var pending []string
-	for rows.Next() {
-		var id string
-		rows.Scan(&id)
-		pending = append(pending, id)
+	if w := deleteJSONBody(r, "/api/requests/"+req["ID"].(string), map[string]interface{}{"phone": "5593001"}); w.Code/100 != 2 {
+		t.Fatalf("delete request: %d %s", w.Code, w.Body.String())
 	}
-	if len(pending) != 0 {
-		t.Errorf("expected 0 pending after interest expressed, got %d", len(pending))
+	if got := getInbox(t, r, "5593001"); len(got.Items) != 0 {
+		t.Errorf("deleting the alert should remove its matches, got %+v", got.Items)
 	}
 }
 
