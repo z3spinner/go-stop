@@ -43,6 +43,7 @@ type Querier interface {
 	DeleteInboxForRide(ctx context.Context, rideID pgtype.UUID) error
 	DeleteInterest(ctx context.Context, id pgtype.UUID) error
 	DeleteNotificationsForRide(ctx context.Context, rideID pgtype.UUID) error
+	DeleteNotificationsOfKindOlderThan(ctx context.Context, arg DeleteNotificationsOfKindOlderThanParams) (int64, error)
 	DeleteNotificationsOlderThan(ctx context.Context, createdAt pgtype.Timestamptz) (int64, error)
 	DeleteRequest(ctx context.Context, id pgtype.UUID) error
 	DeleteRide(ctx context.Context, id pgtype.UUID) error

@@ -68,4 +68,8 @@ type InboxRepository interface {
 
 	// DeleteOlderThan removes items created before cutoff and returns how many.
 	DeleteOlderThan(cutoff time.Time) (int64, error)
+
+	// DeleteKindOlderThan removes items of kind created before cutoff and
+	// returns how many (for kinds that go stale sooner than the retention).
+	DeleteKindOlderThan(kind string, cutoff time.Time) (int64, error)
 }

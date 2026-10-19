@@ -6,8 +6,7 @@ package domain
 import "time"
 
 // Notification kinds. A Message with a Kind is also kept in the recipient's
-// in-app inbox; a Message without one (the engagement reminder broadcast) is
-// push-only. The frontend renders each kind in the reader's language, so these
+// in-app inbox; a Message without one is push-only. The frontend renders each kind in the reader's language, so these
 // values are part of the API contract — don't rename them.
 const (
 	KindRideMatch         = "ride_match"         // a ride matches the searcher's request
@@ -19,7 +18,14 @@ const (
 	KindContactOffered    = "contact_offered"    // someone offered their contact on a request
 	KindFeedbackReminder  = "feedback_reminder"  // "did your ride leave with passengers?"
 	KindTest              = "test"               // the user's own "send a test notification"
+	// The weekly "the board is almost empty, share a ride" push to everyone.
+	KindEngagementReminder = "engagement_reminder"
 )
+
+// EngagementReminderLifetime is how long the weekly engagement reminder stays
+// in the inbox: it's about that week, and isn't linked to any post that could
+// expire with it.
+const EngagementReminderLifetime = 7 * 24 * time.Hour
 
 // ReminderRule says which kinds get periodic reminder pushes while unread
 // (see usecase.SendInboxReminders) and at most how many (0 = no limit: until

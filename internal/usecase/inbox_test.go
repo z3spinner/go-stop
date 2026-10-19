@@ -53,6 +53,8 @@ type mockInboxRepo struct {
 	deletedRides     []string
 	deletedRequests  []string
 	deleteCutoff     time.Time
+	kindDeletes      []string // DeleteKindOlderThan calls: kind
+	kindCutoff       time.Time
 	deleted          int64
 	goneCalled       bool
 	dismissed        []string // "phone/id"
@@ -153,6 +155,11 @@ func (m *mockInboxRepo) DeleteForGonePosts() (int64, error) {
 func (m *mockInboxRepo) DeleteOlderThan(cutoff time.Time) (int64, error) {
 	m.deleteCutoff = cutoff
 	return m.deleted, nil
+}
+func (m *mockInboxRepo) DeleteKindOlderThan(kind string, cutoff time.Time) (int64, error) {
+	m.kindDeletes = append(m.kindDeletes, kind)
+	m.kindCutoff = cutoff
+	return 0, nil
 }
 
 // ── InboxNotifier ─────────────────────────────────────────────────────────────
@@ -452,6 +459,21 @@ func TestPurgeInbox_DeletesOlderThanRetention(t *testing.T) {
 		if d := inbox.scrubCutoff.Sub(wantScrub); d < 0 || d > time.Minute {
 			t.Errorf("days=%d: scrub cutoff %v, want ≈ %v (end of the undo window)", tc.days, inbox.scrubCutoff, wantScrub)
 		}
+	}
+}
+
+func TestPurgeInbox_DropsTheEngagementReminderAfterAWeek(t *testing.T) {
+	inbox := &mockInboxRepo{}
+	before := time.Now()
+	if err := usecase.NewPurgeInbox(inbox, 30).Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(inbox.kindDeletes) != 1 || inbox.kindDeletes[0] != domain.KindEngagementReminder {
+		t.Fatalf("expected the engagement reminder to be purged by age, got %v", inbox.kindDeletes)
+	}
+	want := before.Add(-domain.EngagementReminderLifetime)
+	if d := inbox.kindCutoff.Sub(want); d < 0 || d > time.Minute {
+		t.Errorf("cutoff %v, want ≈ %v (a week ago)", inbox.kindCutoff, want)
 	}
 }
 

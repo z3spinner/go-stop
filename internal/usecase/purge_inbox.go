@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/z3spinner/go-stop/internal/boundaries/repository"
+	"github.com/z3spinner/go-stop/internal/domain"
 )
 
 const (
@@ -38,9 +39,9 @@ type PurgeInbox struct {
 }
 
 // NewPurgeInbox deletes inbox items about rides/requests that have expired or
-// been deleted, and anything older than retentionDays (clamped, see
-// ClampInboxRetentionDays), and blanks the content of items the user deleted
-// more than InboxUndoWindow ago. Runs in the hourly cron after the expiry jobs.
+// been deleted, anything older than retentionDays (clamped, see
+// ClampInboxRetentionDays) and the weekly engagement reminder after a week, and
+// blanks the content of items the user deleted more than InboxUndoWindow ago. Runs in the hourly cron after the expiry jobs.
 func NewPurgeInbox(inbox repository.InboxRepository, retentionDays int) *PurgeInbox {
 	days := ClampInboxRetentionDays(retentionDays)
 	return &PurgeInbox{inbox: inbox, retention: time.Duration(days) * 24 * time.Hour}
@@ -56,6 +57,11 @@ func (uc *PurgeInbox) Execute() error {
 	if err != nil {
 		return err
 	}
+	stale, err := uc.inbox.DeleteKindOlderThan(domain.KindEngagementReminder, now.Add(-domain.EngagementReminderLifetime))
+	if err != nil {
+		return err
+	}
+	old += stale
 	scrubbed, err := uc.inbox.ScrubDismissed(now.Add(-InboxUndoWindow))
 	if err != nil {
 		return err

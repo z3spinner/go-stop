@@ -110,6 +110,8 @@
   "inboxKindContactOffered": "{name} kan je helpen",
   "inboxKindDriverShared": "{name} kan je meenemen",
   "inboxKindFeedbackReminder": "Is je rit met passagiers vertrokken?",
+  "inboxKindEngagementReminder": "Deel een rit deze week!",
+  "inboxEngagementReminderBody": "Het bord is bijna leeg — wees de eerste die een rit plaatst en help je buren op weg.",
   "inboxKindInterestAccepted": "{name} heeft geaccepteerd en contact gedeeld",
   "inboxKindInterestCancelled": "{name} heeft het contactverzoek ingetrokken",
   "inboxKindInterestReceived": "{name} vraagt je contactgegevens",

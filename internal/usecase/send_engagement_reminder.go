@@ -45,7 +45,8 @@ var engagementBodies = map[string]string{
 
 // SendEngagementReminder is a weekly scheduled job that sends a motivational
 // push notification to all subscribers when available rides fall below the
-// threshold. It fires on Mondays at or after 08:00 in the service timezone and
+// threshold, and keeps a copy in each subscriber's inbox for a week
+// (domain.EngagementReminderLifetime). It fires on Mondays at or after 08:00 in the service timezone and
 // is idempotent: once the notification is sent for a given ISO week, subsequent
 // runs within that week are a no-op.
 type SendEngagementReminder struct {
@@ -127,18 +128,32 @@ func (uc *SendEngagementReminder) Execute() error {
 		return uc.settings.InsertIfAbsent(ctx, weekKey, "sent")
 	}
 
-	// Subscriptions carry no language preference, so fall back to French —
-	// the app's primary language. pick() returns the French value when the
-	// key is absent or empty, so this is safe for all future callers too.
+	// Subscriptions carry no language preference, so the push falls back to
+	// French — the app's primary language. The inbox copy is rendered from its
+	// kind in the reader's language.
 	msg := domain.Message{
-		Title: pick(engagementTitles, "fr"),
-		Body:  pick(engagementBodies, "fr"),
-		URL:   "/",
+		Title:    pick(engagementTitles, "fr"),
+		Body:     pick(engagementBodies, "fr"),
+		URL:      "/",
+		Kind:     domain.KindEngagementReminder,
+		DedupKey: domain.InboxKey(domain.KindEngagementReminder, fmt.Sprintf("%04d-W%02d", isoYear, isoWeek)),
 	}
 
+	// One inbox item per phone, however many devices it has; a device with no
+	// phone has no inbox and only gets the push.
+	inboxIDs := map[string]string{}
 	sent := 0
 	for _, sub := range subs {
-		if err := uc.notifier.Send(sub, msg); err != nil {
+		m := msg
+		if sub.Phone != "" {
+			id, ok := inboxIDs[sub.Phone]
+			if !ok {
+				id = uc.notifier.Record(sub.Phone, msg)
+				inboxIDs[sub.Phone] = id
+			}
+			m.InboxID = id
+		}
+		if err := uc.notifier.Send(sub, m); err != nil {
 			log.Printf("engagement reminder: push error endpoint=%.20s...: %v", sub.Endpoint, err)
 			if strings.Contains(err.Error(), "410") {
 				_ = uc.subs.DeleteByEndpoint(sub.Endpoint)

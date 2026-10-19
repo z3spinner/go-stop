@@ -110,6 +110,8 @@
   "inboxKindContactOffered": "{name} peut vous aider",
   "inboxKindDriverShared": "{name} peut vous emmener",
   "inboxKindFeedbackReminder": "Votre trajet est-il parti avec des passagers ?",
+  "inboxKindEngagementReminder": "Proposez un trajet cette semaine !",
+  "inboxEngagementReminderBody": "Le tableau est presque vide — soyez le premier à poster un trajet et aidez vos voisins à se déplacer.",
   "inboxKindInterestAccepted": "{name} accepte de partager son contact",
   "inboxKindInterestCancelled": "{name} a annulé sa demande de contact",
   "inboxKindInterestReceived": "{name} demande votre contact",

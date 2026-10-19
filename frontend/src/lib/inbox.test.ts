@@ -47,6 +47,19 @@ describe('inboxTitle', () => {
 	it('needs no name for the feedback reminder', () => {
 		expect(inboxTitle(item({ kind: 'feedback_reminder', contact_name: '' }))).toBe(m.inboxKindFeedbackReminder());
 	});
+	it('renders the weekly engagement reminder in the reader\'s language', () => {
+		const weekly = item({
+			kind: 'engagement_reminder',
+			contact_name: '',
+			origin: '',
+			destination: '',
+			title: 'Proposez un trajet cette semaine ! 🚗',
+			body: 'Le tableau est presque vide…'
+		});
+		expect(inboxTitle(weekly)).toBe(m.inboxKindEngagementReminder());
+		expect(inboxRoute(weekly)).toBe(m.inboxEngagementReminderBody());
+		expect(inboxIcon(weekly)).toBe('📣');
+	});
 	it('falls back to the server title for unknown kinds or a missing name', () => {
 		expect(inboxTitle(item({ kind: 'something_new' }))).toBe('Ride available!');
 		expect(inboxTitle(item({ contact_name: '' }))).toBe('Ride available!');

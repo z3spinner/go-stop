@@ -26,8 +26,7 @@ func NewInboxNotifier(push notification.Pusher, inbox repository.InboxRepository
 	return &InboxNotifier{Pusher: push, inbox: inbox}
 }
 
-// Record stores msg for phone. Messages without a Kind (the engagement
-// reminder broadcast) are push-only. The other
+// Record stores msg for phone. Messages without a Kind are push-only. The other
 // party's phone number (msg.Phone) is deliberately not stored. Best-effort: a
 // storage failure is logged and never blocks the push.
 func (n *InboxNotifier) Record(phone string, msg domain.Message) string {
