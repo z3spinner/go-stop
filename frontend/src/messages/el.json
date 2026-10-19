@@ -110,6 +110,8 @@
   "inboxKindContactOffered": "Ο/Η {name} μπορεί να σε βοηθήσει",
   "inboxKindDriverShared": "Ο/Η {name} μπορεί να σε πάρει",
   "inboxKindFeedbackReminder": "Η διαδρομή σου ξεκίνησε με επιβάτες;",
+  "inboxKindEngagementReminder": "Μοιράσου μια διαδρομή αυτή την εβδομάδα!",
+  "inboxEngagementReminderBody": "Ο πίνακας είναι σχεδόν άδειος — γίνε ο πρώτος που θα δημοσιεύσει μια διαδρομή και βοήθησε τους γείτονές σου να μετακινηθούν.",
   "inboxKindInterestAccepted": "Ο/Η {name} δέχτηκε και μοιράστηκε τα στοιχεία του/της",
   "inboxKindInterestCancelled": "Ο/Η {name} ακύρωσε το αίτημα επικοινωνίας",
   "inboxKindInterestReceived": "Ο/Η {name} ζητά τα στοιχεία επικοινωνίας σου",

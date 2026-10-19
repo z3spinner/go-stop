@@ -49,6 +49,9 @@ DELETE FROM notifications WHERE request_id = $1;
 -- name: DeleteNotificationsOlderThan :execrows
 DELETE FROM notifications WHERE created_at < $1;
 
+-- name: DeleteNotificationsOfKindOlderThan :execrows
+DELETE FROM notifications WHERE kind = $1 AND created_at < $2;
+
 -- name: DeleteInboxForGonePosts :execrows
 -- Removes items about rides/requests that no longer exist — expired (deleted
 -- by the hourly expiry job) or deleted by their owner — so a post's details

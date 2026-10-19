@@ -44,7 +44,9 @@ Rules:
   calling `notifier.Send` directly from a new use case. Give every new message a
   `Kind` (domain/inbox.go), a `DedupKey` for one logical event, and the
   `RideID`/`RequestID` it is about (so deleting the post cleans inboxes); a
-  message without a `Kind` is push-only. Kinds in `domain.ReminderRules` are
+  message without a `Kind` is push-only. A broadcast (the weekly engagement
+  reminder) records one item per phone and gives it a shorter lifetime in
+  `purge_inbox.go`, since no post expires with it. Kinds in `domain.ReminderRules` are
   re-pushed while unread (`send_inbox_reminders.go`), some with a cap (ride
   matches and the feedback prompt: 2 reminders). Don't build another retry loop for a new
   notification: push it once with a `Kind` and add a rule. A notification is read

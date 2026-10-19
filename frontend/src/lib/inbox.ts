@@ -163,6 +163,7 @@ const ICONS: Record<string, string> = {
 	driver_shared: '🚗',
 	contact_offered: '🤝',
 	feedback_reminder: '💬',
+	engagement_reminder: '📣',
 	test: '🔔'
 };
 
@@ -173,13 +174,19 @@ const ICONS: Record<string, string> = {
  */
 export function inboxTitle(item: InboxItem): string {
 	if (item.kind === 'feedback_reminder') return m.inboxKindFeedbackReminder();
+	if (item.kind === 'engagement_reminder') return m.inboxKindEngagementReminder();
 	const fn = TITLES[item.kind];
 	if (fn && item.contact_name) return fn(item.contact_name);
 	return item.title || m.inboxTitle();
 }
 
-/** "Origin → Destination", or the server body when the route is unknown. */
+/**
+ * "Origin → Destination", or the server body when the route is unknown. The
+ * weekly engagement reminder (sent in French to everyone) is about no trip, so
+ * its text is rendered in the reader's language instead.
+ */
 export function inboxRoute(item: InboxItem): string {
+	if (item.kind === 'engagement_reminder') return m.inboxEngagementReminderBody();
 	if (item.origin && item.destination) return `${item.origin} → ${item.destination}`;
 	return item.body;
 }

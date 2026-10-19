@@ -130,6 +130,23 @@ func (q *Queries) DeleteInboxForRide(ctx context.Context, rideID pgtype.UUID) er
 	return err
 }
 
+const deleteNotificationsOfKindOlderThan = `-- name: DeleteNotificationsOfKindOlderThan :execrows
+DELETE FROM notifications WHERE kind = $1 AND created_at < $2
+`
+
+type DeleteNotificationsOfKindOlderThanParams struct {
+	Kind      string             `db:"kind"`
+	CreatedAt pgtype.Timestamptz `db:"created_at"`
+}
+
+func (q *Queries) DeleteNotificationsOfKindOlderThan(ctx context.Context, arg DeleteNotificationsOfKindOlderThanParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteNotificationsOfKindOlderThan, arg.Kind, arg.CreatedAt)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteNotificationsOlderThan = `-- name: DeleteNotificationsOlderThan :execrows
 DELETE FROM notifications WHERE created_at < $1
 `

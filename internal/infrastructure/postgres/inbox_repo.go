@@ -168,3 +168,10 @@ func (r *InboxRepo) DeleteForGonePosts() (int64, error) {
 func (r *InboxRepo) DeleteOlderThan(cutoff time.Time) (int64, error) {
 	return r.q.DeleteNotificationsOlderThan(context.Background(), tsFrom(cutoff))
 }
+
+func (r *InboxRepo) DeleteKindOlderThan(kind string, cutoff time.Time) (int64, error) {
+	return r.q.DeleteNotificationsOfKindOlderThan(context.Background(), queries.DeleteNotificationsOfKindOlderThanParams{
+		Kind:      kind,
+		CreatedAt: tsFrom(cutoff),
+	})
+}

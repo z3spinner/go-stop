@@ -110,6 +110,8 @@
   "inboxKindContactOffered": "{name} can help you",
   "inboxKindDriverShared": "{name} can give you a ride",
   "inboxKindFeedbackReminder": "Did your ride leave with passengers?",
+  "inboxKindEngagementReminder": "Share a ride this week!",
+  "inboxEngagementReminderBody": "The board is almost empty — be the first to post a ride and help your neighbours get moving.",
   "inboxKindInterestAccepted": "{name} accepted and shared their contact",
   "inboxKindInterestCancelled": "{name} withdrew their contact request",
   "inboxKindInterestReceived": "{name} asked for your contact",

@@ -110,6 +110,8 @@
   "inboxKindContactOffered": "{name} puede ayudarte",
   "inboxKindDriverShared": "{name} puede llevarte",
   "inboxKindFeedbackReminder": "¿Tu viaje salió con pasajeros?",
+  "inboxKindEngagementReminder": "¡Comparte un viaje esta semana!",
+  "inboxEngagementReminderBody": "El tablón está casi vacío — sé el primero en publicar un trayecto y ayuda a tus vecinos a moverse.",
   "inboxKindInterestAccepted": "{name} aceptó y compartió su contacto",
   "inboxKindInterestCancelled": "{name} canceló su solicitud de contacto",
   "inboxKindInterestReceived": "{name} pide tu contacto",

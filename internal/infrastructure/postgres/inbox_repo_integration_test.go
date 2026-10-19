@@ -114,6 +114,40 @@ func TestInboxRepo_DeleteOlderThan(t *testing.T) {
 	}
 }
 
+func TestInboxRepo_DeleteKindOlderThan(t *testing.T) {
+	truncate(t)
+	repo := postgres.NewInboxRepo(testPool)
+	for _, it := range []domain.InboxItem{
+		{Phone: "0611", Kind: domain.KindEngagementReminder, DedupKey: "old-engagement"},
+		{Phone: "0611", Kind: domain.KindEngagementReminder, DedupKey: "new-engagement"},
+		{Phone: "0611", Kind: domain.KindTest, DedupKey: "old-test"},
+	} {
+		if _, err := repo.Add(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := testPool.Exec(context.Background(),
+		`UPDATE notifications SET created_at = NOW() - interval '8 days' WHERE dedup_key LIKE 'old-%'`); err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := repo.DeleteKindOlderThan(domain.KindEngagementReminder, time.Now().Add(-7*24*time.Hour))
+	if err != nil {
+		t.Fatalf("DeleteKindOlderThan: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("expected 1 deleted, got %d", n)
+	}
+	items, _ := repo.ListByPhone("0611", 10)
+	left := map[string]bool{}
+	for _, it := range items {
+		left[it.DedupKey] = true
+	}
+	if len(items) != 2 || !left["new-engagement"] || !left["old-test"] {
+		t.Errorf("expected the recent engagement reminder and the other kind to remain, got %+v", items)
+	}
+}
+
 func TestInboxRepo_UnreadCountUsesListWindow(t *testing.T) {
 	truncate(t)
 	repo := postgres.NewInboxRepo(testPool)

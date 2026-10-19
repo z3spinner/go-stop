@@ -108,6 +108,41 @@ func TestSendEngagementReminder_SendsWhenRidesLow(t *testing.T) {
 	}
 }
 
+func TestSendEngagementReminder_KeepsOneInboxCopyPerPhone(t *testing.T) {
+	settings := newMockSettings()
+	n := &mockNotifier{}
+	subs := []domain.Subscription{
+		{Phone: "555-0001", Endpoint: "https://push.example.com/phone"},
+		{Phone: "555-0001", Endpoint: "https://push.example.com/laptop"},
+		{Phone: "555-0002", Endpoint: "https://push.example.com/other"},
+		{Endpoint: "https://push.example.com/no-phone"},
+	}
+
+	uc := makeUC(make([]domain.Ride, 2), subs, settings, n, mondayAt8(2030, 1, 7, time.UTC))
+	if err := uc.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	week := domain.InboxKey(domain.KindEngagementReminder, "2030-W02")
+	if len(n.recorded) != 2 {
+		t.Fatalf("expected one inbox copy per phone (2), got %d: %+v", len(n.recorded), n.recorded)
+	}
+	assertInboxMsg(t, n.recorded[0], "555-0001", domain.Message{Kind: domain.KindEngagementReminder, DedupKey: week})
+	assertInboxMsg(t, n.recorded[1], "555-0002", domain.Message{Kind: domain.KindEngagementReminder, DedupKey: week})
+
+	if len(n.sent) != 4 {
+		t.Fatalf("expected a push to every device (4), got %d", len(n.sent))
+	}
+	// Both devices of a phone point at its single inbox item, so tapping
+	// either push marks it read; a device without a phone has no inbox.
+	wantIDs := []string{"inbox-1", "inbox-1", "inbox-2", ""}
+	for i, msg := range n.sent {
+		if msg.InboxID != wantIDs[i] {
+			t.Errorf("push %d: InboxID %q, want %q", i, msg.InboxID, wantIDs[i])
+		}
+	}
+}
+
 func TestSendEngagementReminder_SkipsWhenRidesEnough(t *testing.T) {
 	settings := newMockSettings()
 	n := &mockNotifier{}
