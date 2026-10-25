@@ -40,7 +40,8 @@ type PurgeInbox struct {
 
 // NewPurgeInbox deletes inbox items about rides/requests that have expired or
 // been deleted, anything older than retentionDays (clamped, see
-// ClampInboxRetentionDays) and the weekly engagement reminder after a week, and
+// ClampInboxRetentionDays), the weekly engagement reminder after a week and the
+// morning digest after a day, and
 // blanks the content of items the user deleted more than InboxUndoWindow ago. Runs in the hourly cron after the expiry jobs.
 func NewPurgeInbox(inbox repository.InboxRepository, retentionDays int) *PurgeInbox {
 	days := ClampInboxRetentionDays(retentionDays)
@@ -58,6 +59,11 @@ func (uc *PurgeInbox) Execute() error {
 		return err
 	}
 	stale, err := uc.inbox.DeleteKindOlderThan(domain.KindEngagementReminder, now.Add(-domain.EngagementReminderLifetime))
+	if err != nil {
+		return err
+	}
+	old += stale
+	stale, err = uc.inbox.DeleteKindOlderThan(domain.KindMorningDigest, now.Add(-domain.MorningDigestLifetime))
 	if err != nil {
 		return err
 	}

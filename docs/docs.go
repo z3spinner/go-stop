@@ -452,6 +452,102 @@ const docTemplate = `{
                 }
             }
         },
+        "/notification-preferences": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "operationId": "getNotificationPreferences",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.NotificationPreferences"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "operationId": "setNotificationPreferences",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phone",
+                        "name": "X-Phone",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Preferences",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.NotificationPreferences"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.NotificationPreferences"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/notifications": {
             "get": {
                 "produces": [
@@ -1823,6 +1919,10 @@ const docTemplate = `{
         "handler.ConfigResponse": {
             "type": "object",
             "properties": {
+                "morningDigestHour": {
+                    "description": "Local hour (SERVICE_TZ) of the daily morning digest; -1 when disabled.",
+                    "type": "integer"
+                },
                 "notificationRetentionDays": {
                     "description": "How many days the in-app inbox keeps notifications.",
                     "type": "integer"
@@ -2071,6 +2171,15 @@ const docTemplate = `{
                 },
                 "sent_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.NotificationPreferences": {
+            "type": "object",
+            "properties": {
+                "morning_digest": {
+                    "description": "The daily summary of the day's rides and requests (on by default).",
+                    "type": "boolean"
                 }
             }
         },

@@ -71,6 +71,12 @@ type Notification struct {
 	ReminderCount int32              `db:"reminder_count"`
 }
 
+type NotificationPreference struct {
+	Phone         string             `db:"phone"`
+	MorningDigest bool               `db:"morning_digest"`
+	UpdatedAt     pgtype.Timestamptz `db:"updated_at"`
+}
+
 type NotificationQueue struct {
 	ID            pgtype.UUID        `db:"id"`
 	RideID        pgtype.UUID        `db:"ride_id"`

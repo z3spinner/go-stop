@@ -13,13 +13,15 @@ type ConfigHandler struct {
 	siteName                  string
 	returnDelayHours          int
 	notificationRetentionDays int
+	morningDigestHour         int
 }
 
-func NewConfigHandler(siteName string, returnDelayHours, notificationRetentionDays int) *ConfigHandler {
+func NewConfigHandler(siteName string, returnDelayHours, notificationRetentionDays, morningDigestHour int) *ConfigHandler {
 	return &ConfigHandler{
 		siteName:                  siteName,
 		returnDelayHours:          returnDelayHours,
 		notificationRetentionDays: notificationRetentionDays,
+		morningDigestHour:         morningDigestHour,
 	}
 }
 
@@ -34,5 +36,6 @@ func (h *ConfigHandler) Get(c *gin.Context) {
 		SiteName:                  h.siteName,
 		ReturnDelayHours:          h.returnDelayHours,
 		NotificationRetentionDays: h.notificationRetentionDays,
+		MorningDigestHour:         h.morningDigestHour,
 	})
 }

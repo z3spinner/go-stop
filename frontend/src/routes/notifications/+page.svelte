@@ -11,6 +11,7 @@
 	import { openNotifModal } from '$lib/notifModal';
 	import { openA2HS } from '$lib/a2hs';
 	import { config } from '$lib/config';
+	import { api } from '$lib/api';
 	import {
 		DEFAULT_RETENTION_DAYS,
 		inboxIcon,
@@ -77,6 +78,35 @@
 		});
 	});
 
+	// Morning digest switch: on by default, saved per phone. Hidden when the
+	// server doesn't send one (MORNING_DIGEST_HOUR=none, or an older server).
+	let digestHour = $derived($config.morningDigestHour ?? -1);
+	let digestOn = $state<boolean | null>(null);
+	let digestErr = $state('');
+	$effect(() => {
+		const p = phone;
+		digestOn = null;
+		if (!p) return;
+		api.preferences
+			.get(p)
+			.then((r) => {
+				if (untrack(() => phone) === p) digestOn = r.morning_digest;
+			})
+			.catch(() => {});
+	});
+	async function toggleDigest(e: Event) {
+		const on = (e.currentTarget as HTMLInputElement).checked;
+		const prev = digestOn;
+		digestOn = on;
+		digestErr = '';
+		try {
+			await api.preferences.set(phone, { morning_digest: on });
+		} catch {
+			digestOn = prev;
+			digestErr = m.digestSaveErr();
+		}
+	}
+
 	// A notification becomes read only when it is tapped (here, or as a push) —
 	// never just because it is on screen. Navigation to its link continues.
 	function open(item: InboxItem) {
@@ -95,6 +125,16 @@
 	</div>
 	{#if !pushOn}
 		<p class="inbox-push-off mb-3 text-sm text-amber-700">{m.inboxPushOff()}</p>
+	{/if}
+	{#if digestHour >= 0 && digestOn !== null}
+		<label class="digest-pref card mb-3 flex items-start gap-3 rounded border p-3">
+			<input type="checkbox" class="digest-toggle mt-1 h-4 w-4 shrink-0" checked={digestOn} onchange={toggleDigest} />
+			<span class="flex flex-col gap-0.5">
+				<span class="font-medium">☀️ {m.digestToggleLabel()}</span>
+				<span class="text-sm text-gray-600">{m.digestToggleHint({ hour: String(digestHour) })}</span>
+				{#if digestErr}<span class="digest-err text-sm text-red-600">{digestErr}</span>{/if}
+			</span>
+		</label>
 	{/if}
 
 	<div id="inbox-list" class="flex flex-col gap-2">

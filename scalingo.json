@@ -30,6 +30,10 @@
       "description": "Local hours with no reminder pushes, e.g. 21-8 (default); 'none' to always send",
       "value": "21-8"
     },
+    "MORNING_DIGEST_HOUR": {
+      "description": "Local hour of the daily morning digest of today's rides and requests (default: 8); 'none' to disable",
+      "value": "8"
+    },
     "NOTIFICATION_RETENTION_DAYS": {
       "description": "Max days a notification stays in the in-app inbox (default: 30); removed earlier when its ride or request expires or is deleted",
       "value": "30"

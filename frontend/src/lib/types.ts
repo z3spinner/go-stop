@@ -50,6 +50,7 @@ import type {
 	DomainRouteStat,
 	DomainActivityCounts,
 	HandlerConfigResponse,
+	HandlerNotificationPreferences,
 	HandlerVapidKeyResponse,
 	// Request bodies / params — keep as-is (callers build these, optionality is fine)
 	HandlerPostRideBody as PostRideBody,
@@ -74,11 +75,13 @@ export type AcceptInterestResponse = DeepRequired<HandlerAcceptInterestResponse>
 export type Stats = DeepRequired<DomainStats>;
 export type RouteStat = DeepRequired<DomainRouteStat>;
 export type ActivityCounts = DeepRequired<DomainActivityCounts>;
-// notificationRetentionDays is optional so an older server (or a test fixture)
-// without it still type-checks; callers fall back to the default.
-export type Config = DeepRequired<Omit<HandlerConfigResponse, 'notificationRetentionDays'>> &
-	Pick<HandlerConfigResponse, 'notificationRetentionDays'>;
+// notificationRetentionDays and morningDigestHour are optional so an older server
+// (or a test fixture) without them still type-checks; callers fall back to the
+// defaults.
+export type Config = DeepRequired<Omit<HandlerConfigResponse, 'notificationRetentionDays' | 'morningDigestHour'>> &
+	Pick<HandlerConfigResponse, 'notificationRetentionDays' | 'morningDigestHour'>;
 export type VapidKey = DeepRequired<HandlerVapidKeyResponse>;
+export type NotificationPreferences = DeepRequired<HandlerNotificationPreferences>;
 
 // ── InboxItem — partial exception ────────────────────────────────────────────
 // `departure_at` is `omitempty` on the server (unknown for some kinds).

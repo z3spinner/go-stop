@@ -76,6 +76,8 @@ export interface HandlerAcceptInterestResponse {
 }
 
 export interface HandlerConfigResponse {
+  /** Local hour (SERVICE_TZ) of the daily morning digest; -1 when disabled. */
+  morningDigestHour?: number;
   /** How many days the in-app inbox keeps notifications. */
   notificationRetentionDays?: number;
   returnDelayHours?: number;
@@ -179,6 +181,11 @@ export interface HandlerNotificationItem {
   request_id?: string;
   ride_id?: string;
   sent_count?: number;
+}
+
+export interface HandlerNotificationPreferences {
+  /** The daily summary of the day's rides and requests (on by default). */
+  morning_digest?: boolean;
 }
 
 export interface HandlerOfferContactBody {
@@ -756,6 +763,101 @@ export const getInterestContact = async (id: string, options?: RequestInit): Pro
     method: 'GET'
 
 
+  }
+);}
+
+
+
+export type getNotificationPreferencesResponse200 = {
+  data: HandlerNotificationPreferences
+  status: 200
+}
+
+export type getNotificationPreferencesResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type getNotificationPreferencesResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type getNotificationPreferencesResponseSuccess = (getNotificationPreferencesResponse200) & {
+  headers: Headers;
+};
+export type getNotificationPreferencesResponseError = (getNotificationPreferencesResponse401 | getNotificationPreferencesResponse500) & {
+  headers: Headers;
+};
+
+export type getNotificationPreferencesResponse = (getNotificationPreferencesResponseSuccess | getNotificationPreferencesResponseError)
+
+export const getGetNotificationPreferencesUrl = () => {
+
+
+
+
+  return `/notification-preferences`
+}
+
+export const getNotificationPreferences = async ( options?: RequestInit): Promise<getNotificationPreferencesResponse> => {
+
+  return customFetch<getNotificationPreferencesResponse>(getGetNotificationPreferencesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+export type setNotificationPreferencesResponse200 = {
+  data: HandlerNotificationPreferences
+  status: 200
+}
+
+export type setNotificationPreferencesResponse400 = {
+  data: HandlerErrorResponse
+  status: 400
+}
+
+export type setNotificationPreferencesResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type setNotificationPreferencesResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type setNotificationPreferencesResponseSuccess = (setNotificationPreferencesResponse200) & {
+  headers: Headers;
+};
+export type setNotificationPreferencesResponseError = (setNotificationPreferencesResponse400 | setNotificationPreferencesResponse401 | setNotificationPreferencesResponse500) & {
+  headers: Headers;
+};
+
+export type setNotificationPreferencesResponse = (setNotificationPreferencesResponseSuccess | setNotificationPreferencesResponseError)
+
+export const getSetNotificationPreferencesUrl = () => {
+
+
+
+
+  return `/notification-preferences`
+}
+
+export const setNotificationPreferences = async (handlerNotificationPreferences: HandlerNotificationPreferences, options?: RequestInit): Promise<setNotificationPreferencesResponse> => {
+
+  return customFetch<setNotificationPreferencesResponse>(getSetNotificationPreferencesUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(handlerNotificationPreferences)
   }
 );}
 

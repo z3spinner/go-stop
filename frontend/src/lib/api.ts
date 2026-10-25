@@ -31,6 +31,7 @@ import type {
 	Inbox,
 	Stats,
 	Config,
+	NotificationPreferences,
 	VapidKey,
 	PostRideBody,
 	UpdateRideBody,
@@ -135,5 +136,12 @@ export const api = {
 		/** Undo a recent delete; rejects with ApiError 404 when it's too late. */
 		restore: (phone: string, id: string) =>
 			unwrap<null>(gen.restoreInboxItem(id, phoneHeader(phone)))
+	},
+	preferences: {
+		/** The phone's notification preferences (defaults: everything on). */
+		get: (phone: string) =>
+			unwrap<NotificationPreferences>(gen.getNotificationPreferences(phoneHeader(phone))),
+		set: (phone: string, prefs: NotificationPreferences) =>
+			unwrap<NotificationPreferences>(gen.setNotificationPreferences(prefs, phoneHeader(phone)))
 	}
 };
