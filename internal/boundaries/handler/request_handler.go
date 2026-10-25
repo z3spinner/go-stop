@@ -23,6 +23,7 @@ type RequestHandler struct {
 	offerContact            *usecase.OfferContact
 	getContactOfferStatus   *usecase.GetRequestContactOfferStatus
 	getRequestContactOffers *usecase.GetRequestContactOffers
+	renewRequest            *usecase.RenewRequest
 	requestRepo             repository.RequestRepository
 	statRepo                repository.StatRepository
 }
@@ -36,6 +37,7 @@ func NewRequestHandler(
 	offerContact *usecase.OfferContact,
 	getContactOfferStatus *usecase.GetRequestContactOfferStatus,
 	getRequestContactOffers *usecase.GetRequestContactOffers,
+	renewRequest *usecase.RenewRequest,
 	requestRepo repository.RequestRepository,
 	statRepo repository.StatRepository,
 ) *RequestHandler {
@@ -48,6 +50,7 @@ func NewRequestHandler(
 		offerContact:            offerContact,
 		getContactOfferStatus:   getContactOfferStatus,
 		getRequestContactOffers: getRequestContactOffers,
+		renewRequest:            renewRequest,
 		requestRepo:             requestRepo,
 		statRepo:                statRepo,
 	}
@@ -270,6 +273,41 @@ func (h *RequestHandler) Delete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// Renew keeps one of the caller's open-ended alerts (anytime or daily) for
+// another 30 days from now, and returns it with its new expiry.
+// @ID       renewRequest
+// @Tags     requests
+// @Produce  json
+// @Param    id       path    string  true  "Request ID"
+// @Param    X-Phone  header  string  true  "Owner phone"
+// @Success  200  {object}  domain.Request
+// @Failure  401  {object}  handler.ErrorResponse
+// @Failure  403  {object}  handler.ErrorResponse
+// @Failure  404  {object}  handler.ErrorResponse
+// @Failure  409  {object}  handler.ErrorResponse
+// @Failure  500  {object}  handler.ErrorResponse
+// @Router   /requests/{id}/renew [post]
+func (h *RequestHandler) Renew(c *gin.Context) {
+	phone := normalizePhone(c.GetHeader("X-Phone"))
+	if phone == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "X-Phone header required"})
+		return
+	}
+	req, err := h.renewRequest.Execute(c.Param("id"), phone)
+	switch {
+	case err == nil:
+		c.JSON(http.StatusOK, req)
+	case errors.Is(err, usecase.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+	case errors.Is(err, usecase.ErrUnauthorized):
+		c.JSON(http.StatusForbidden, gin.H{"error": "unauthorized"})
+	case errors.Is(err, usecase.ErrNotRenewable):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 }
 
 type offerContactBody struct {

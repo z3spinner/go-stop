@@ -20,7 +20,15 @@ const (
 	KindTest              = "test"               // the user's own "send a test notification"
 	// The weekly "the board is almost empty, share a ride" push to everyone.
 	KindEngagementReminder = "engagement_reminder"
+	// "your open-ended alert expires in a few days — keep it?"
+	KindAlertExpiring = "alert_expiring"
 )
+
+// AlertExpiryKey is the dedup key of the expiry warning for one lifetime of an
+// alert: renewing it moves its expiry, so the next warning is a new item.
+func AlertExpiryKey(requestID string, expiresAt time.Time) string {
+	return InboxKey(KindAlertExpiring, requestID+"@"+expiresAt.UTC().Format("2006-01-02"))
+}
 
 // EngagementReminderLifetime is how long the weekly engagement reminder stays
 // in the inbox: it's about that week, and isn't linked to any post that could

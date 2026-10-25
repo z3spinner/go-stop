@@ -148,7 +148,7 @@ func TestPostRequest_TimeAlertExpiresDayAfterNotAYear(t *testing.T) {
 	}
 }
 
-func TestPostRequest_DailyAlertExpiresInAYear(t *testing.T) {
+func TestPostRequest_DailyAlertExpiresAfterAlertLifetime(t *testing.T) {
 	reqs := &mockRequestRepo{}
 	uc := usecase.NewPostRequest(reqs, &mockRideRepoWithMatch{}, &mockSubRepo{}, &mockNotifier{})
 
@@ -164,7 +164,20 @@ func TestPostRequest_DailyAlertExpiresInAYear(t *testing.T) {
 	if !saved.Date.IsZero() {
 		t.Errorf("daily Date should stay zero (NULL), got %v", saved.Date)
 	}
-	if saved.ExpiresAt.Before(time.Now().AddDate(0, 11, 0)) {
-		t.Errorf("daily alert should expire ~1 year out, got %v", saved.ExpiresAt)
+	if want := saved.PostedAt.Add(domain.AlertLifetime); !saved.ExpiresAt.Equal(want) {
+		t.Errorf("daily alert ExpiresAt = %v, want %v (posted + AlertLifetime)", saved.ExpiresAt, want)
+	}
+}
+
+func TestPostRequest_AnytimeAlertExpiresAfterAlertLifetime(t *testing.T) {
+	reqs := &mockRequestRepo{}
+	uc := usecase.NewPostRequest(reqs, &mockRideRepoWithMatch{}, &mockSubRepo{}, &mockNotifier{})
+
+	if _, err := uc.Execute(domain.Request{Origin: "A", Destination: "B"}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	saved := reqs.saved[0]
+	if want := saved.PostedAt.Add(domain.AlertLifetime); !saved.ExpiresAt.Equal(want) {
+		t.Errorf("anytime alert ExpiresAt = %v, want %v (posted + AlertLifetime)", saved.ExpiresAt, want)
 	}
 }

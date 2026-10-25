@@ -5,6 +5,15 @@ package domain
 
 import "time"
 
+// Open-ended alerts (anytime, or a daily time) have no date of their own to
+// expire with. They last AlertLifetime from posting or from their last renewal;
+// AlertExpiryNotice before that, their owner is asked whether to keep them.
+// Without this, alerts outlived the people who posted them by months.
+const (
+	AlertLifetime     = 30 * 24 * time.Hour
+	AlertExpiryNotice = 3 * 24 * time.Hour
+)
+
 type Request struct {
 	ID           string
 	SearcherName string

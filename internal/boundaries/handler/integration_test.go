@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, notifications`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, request_expiry_warnings, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, notifications`)
 		if truncErr == nil {
 			break
 		}
@@ -107,7 +107,7 @@ func setupRouter() *gin.Engine {
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
 
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, time.UTC)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), offerContact, getContactOfferStatus, getRequestContactOffers, reqRepo, statRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, usecase.NewPingSearcher(reqRepo, rideRepo, interestRepo, subRepo, n), offerContact, getContactOfferStatus, getRequestContactOffers, usecase.NewRenewRequest(reqRepo, reqRepo, n), reqRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, usecase.NewSendTestPush(subRepo, n))
 
@@ -134,6 +134,7 @@ func setupRouter() *gin.Engine {
 	r.POST("/api/requests/:id/offer-contact", reqH.OfferContact)
 	r.GET("/api/requests/:id/offer-contact-status", reqH.GetContactOfferStatus)
 	r.GET("/api/requests/:id/offers", reqH.ListContactOffers)
+	r.POST("/api/requests/:id/renew", reqH.Renew)
 	r.GET("/api/destinations", destH.List)
 	r.POST("/api/subscriptions", subH.Subscribe)
 	r.POST("/api/subscriptions/test", subH.TestPush)
@@ -149,7 +150,7 @@ func setupRouter() *gin.Engine {
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers, notifications`); err != nil {
+		`TRUNCATE rides, requests, request_expiry_warnings, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers, notifications`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }

@@ -60,6 +60,18 @@ describe('inboxTitle', () => {
 		expect(inboxRoute(weekly)).toBe(m.inboxEngagementReminderBody());
 		expect(inboxIcon(weekly)).toBe('📣');
 	});
+	it('renders the alert expiry warning in the reader\'s language, with its route', () => {
+		const expiring = item({
+			kind: 'alert_expiring',
+			contact_name: '',
+			origin: 'Crest',
+			destination: 'Saillans',
+			title: 'Votre alerte expire bientôt'
+		});
+		expect(inboxTitle(expiring)).toBe(m.inboxKindAlertExpiring());
+		expect(inboxRoute(expiring)).toBe('Crest → Saillans');
+		expect(inboxIcon(expiring)).toBe('⏳');
+	});
 	it('falls back to the server title for unknown kinds or a missing name', () => {
 		expect(inboxTitle(item({ kind: 'something_new' }))).toBe('Ride available!');
 		expect(inboxTitle(item({ contact_name: '' }))).toBe('Ride available!');

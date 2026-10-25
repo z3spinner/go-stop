@@ -4,7 +4,7 @@
 -->
 
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { api } from '$lib/api';
 	import { userPhone } from '$lib/stores';
@@ -18,9 +18,33 @@
 	let contactOffers = $state<ContactOffer[]>([]);
 
 	const ZERO = '0001-01-01T00:00:00Z';
+	const RENEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 	const hasDate = $derived(request.Date !== ZERO && request.Date?.slice(0, 4) !== '0001');
 	const hasTime = $derived(request.DepartureAt !== ZERO && request.DepartureAt?.slice(0, 4) !== '0001');
 	const isDaily = $derived(hasTime && request.DepartureAt.slice(0, 10) === '1970-01-01');
+	// Open-ended alerts (anytime or daily) last 30 days unless renewed; the
+	// owner is notified 3 days before. Renewing is offered in the last week.
+	const isOpenEnded = $derived(!hasDate && (!hasTime || isDaily));
+	let expiresAt = $state(untrack(() => request.ExpiresAt ?? ''));
+	const expiringSoon = $derived.by(() => {
+		const t = Date.parse(expiresAt);
+		return !Number.isNaN(t) && t - Date.now() <= RENEW_WINDOW_MS;
+	});
+	let renewing = $state(false);
+
+	async function renew() {
+		if (renewing) return;
+		renewing = true;
+		try {
+			const r = await api.requests.renew(request.ID, get(userPhone));
+			expiresAt = r.ExpiresAt;
+			msg = m.alertRenewed({ date: formatDate(r.ExpiresAt) });
+		} catch {
+			msg = m.alertRenewErr();
+		} finally {
+			renewing = false;
+		}
+	}
 
 	async function del() {
 		try {
@@ -54,11 +78,17 @@
 			<span>{formatTime(request.DepartureAt)}</span>
 			<span class="tag">{flexLabel(request.Flexibility)}</span>
 		{/if}
+		{#if isOpenEnded && expiresAt && !deleted}
+			<span class="tag tag-expires" class:tag-expiring={expiringSoon}>{m.alertExpiresOn({ date: formatDate(expiresAt) })}</span>
+		{/if}
 	</div>
 	<div class="alert-actions flex gap-2">
 		<button type="button" class="btn-see-matches" data-origin={request.Origin} data-dest={request.Destination}
 			data-dept={hasTime ? request.DepartureAt : ''}
 			onclick={() => onseematches?.(request.Origin, request.Destination, hasTime ? request.DepartureAt : '')}>{m.btnSeeMatches()}</button>
+		{#if isOpenEnded && expiringSoon && !deleted}
+			<button type="button" class="btn-renew" data-id={request.ID} disabled={renewing} onclick={renew}>{m.btnRenewAlert()}</button>
+		{/if}
 		<button type="button" class="btn btn-danger btn-delete" data-id={request.ID} data-phone={get(userPhone)} disabled={deleted} onclick={del}>{m.btnDelete()}</button>
 	</div>
 	<div class="delete-msg" id="msg-{request.ID}">{msg}</div>

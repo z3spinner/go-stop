@@ -6,6 +6,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/z3spinner/go-stop/internal/domain"
@@ -83,4 +84,26 @@ func (r *RequestRepo) Delete(id string) error {
 
 func (r *RequestRepo) DeleteExpired() error {
 	return r.q.DeleteExpiredRequests(context.Background())
+}
+
+func (r *RequestRepo) FindExpiringBefore(before time.Time) ([]domain.Request, error) {
+	rows, err := r.q.FindAlertsExpiringBefore(context.Background(), tsFrom(before))
+	if err != nil {
+		return nil, err
+	}
+	return requestsFromRows(rows), nil
+}
+
+func (r *RequestRepo) MarkExpiryWarned(id string, expiresAt time.Time) error {
+	return r.q.MarkRequestExpiryWarned(context.Background(), queries.MarkRequestExpiryWarnedParams{
+		RequestID: uuidFrom(id),
+		ExpiresAt: tsFrom(expiresAt),
+	})
+}
+
+func (r *RequestRepo) SetExpiry(id string, expiresAt time.Time) error {
+	return r.q.SetRequestExpiry(context.Background(), queries.SetRequestExpiryParams{
+		ID:        uuidFrom(id),
+		ExpiresAt: tsFrom(expiresAt),
+	})
 }

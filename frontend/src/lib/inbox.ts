@@ -164,6 +164,7 @@ const ICONS: Record<string, string> = {
 	contact_offered: '🤝',
 	feedback_reminder: '💬',
 	engagement_reminder: '📣',
+	alert_expiring: '⏳',
 	test: '🔔'
 };
 
@@ -175,6 +176,7 @@ const ICONS: Record<string, string> = {
 export function inboxTitle(item: InboxItem): string {
 	if (item.kind === 'feedback_reminder') return m.inboxKindFeedbackReminder();
 	if (item.kind === 'engagement_reminder') return m.inboxKindEngagementReminder();
+	if (item.kind === 'alert_expiring') return m.inboxKindAlertExpiring();
 	const fn = TITLES[item.kind];
 	if (fn && item.contact_name) return fn(item.contact_name);
 	return item.title || m.inboxTitle();
