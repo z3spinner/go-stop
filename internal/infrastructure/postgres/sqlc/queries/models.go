@@ -96,6 +96,12 @@ type Request struct {
 	DestinationNorm pgtype.Text        `db:"destination_norm"`
 }
 
+type RequestExpiryWarning struct {
+	RequestID pgtype.UUID        `db:"request_id"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at"`
+	WarnedAt  pgtype.Timestamptz `db:"warned_at"`
+}
+
 type Ride struct {
 	ID              pgtype.UUID        `db:"id"`
 	DriverName      string             `db:"driver_name"`

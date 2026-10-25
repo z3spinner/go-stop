@@ -65,6 +65,10 @@ type Querier interface {
 	// queued. send_after = window end (departure + flexibility minutes) + 1 hour.
 	// Idempotent via ride_id UNIQUE.
 	EnqueueStartedRides(ctx context.Context, windowStartAfter pgtype.Timestamptz) error
+	// Open-ended alerts (anytime, or a daily time: no date of their own) that
+	// expire before sqlc.arg(before) and whose current expiry hasn't been warned
+	// about yet (see request_expiry_warnings).
+	FindAlertsExpiringBefore(ctx context.Context, before pgtype.Timestamptz) ([]Request, error)
 	// Unread, not deleted items of the given kinds whose last push (the original
 	// one, or the last reminder) is older than the cutoff, and which have had
 	// fewer than max_reminders reminders (0 = no limit). Items about an expired or
@@ -151,6 +155,7 @@ type Querier interface {
 	// The user acted on the thing these notifications are about (accepted a
 	// request, opened a shared contact, looked at offers), so they count as read.
 	MarkNotificationsReadByDedupKeys(ctx context.Context, arg MarkNotificationsReadByDedupKeysParams) error
+	MarkRequestExpiryWarned(ctx context.Context, arg MarkRequestExpiryWarnedParams) error
 	// Undo of a recent dismissal; only while its content hasn't been blanked yet.
 	RestoreNotification(ctx context.Context, arg RestoreNotificationParams) (int64, error)
 	// Blanks the content of items dismissed before the cutoff, keeping only what
@@ -168,6 +173,7 @@ type Querier interface {
 	// as a search fallback when the exact lookup returns nothing — NEVER for the
 	// notification matching path, where a loose match would ping the wrong driver.
 	SearchRidesFuzzy(ctx context.Context, arg SearchRidesFuzzyParams) ([]Ride, error)
+	SetRequestExpiry(ctx context.Context, arg SetRequestExpiryParams) error
 	// Upsert tail for an idempotent re-post: when InsertRide hits the dedup-key
 	// conflict, refresh the mutable non-key fields and return the canonical row.
 	// id, phone, departure_at, posted_at and feedback_given are deliberately kept;

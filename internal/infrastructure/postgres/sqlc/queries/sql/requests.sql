@@ -73,3 +73,25 @@ DELETE FROM requests WHERE id = $1;
 
 -- name: DeleteExpiredRequests :exec
 DELETE FROM requests WHERE expires_at < NOW();
+
+-- name: FindAlertsExpiringBefore :many
+-- Open-ended alerts (anytime, or a daily time: no date of their own) that
+-- expire before sqlc.arg(before) and whose current expiry hasn't been warned
+-- about yet (see request_expiry_warnings).
+SELECT r.id, r.searcher_name, r.phone, r.origin, r.destination, r.date, r.departure_at, r.flexibility, r.posted_at, r.expires_at, r.origin_norm, r.destination_norm
+FROM requests r
+LEFT JOIN request_expiry_warnings w ON w.request_id = r.id AND w.expires_at = r.expires_at
+WHERE w.request_id IS NULL
+  AND r.date IS NULL
+  AND (r.departure_at IS NULL OR EXTRACT(YEAR FROM r.departure_at) = 1970)
+  AND r.expires_at > NOW()
+  AND r.expires_at <= sqlc.arg(before)::timestamptz
+ORDER BY r.expires_at;
+
+-- name: MarkRequestExpiryWarned :exec
+INSERT INTO request_expiry_warnings (request_id, expires_at, warned_at)
+VALUES ($1, $2, NOW())
+ON CONFLICT (request_id) DO UPDATE SET expires_at = EXCLUDED.expires_at, warned_at = EXCLUDED.warned_at;
+
+-- name: SetRequestExpiry :exec
+UPDATE requests SET expires_at = $2 WHERE id = $1;

@@ -102,6 +102,7 @@ func main() {
 	offerContact := usecase.NewOfferContact(requestRepo, contactOfferRepo, subRepo, notifier)
 	getContactOfferStatus := usecase.NewGetRequestContactOfferStatus(requestRepo, contactOfferRepo)
 	getRequestContactOffers := usecase.NewGetRequestContactOffers(requestRepo, contactOfferRepo)
+	renewRequest := usecase.NewRenewRequest(requestRepo, requestRepo, notifier)
 
 	serviceTZ := time.UTC
 	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
@@ -136,10 +137,13 @@ func main() {
 	// The post-ride feedback prompt is pushed once (not during quiet hours);
 	// its repeats are inbox reminders.
 	sendFeedbackPrompts := usecase.NewSendFeedbackPrompts(feedbackQueueRepo, subRepo, notifier, quiet, serviceTZ)
+	// Open-ended alerts last 30 days; their owners are asked 3 days before
+	// whether to keep them (not during quiet hours).
+	sendAlertExpiryWarnings := usecase.NewSendAlertExpiryWarnings(requestRepo, subRepo, notifier, quiet, serviceTZ)
 
 	rideH := handler.NewRideHandler(postRide, updateRide, getRides, getMyRides, searchRides, deleteRide, getMatchingRequests, statRepo, interestRepo, rideRepo, serviceTZ)
 	interestH := handler.NewInterestHandler(expressInterest, acceptInterest, getInterestContact, cancelInterest, interestRepo, statRepo)
-	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getContactOfferStatus, getRequestContactOffers, requestRepo, statRepo)
+	reqH := handler.NewRequestHandler(postRequest, getMyRequests, getActiveRequests, deleteRequest, pingSearcher, offerContact, getContactOfferStatus, getRequestContactOffers, renewRequest, requestRepo, statRepo)
 	destH := handler.NewDestinationHandler(getDests)
 	subH := handler.NewSubscriptionHandler(subscribe, unsubscribe, sendTestPush)
 	notifQueueH := handler.NewNotificationQueueHandler(getPendingNotifications)
@@ -180,6 +184,9 @@ func main() {
 			}
 			if err := sendFeedbackPrompts.Execute(); err != nil {
 				log.Printf("send feedback prompts: %v", err)
+			}
+			if err := sendAlertExpiryWarnings.Execute(); err != nil {
+				log.Printf("alert expiry warnings: %v", err)
 			}
 			if err := sendEngagementReminder.Execute(); err != nil {
 				log.Printf("engagement reminder: %v", err)
@@ -243,6 +250,7 @@ func main() {
 		api.POST("/requests/:id/offer-contact", reqH.OfferContact)
 		api.GET("/requests/:id/offer-contact-status", reqH.GetContactOfferStatus)
 		api.GET("/requests/:id/offers", reqH.ListContactOffers)
+		api.POST("/requests/:id/renew", reqH.Renew)
 
 		api.GET("/destinations", destH.List)
 

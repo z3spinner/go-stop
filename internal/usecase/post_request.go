@@ -33,9 +33,9 @@ func (uc *PostRequest) Execute(req domain.Request) (domain.Request, error) {
 	req.PostedAt = time.Now()
 	switch {
 	case req.Date.IsZero() && req.DepartureAt.IsZero(): // anytime — no date/time constraint
-		req.ExpiresAt = time.Now().AddDate(1, 0, 0)
+		req.ExpiresAt = req.PostedAt.Add(domain.AlertLifetime) // renewable, see SendAlertExpiryWarnings
 	case req.Date.IsZero() && req.DepartureAt.Year() == 1970: // daily — recurring time-of-day (1970-01-01 sentinel)
-		req.ExpiresAt = time.Now().AddDate(1, 0, 0)
+		req.ExpiresAt = req.PostedAt.Add(domain.AlertLifetime)
 	case !req.Date.IsZero() && req.DepartureAt.IsZero(): // day — a given date, any time
 		req.ExpiresAt = req.Date.AddDate(0, 0, 1)
 	default: // time — a concrete one-off date+time. The handler leaves the Date column

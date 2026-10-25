@@ -13,3 +13,7 @@ var ErrNotFound = errors.New("not found")
 var ErrNotPending = errors.New("interest is not pending")
 
 var ErrNameRequired = errors.New("name is required")
+
+// ErrNotRenewable is returned when renewing a request that isn't an open-ended
+// alert: a dated request expires with its date and can't be extended.
+var ErrNotRenewable = errors.New("only open-ended alerts can be renewed")

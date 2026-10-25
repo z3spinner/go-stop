@@ -29,6 +29,54 @@ func (q *Queries) DeleteRequest(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const findAlertsExpiringBefore = `-- name: FindAlertsExpiringBefore :many
+SELECT r.id, r.searcher_name, r.phone, r.origin, r.destination, r.date, r.departure_at, r.flexibility, r.posted_at, r.expires_at, r.origin_norm, r.destination_norm
+FROM requests r
+LEFT JOIN request_expiry_warnings w ON w.request_id = r.id AND w.expires_at = r.expires_at
+WHERE w.request_id IS NULL
+  AND r.date IS NULL
+  AND (r.departure_at IS NULL OR EXTRACT(YEAR FROM r.departure_at) = 1970)
+  AND r.expires_at > NOW()
+  AND r.expires_at <= $1::timestamptz
+ORDER BY r.expires_at
+`
+
+// Open-ended alerts (anytime, or a daily time: no date of their own) that
+// expire before sqlc.arg(before) and whose current expiry hasn't been warned
+// about yet (see request_expiry_warnings).
+func (q *Queries) FindAlertsExpiringBefore(ctx context.Context, before pgtype.Timestamptz) ([]Request, error) {
+	rows, err := q.db.Query(ctx, findAlertsExpiringBefore, before)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Request{}
+	for rows.Next() {
+		var i Request
+		if err := rows.Scan(
+			&i.ID,
+			&i.SearcherName,
+			&i.Phone,
+			&i.Origin,
+			&i.Destination,
+			&i.Date,
+			&i.DepartureAt,
+			&i.Flexibility,
+			&i.PostedAt,
+			&i.ExpiresAt,
+			&i.OriginNorm,
+			&i.DestinationNorm,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findRequestsMatchingRide = `-- name: FindRequestsMatchingRide :many
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
 FROM requests
@@ -272,4 +320,34 @@ func (q *Queries) ListRequestsByPhone(ctx context.Context, arg ListRequestsByPho
 		return nil, err
 	}
 	return items, nil
+}
+
+const markRequestExpiryWarned = `-- name: MarkRequestExpiryWarned :exec
+INSERT INTO request_expiry_warnings (request_id, expires_at, warned_at)
+VALUES ($1, $2, NOW())
+ON CONFLICT (request_id) DO UPDATE SET expires_at = EXCLUDED.expires_at, warned_at = EXCLUDED.warned_at
+`
+
+type MarkRequestExpiryWarnedParams struct {
+	RequestID pgtype.UUID        `db:"request_id"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at"`
+}
+
+func (q *Queries) MarkRequestExpiryWarned(ctx context.Context, arg MarkRequestExpiryWarnedParams) error {
+	_, err := q.db.Exec(ctx, markRequestExpiryWarned, arg.RequestID, arg.ExpiresAt)
+	return err
+}
+
+const setRequestExpiry = `-- name: SetRequestExpiry :exec
+UPDATE requests SET expires_at = $2 WHERE id = $1
+`
+
+type SetRequestExpiryParams struct {
+	ID        pgtype.UUID        `db:"id"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at"`
+}
+
+func (q *Queries) SetRequestExpiry(ctx context.Context, arg SetRequestExpiryParams) error {
+	_, err := q.db.Exec(ctx, setRequestExpiry, arg.ID, arg.ExpiresAt)
+	return err
 }

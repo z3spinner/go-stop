@@ -1204,6 +1204,66 @@ export const pingRequest = async (id: string,
 
 
 
+export type renewRequestResponse200 = {
+  data: DomainRequest
+  status: 200
+}
+
+export type renewRequestResponse401 = {
+  data: HandlerErrorResponse
+  status: 401
+}
+
+export type renewRequestResponse403 = {
+  data: HandlerErrorResponse
+  status: 403
+}
+
+export type renewRequestResponse404 = {
+  data: HandlerErrorResponse
+  status: 404
+}
+
+export type renewRequestResponse409 = {
+  data: HandlerErrorResponse
+  status: 409
+}
+
+export type renewRequestResponse500 = {
+  data: HandlerErrorResponse
+  status: 500
+}
+
+export type renewRequestResponseSuccess = (renewRequestResponse200) & {
+  headers: Headers;
+};
+export type renewRequestResponseError = (renewRequestResponse401 | renewRequestResponse403 | renewRequestResponse404 | renewRequestResponse409 | renewRequestResponse500) & {
+  headers: Headers;
+};
+
+export type renewRequestResponse = (renewRequestResponseSuccess | renewRequestResponseError)
+
+export const getRenewRequestUrl = (id: string,) => {
+
+
+
+
+  return `/requests/${id}/renew`
+}
+
+export const renewRequest = async (id: string, options?: RequestInit): Promise<renewRequestResponse> => {
+
+  return customFetch<renewRequestResponse>(getRenewRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
 export type listRidesResponse200 = {
   data: HandlerPublicRide[]
   status: 200

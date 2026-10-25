@@ -7,6 +7,7 @@
 	import { onMount, tick } from 'svelte';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { api } from '$lib/api';
 	import { userPhone } from '$lib/stores';
 	import AlertCard from '$lib/components/alerts/AlertCard.svelte';
@@ -30,6 +31,21 @@
 			api.interests.listMine(phone).catch(() => [])
 		]);
 		alerts = a; requests = r; loaded = true;
+		await tick();
+		showLinkedCard();
+	}
+
+	// A notification ("your alert expires soon") links to ?alert=<id>. The cards
+	// load after navigation, so bring that one into view once rendered. (A query
+	// parameter rather than #card-<id>: the service worker appends ?n=<inbox id>
+	// to the link, which would land inside a hash.)
+	function showLinkedCard() {
+		const id = page.url.searchParams.get('alert');
+		if (!id) return;
+		const el = document.getElementById(`card-${id}`);
+		if (!el) return;
+		el.classList.add('card-linked');
+		el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 	}
 	function seeMatches(o: string, d: string, dep: string) {
 		const u = new URLSearchParams({ origin: o, destination: d });

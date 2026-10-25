@@ -99,7 +99,9 @@ export const api = {
 		getOfferStatus: (id: string, phone: string) =>
 			unwrap<{ offered: boolean }>(gen.getContactOfferStatus(id, phoneHeader(phone))),
 		listOffers: (id: string, phone: string) =>
-			unwrap<ContactOffer[]>(gen.listContactOffers(id, phoneHeader(phone)))
+			unwrap<ContactOffer[]>(gen.listContactOffers(id, phoneHeader(phone))),
+		/** Keep an open-ended alert (anytime/daily) another 30 days; resolves to it with its new expiry. */
+		renew: (id: string, phone: string) => unwrap<Request>(gen.renewRequest(id, phoneHeader(phone)))
 	},
 	interests: {
 		express: (rideId: string, phone: string, name?: string) =>

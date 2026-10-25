@@ -394,6 +394,23 @@ input:focus, select:focus { outline: 2px solid var(--blue); border-color: transp
   white-space: nowrap;
 }
 .btn-see-matches:hover { background: var(--blue); color: white; }
+/* Open-ended alerts expire after 30 days unless renewed (AlertCard). */
+.tag-expiring { background: var(--amber-bg); color: var(--amber); font-weight: 600; }
+.btn-renew {
+  background: var(--blue);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-renew:hover { background: var(--blue-dark); }
+.btn-renew:disabled { opacity: 0.6; cursor: default; }
+/* The card a notification links to (My searches #card-<id>). */
+.card-linked { box-shadow: 0 0 0 2px var(--amber); }
 
 /* Language picker dropdown */
 .lang-picker { position: relative; display: inline-flex; }
