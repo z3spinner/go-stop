@@ -7,12 +7,13 @@ import AlertCard from './AlertCard.svelte';
 import { userPhone } from '$lib/stores';
 import { m } from '$lib/paraglide/messages';
 import { formatDate } from '$lib/utils';
+import type { Request } from '$lib/types';
 
 const ZERO = '0001-01-01T00:00:00Z';
 const DAY = 24 * 60 * 60 * 1000;
 const inDays = (d: number) => new Date(Date.now() + d * DAY).toISOString();
 
-const alert = (over: Record<string, unknown> = {}) => ({
+const alert = (over: Partial<Request> = {}): Request => ({
 	ID: 'req1',
 	SearcherName: 'Zoé',
 	Phone: '0622000002',
