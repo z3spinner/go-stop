@@ -20,6 +20,16 @@ export function isIOSBrowser(): boolean {
 	return isIOS && !standalone;
 }
 
+/**
+ * True inside another app's built-in browser (Facebook, Messenger, Instagram,
+ * WhatsApp, LinkedIn, Snapchat, TikTok…). On iPhone their Share menu has no
+ * "Add to Home Screen", so the page has to be opened in Safari first. Pure, so
+ * it can be tested with any user agent.
+ */
+export function isInAppBrowser(ua: string): boolean {
+	return /FBAN|FBAV|FB_IAB|Instagram|WhatsApp|LinkedInApp|Snapchat|musical_ly|BytedanceWebview|Line\/|Pinterest|Twitter/i.test(ua);
+}
+
 export function isStandalone(): boolean {
 	if (!browser) return false;
 	return (
