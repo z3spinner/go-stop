@@ -129,6 +129,8 @@
   "inboxKindRequestMatch": "{name} sucht eine Fahrt auf deiner Strecke",
   "inboxKindRideMatch": "{name} bietet eine passende Fahrt an",
   "inboxNoPhone": "Gib deine Telefonnummer in deinem Profil an, um deine Benachrichtigungen zu sehen.",
+  "inboxNotFound": "Diese Benachrichtigung gibt es nicht mehr.",
+  "inboxSeeBoard": "Zum heutigen Brett",
   "inboxPast": "vorbei",
   "inboxPushOff": "Auf diesem Gerät sind keine Benachrichtigungen aktiviert: Neue Benachrichtigungen siehst du nur, wenn du die Seite öffnest.",
   "inboxPushSettings": "Benachrichtigungseinstellungen",

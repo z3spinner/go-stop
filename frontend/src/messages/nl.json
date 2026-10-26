@@ -129,6 +129,8 @@
   "inboxKindRequestMatch": "{name} zoekt een rit op jouw route",
   "inboxKindRideMatch": "{name} biedt een rit aan die bij je past",
   "inboxNoPhone": "Vul je telefoonnummer in je profiel in om je meldingen te zien.",
+  "inboxNotFound": "Deze melding bestaat niet meer.",
+  "inboxSeeBoard": "Bekijk het bord van vandaag",
   "inboxPast": "voorbij",
   "inboxPushOff": "Meldingen staan niet aan op dit apparaat: je ziet nieuwe meldingen alleen als je de site opent.",
   "inboxPushSettings": "Meldingsinstellingen",

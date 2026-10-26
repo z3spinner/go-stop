@@ -129,6 +129,8 @@
   "inboxKindRequestMatch": "{name} busca un viaje en tu ruta",
   "inboxKindRideMatch": "{name} ofrece un viaje que te encaja",
   "inboxNoPhone": "Añade tu número de teléfono en tu perfil para ver tus notificaciones.",
+  "inboxNotFound": "Esta notificación ya no existe.",
+  "inboxSeeBoard": "Ver el tablón de hoy",
   "inboxPast": "pasado",
   "inboxPushOff": "Las alertas no están activadas en este dispositivo: solo verás las nuevas notificaciones al abrir el sitio.",
   "inboxPushSettings": "Ajustes de alertas",

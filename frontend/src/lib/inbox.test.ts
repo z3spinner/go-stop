@@ -6,6 +6,8 @@ import { get } from 'svelte/store';
 import { api } from './api';
 import {
 	badgeText,
+	inboxAction,
+	inboxHref,
 	inboxIcon,
 	inboxIdFromUrl,
 	inboxItems,
@@ -105,6 +107,22 @@ describe('inboxRoute / inboxIcon', () => {
 		expect(inboxTitle(t)).toBe('Citation du jour');
 		expect(inboxRoute(t)).toBe('Un autre monde est possible.');
 		expect(inboxIcon(t)).toBe('🔔');
+	});
+});
+
+describe('inboxHref / inboxAction', () => {
+	it('opens an item about a trip or request at that page', () => {
+		expect(inboxHref(item())).toBe('/rides/r1');
+		expect(inboxHref(item({ url: '/my-searches?alert=a1' }))).toBe('/my-searches?alert=a1');
+	});
+	it('opens an item that only links home on its own page', () => {
+		expect(inboxHref(item({ id: 'd1', kind: 'morning_digest', url: '/' }))).toBe('/notifications/d1');
+		expect(inboxHref(item({ id: 't1', kind: 'test', url: '' }))).toBe('/notifications/t1');
+	});
+	it('offers the board after the digest and posting after the weekly reminder', () => {
+		expect(inboxAction(item({ kind: 'morning_digest' }))).toEqual({ href: '/', label: m.inboxSeeBoard() });
+		expect(inboxAction(item({ kind: 'engagement_reminder' }))).toEqual({ href: '/post-ride', label: m.postRideTitle() });
+		expect(inboxAction(item({ kind: 'test' }))).toBeNull();
 	});
 });
 

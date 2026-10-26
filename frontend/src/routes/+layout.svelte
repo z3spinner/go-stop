@@ -40,8 +40,9 @@
 	function back() {
 		// Always return to the home hub. history.back() is unreliable here because
 		// history.length counts entries from before the app loaded (other sites in
-		// the same tab), so it could navigate out of the app instead of home.
-		goto('/');
+		// the same tab), so it could navigate out of the app instead of home. A
+		// single notification goes back to the list it was opened from.
+		goto(page.url.pathname.startsWith('/notifications/') ? '/notifications' : '/');
 	}
 
 	if (browser) registerLangStrategy();

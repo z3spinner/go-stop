@@ -13,6 +13,7 @@
 	import { config } from '$lib/config';
 	import {
 		DEFAULT_RETENTION_DAYS,
+		inboxHref,
 		inboxIcon,
 		inboxItems,
 		inboxRoute,
@@ -104,7 +105,7 @@
 			{#each items as item (item.id)}
 				{@const unread = !item.read}
 				<SwipeToDelete ondelete={() => remove(item)} deleteLabel={m.inboxDeleteAria()} actionLabel={m.inboxDelete()}>
-					<a class="inbox-item card rounded border p-3" class:inbox-unread={unread} href={item.url || '/'} data-kind={item.kind} data-id={item.id} draggable="false" onclick={() => open(item)}>
+					<a class="inbox-item card rounded border p-3" class:inbox-unread={unread} href={inboxHref(item)} data-kind={item.kind} data-id={item.id} draggable="false" onclick={() => open(item)}>
 						<span class="inbox-icon" aria-hidden="true">{inboxIcon(item)}</span>
 						<span class="flex min-w-0 flex-col gap-0.5">
 							<span class="inbox-title font-medium">{#if unread}<span class="sr-only">{m.inboxUnreadLabel()}: </span>{/if}{inboxTitle(item)}</span>
