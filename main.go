@@ -39,8 +39,17 @@ func main() {
 			graceMins = n
 		}
 	}
-	rideRepo := postgres.NewRideRepo(pool, graceMins)
-	requestRepo := postgres.NewRequestRepo(pool, graceMins)
+	serviceTZ := time.UTC
+	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
+		if loc, err := time.LoadLocation(tzName); err == nil {
+			serviceTZ = loc
+			log.Printf("service timezone: %s", tzName)
+		} else {
+			log.Printf("warning: invalid SERVICE_TZ %q, using UTC: %v", tzName, err)
+		}
+	}
+	rideRepo := postgres.NewRideRepo(pool, graceMins, serviceTZ)
+	requestRepo := postgres.NewRequestRepo(pool, graceMins, serviceTZ)
 	destRepo := postgres.NewDestinationRepo(pool)
 	subRepo := postgres.NewSubscriptionRepo(pool)
 	statRepo := postgres.NewStatRepo(pool)
@@ -103,16 +112,6 @@ func main() {
 	getContactOfferStatus := usecase.NewGetRequestContactOfferStatus(requestRepo, contactOfferRepo)
 	getRequestContactOffers := usecase.NewGetRequestContactOffers(requestRepo, contactOfferRepo)
 	renewRequest := usecase.NewRenewRequest(requestRepo, requestRepo, notifier)
-
-	serviceTZ := time.UTC
-	if tzName := os.Getenv("SERVICE_TZ"); tzName != "" {
-		if loc, err := time.LoadLocation(tzName); err == nil {
-			serviceTZ = loc
-			log.Printf("service timezone: %s", tzName)
-		} else {
-			log.Printf("warning: invalid SERVICE_TZ %q, using UTC: %v", tzName, err)
-		}
-	}
 
 	settingsRepo := postgres.NewSettingsRepo(pool)
 	sendEngagementReminder := usecase.NewSendEngagementReminder(rideRepo, subRepo, settingsRepo, notifier, serviceTZ)

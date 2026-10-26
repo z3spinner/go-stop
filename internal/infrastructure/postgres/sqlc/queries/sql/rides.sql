@@ -77,13 +77,15 @@ ORDER BY departure_at ASC;
 
 -- name: SearchRidesByTime :many
 -- Time-only search: any date, departure window overlaps search_time ± tolerance.
+-- Both times of day are read on the service-timezone wall clock, so a search
+-- still matches rides on the far side of a DST change.
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + (sqlc.arg(grace_minutes)::int * interval '1 minute') > NOW()
-  AND (departure_at::time - (flexibility * interval '1 minute')) <= (sqlc.arg(search_time)::timestamptz::time + (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
-  AND (departure_at::time + (flexibility * interval '1 minute')) >= (sqlc.arg(search_time)::timestamptz::time - (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+  AND ((departure_at AT TIME ZONE sqlc.arg(service_tz)::text)::time - (flexibility * interval '1 minute')) <= ((sqlc.arg(search_time)::timestamptz AT TIME ZONE sqlc.arg(service_tz)::text)::time + (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
+  AND ((departure_at AT TIME ZONE sqlc.arg(service_tz)::text)::time + (flexibility * interval '1 minute')) >= ((sqlc.arg(search_time)::timestamptz AT TIME ZONE sqlc.arg(service_tz)::text)::time - (sqlc.arg(search_tolerance_minutes)::int * interval '1 minute'))
 ORDER BY departure_at ASC;
 
 -- name: SearchRidesByDateTime :many
@@ -129,12 +131,14 @@ WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = ro
   AND expires_at > NOW();
 
 -- name: FindRidesMatchingDailyRequest :many
+-- The departure_at arg is the daily alert's local HH:MM on its 1970-01-01 UTC
+-- sentinel; rides are compared on the service-timezone wall clock.
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm
 FROM rides
 WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = route_norm(sqlc.arg(destination)::text)
   AND expires_at > NOW()
-  AND (departure_at::time - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz::time + (sqlc.arg(window_minutes)::int * interval '1 minute'))
-  AND (departure_at::time + (flexibility * interval '1 minute')) >= (sqlc.arg(departure_at)::timestamptz::time - (sqlc.arg(window_minutes)::int * interval '1 minute'));
+  AND ((departure_at AT TIME ZONE sqlc.arg(service_tz)::text)::time - (flexibility * interval '1 minute')) <= ((sqlc.arg(departure_at)::timestamptz AT TIME ZONE 'UTC')::time + (sqlc.arg(window_minutes)::int * interval '1 minute'))
+  AND ((departure_at AT TIME ZONE sqlc.arg(service_tz)::text)::time + (flexibility * interval '1 minute')) >= ((sqlc.arg(departure_at)::timestamptz AT TIME ZONE 'UTC')::time - (sqlc.arg(window_minutes)::int * interval '1 minute'));
 
 -- name: FindRidesMatchingDayRequest :many
 SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, feedback_given, origin_norm, destination_norm, driver_name_norm

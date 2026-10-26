@@ -76,11 +76,15 @@ type Querier interface {
 	FindNotificationRemindersDue(ctx context.Context, arg FindNotificationRemindersDueParams) ([]Notification, error)
 	// Matches all alert modes inferred from NULL state of date/departure_at:
 	//   anytime: date IS NULL AND departure_at IS NULL
-	//   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match)
+	//   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match: the
+	//            alert's local HH:MM on its 1970-01-01 UTC sentinel vs the ride's
+	//            time of day on the service-timezone wall clock)
 	//   day:     date set, departure_at IS NULL
 	//   time:    both set (overlapping window)
 	FindRequestsMatchingRide(ctx context.Context, arg FindRequestsMatchingRideParams) ([]Request, error)
 	FindRidesMatchingAnytimeRequest(ctx context.Context, arg FindRidesMatchingAnytimeRequestParams) ([]Ride, error)
+	// The departure_at arg is the daily alert's local HH:MM on its 1970-01-01 UTC
+	// sentinel; rides are compared on the service-timezone wall clock.
 	FindRidesMatchingDailyRequest(ctx context.Context, arg FindRidesMatchingDailyRequestParams) ([]Ride, error)
 	FindRidesMatchingDayRequest(ctx context.Context, arg FindRidesMatchingDayRequestParams) ([]Ride, error)
 	FindRidesMatchingTimeRequest(ctx context.Context, arg FindRidesMatchingTimeRequestParams) ([]Ride, error)
@@ -169,6 +173,8 @@ type Querier interface {
 	// the search time ± search_tolerance_minutes. Hides expired/past-grace rides.
 	SearchRidesByDateTime(ctx context.Context, arg SearchRidesByDateTimeParams) ([]Ride, error)
 	// Time-only search: any date, departure window overlaps search_time ± tolerance.
+	// Both times of day are read on the service-timezone wall clock, so a search
+	// still matches rides on the far side of a DST change.
 	SearchRidesByTime(ctx context.Context, arg SearchRidesByTimeParams) ([]Ride, error)
 	// Trigram fuzzy fallback for typos/spelling variants. The `%` operator uses the
 	// GIN indexes and respects pg_trgm.similarity_threshold (default 0.3). Used only

@@ -18,7 +18,7 @@ import (
 
 func TestRideRepo_SaveAndFindByID(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 
 	testID := uuid.New().String()
 	ride := domain.Ride{
@@ -52,7 +52,7 @@ func TestRideRepo_SaveAndFindByID(t *testing.T) {
 
 func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 
 	activeID := uuid.New().String()
 	_, _, _ = repo.Save(domain.Ride{
@@ -86,7 +86,7 @@ func TestRideRepo_FindAll_OnlyReturnsActive(t *testing.T) {
 
 func TestRideRepo_FindMatching_WindowOverlap(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 
 	// Ride: 09:00 ±30 min → window 08:30–09:30
 	_, _, _ = repo.Save(domain.Ride{
@@ -119,7 +119,7 @@ func TestRideRepo_FindMatching_WindowOverlap(t *testing.T) {
 
 func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 
 	// Ride: 09:00 exact
 	_, _, _ = repo.Save(domain.Ride{
@@ -152,7 +152,7 @@ func TestRideRepo_FindMatching_NoOverlap(t *testing.T) {
 
 func TestRideRepo_Save_UpsertsOnDuplicate(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 
 	originalID := uuid.New().String()
 	originalPosted := time.Now().UTC().Truncate(time.Second)
@@ -217,7 +217,7 @@ func TestRideRepo_Save_UpsertsOnDuplicate(t *testing.T) {
 // one row — the unique index, not a TOCTOU check, is what guarantees this.
 func TestRideRepo_Save_ConcurrentDuplicatesInsertOnce(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 
 	const n = 8
 	var createdCount int32
@@ -263,7 +263,7 @@ func TestRideRepo_Save_ConcurrentDuplicatesInsertOnce(t *testing.T) {
 
 func TestRideRepo_Delete(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 
 	deleteID := uuid.New().String()
 	_, _, _ = repo.Save(domain.Ride{

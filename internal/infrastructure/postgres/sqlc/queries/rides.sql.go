@@ -108,21 +108,25 @@ SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibil
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
-  AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + ($4::int * interval '1 minute'))
-  AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - ($4::int * interval '1 minute'))
+  AND ((departure_at AT TIME ZONE $3::text)::time - (flexibility * interval '1 minute')) <= (($4::timestamptz AT TIME ZONE 'UTC')::time + ($5::int * interval '1 minute'))
+  AND ((departure_at AT TIME ZONE $3::text)::time + (flexibility * interval '1 minute')) >= (($4::timestamptz AT TIME ZONE 'UTC')::time - ($5::int * interval '1 minute'))
 `
 
 type FindRidesMatchingDailyRequestParams struct {
 	Origin        string             `db:"origin"`
 	Destination   string             `db:"destination"`
+	ServiceTz     string             `db:"service_tz"`
 	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
 	WindowMinutes int32              `db:"window_minutes"`
 }
 
+// The departure_at arg is the daily alert's local HH:MM on its 1970-01-01 UTC
+// sentinel; rides are compared on the service-timezone wall clock.
 func (q *Queries) FindRidesMatchingDailyRequest(ctx context.Context, arg FindRidesMatchingDailyRequestParams) ([]Ride, error) {
 	rows, err := q.db.Query(ctx, findRidesMatchingDailyRequest,
 		arg.Origin,
 		arg.Destination,
+		arg.ServiceTz,
 		arg.DepartureAt,
 		arg.WindowMinutes,
 	)
@@ -599,8 +603,8 @@ FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + ($3::int * interval '1 minute') > NOW()
-  AND (departure_at::time - (flexibility * interval '1 minute')) <= ($4::timestamptz::time + ($5::int * interval '1 minute'))
-  AND (departure_at::time + (flexibility * interval '1 minute')) >= ($4::timestamptz::time - ($5::int * interval '1 minute'))
+  AND ((departure_at AT TIME ZONE $4::text)::time - (flexibility * interval '1 minute')) <= (($5::timestamptz AT TIME ZONE $4::text)::time + ($6::int * interval '1 minute'))
+  AND ((departure_at AT TIME ZONE $4::text)::time + (flexibility * interval '1 minute')) >= (($5::timestamptz AT TIME ZONE $4::text)::time - ($6::int * interval '1 minute'))
 ORDER BY departure_at ASC
 `
 
@@ -608,16 +612,20 @@ type SearchRidesByTimeParams struct {
 	Origin                 string             `db:"origin"`
 	Destination            string             `db:"destination"`
 	GraceMinutes           int32              `db:"grace_minutes"`
+	ServiceTz              string             `db:"service_tz"`
 	SearchTime             pgtype.Timestamptz `db:"search_time"`
 	SearchToleranceMinutes int32              `db:"search_tolerance_minutes"`
 }
 
 // Time-only search: any date, departure window overlaps search_time ± tolerance.
+// Both times of day are read on the service-timezone wall clock, so a search
+// still matches rides on the far side of a DST change.
 func (q *Queries) SearchRidesByTime(ctx context.Context, arg SearchRidesByTimeParams) ([]Ride, error) {
 	rows, err := q.db.Query(ctx, searchRidesByTime,
 		arg.Origin,
 		arg.Destination,
 		arg.GraceMinutes,
+		arg.ServiceTz,
 		arg.SearchTime,
 		arg.SearchToleranceMinutes,
 	)

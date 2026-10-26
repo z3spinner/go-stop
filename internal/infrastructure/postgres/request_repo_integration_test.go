@@ -16,7 +16,7 @@ import (
 
 func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool, 60)
+	repo := postgres.NewRequestRepo(testPool, 60, time.UTC)
 
 	testID := uuid.New().String()
 	req := domain.Request{
@@ -50,7 +50,7 @@ func TestRequestRepo_SaveAndFindByID(t *testing.T) {
 
 func TestRequestRepo_FindAllActive_Ordering(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool, 60)
+	repo := postgres.NewRequestRepo(testPool, 60, time.UTC)
 
 	zero := time.Time{}
 	expires := time.Date(2031, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -99,7 +99,7 @@ func TestRequestRepo_FindAllActive_Ordering(t *testing.T) {
 
 func TestRequestRepo_FindMatching_WindowOverlap(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool, 60)
+	repo := postgres.NewRequestRepo(testPool, 60, time.UTC)
 
 	// Request: 09:15 ±30 min → window 08:45–09:45
 	_ = repo.Save(domain.Request{
@@ -133,7 +133,7 @@ func TestRequestRepo_FindMatching_WindowOverlap(t *testing.T) {
 func TestRequestRepo_FindAllActive_HidesPastGraceWindow(t *testing.T) {
 	truncate(t)
 	const grace = 30
-	repo := postgres.NewRequestRepo(testPool, grace)
+	repo := postgres.NewRequestRepo(testPool, grace, time.UTC)
 
 	now := time.Now().UTC()
 	zero := time.Time{}

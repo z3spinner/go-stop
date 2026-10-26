@@ -15,7 +15,7 @@
       "value": "Go-Stop"
     },
     "SERVICE_TZ": {
-      "description": "IANA timezone for the community (e.g. Europe/Paris, Europe/London). Used to interpret time-only searches correctly.",
+      "description": "IANA timezone for the community (e.g. Europe/Paris, Europe/London). Used to match time-only searches and daily alerts on local clock time.",
       "value": "Europe/Paris"
     },
     "RIDE_GRACE_MINUTES": {
