@@ -195,6 +195,23 @@ export function inboxRoute(item: InboxItem): string {
 	return item.body;
 }
 
+/**
+ * Where tapping an item in the list goes: the trip, request or alert it is
+ * about. Items about no particular page (the morning digest, the weekly
+ * reminder, a test) only link home, which would be a surprise — they open on
+ * their own page instead.
+ */
+export function inboxHref(item: InboxItem): string {
+	return item.url && item.url !== '/' ? item.url : `/notifications/${encodeURIComponent(item.id)}`;
+}
+
+/** The next step an item's own page offers, if any. */
+export function inboxAction(item: InboxItem): { href: string; label: string } | null {
+	if (item.kind === 'morning_digest') return { href: '/', label: m.inboxSeeBoard() };
+	if (item.kind === 'engagement_reminder') return { href: '/post-ride', label: m.postRideTitle() };
+	return null;
+}
+
 export function inboxIcon(item: InboxItem): string {
 	return ICONS[item.kind] ?? '🔔';
 }

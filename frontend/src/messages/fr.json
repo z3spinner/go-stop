@@ -129,6 +129,8 @@
   "inboxKindRequestMatch": "{name} cherche un trajet sur votre route",
   "inboxKindRideMatch": "{name} propose un trajet pour vous",
   "inboxNoPhone": "Indiquez votre numéro de téléphone dans votre profil pour voir vos notifications.",
+  "inboxNotFound": "Cette notification n'existe plus.",
+  "inboxSeeBoard": "Voir le tableau du jour",
   "inboxPast": "passé",
   "inboxPushOff": "Les alertes ne sont pas activées sur cet appareil : vous ne verrez les nouvelles notifications qu'en ouvrant le site.",
   "inboxPushSettings": "Réglages des alertes",

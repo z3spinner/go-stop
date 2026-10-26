@@ -129,6 +129,8 @@
   "inboxKindRequestMatch": "{name} needs a ride on your route",
   "inboxKindRideMatch": "{name} is offering a ride that suits you",
   "inboxNoPhone": "Add your phone number to your profile to see your notifications.",
+  "inboxNotFound": "This notification no longer exists.",
+  "inboxSeeBoard": "See today's board",
   "inboxPast": "past",
   "inboxPushOff": "Alerts aren't on for this device: you'll only see new notifications when you open the site.",
   "inboxPushSettings": "Alert settings",

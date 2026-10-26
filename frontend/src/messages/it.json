@@ -129,6 +129,8 @@
   "inboxKindRequestMatch": "{name} cerca un passaggio sul tuo percorso",
   "inboxKindRideMatch": "{name} offre un passaggio adatto a te",
   "inboxNoPhone": "Aggiungi il tuo numero di telefono al profilo per vedere le tue notifiche.",
+  "inboxNotFound": "Questa notifica non esiste più.",
+  "inboxSeeBoard": "Vedi la bacheca di oggi",
   "inboxPast": "passato",
   "inboxPushOff": "Gli avvisi non sono attivi su questo dispositivo: vedrai le nuove notifiche solo aprendo il sito.",
   "inboxPushSettings": "Impostazioni avvisi",

@@ -92,6 +92,16 @@ describe('notifications page', () => {
 		expect(get(inboxUnread)).toBe(1);
 	});
 
+	it('links an item about no particular page to the notification itself', async () => {
+		userPhone.set('0611111111');
+		fakeServer([item({ id: 'd1', kind: 'morning_digest', url: '/', contact_name: '', origin: '', destination: '' }), unreadBob]);
+		const { container } = render(Notifications);
+		await waitFor(() => expect(container.querySelectorAll('.inbox-item')).toHaveLength(2));
+		const [digest, bob] = Array.from(container.querySelectorAll<HTMLAnchorElement>('.inbox-item'));
+		expect(digest.getAttribute('href')).toBe('/notifications/d1');
+		expect(bob.getAttribute('href')).toBe('/my-rides');
+	});
+
 	it('tapping a notification marks just that one read', async () => {
 		userPhone.set('0611111111');
 		const srv = fakeServer([unreadBob, item({ id: 'n4', contact_name: 'Dana' }), readPast]);
