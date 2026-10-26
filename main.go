@@ -174,8 +174,6 @@ func main() {
 	statsH := handler.NewStatsHandler(getStats)
 
 	go func() {
-		ticker := time.NewTicker(time.Hour)
-		defer ticker.Stop()
 		runCronCycle := func() {
 			// enqueueFeedback runs FIRST, before expireRides, so an evening ride
 			// about to be expired/deleted is still captured into the feedback queue.
@@ -212,6 +210,13 @@ func main() {
 			}
 		}
 		runCronCycle() // tick at startup — don't wait an hour for the first cycle
+		// Then run just after each hour, whenever the app was (re)started, so
+		// time-of-day jobs (the 8:00 morning digest, Monday's 8:00 engagement
+		// reminder) go out on time instead of up to an hour late.
+		time.Sleep(time.Until(time.Now().Truncate(time.Hour).Add(time.Hour + time.Minute)))
+		runCronCycle()
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
 		for range ticker.C {
 			runCronCycle()
 		}
