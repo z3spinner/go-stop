@@ -28,8 +28,8 @@ func paris(t *testing.T) *time.Location {
 	return loc
 }
 
-// saveRideDeparting stores an active ride A→B leaving at dep.
-func saveRideDeparting(t *testing.T, repo *postgres.RideRepo, dep time.Time) string {
+// saveRideDeparting stores an active ride A→B leaving at dep, give or take flex.
+func saveRideDeparting(t *testing.T, repo *postgres.RideRepo, dep time.Time, flex domain.Flexibility) string {
 	t.Helper()
 	id := uuid.New().String()
 	if _, _, err := repo.Save(domain.Ride{
@@ -37,7 +37,7 @@ func saveRideDeparting(t *testing.T, repo *postgres.RideRepo, dep time.Time) str
 		Origin: "A", Destination: "B",
 		Date:        time.Date(dep.Year(), dep.Month(), dep.Day(), 0, 0, 0, 0, time.UTC),
 		DepartureAt: dep,
-		Flexibility: domain.Exact,
+		Flexibility: flex,
 		PostedAt:    time.Now().UTC(),
 		ExpiresAt:   dep.AddDate(0, 0, 1),
 	}); err != nil {
@@ -63,8 +63,8 @@ func TestRideRepo_FindByOriginAndTime_UsesServiceWallClock(t *testing.T) {
 	truncate(t)
 	loc := paris(t)
 	repo := postgres.NewRideRepo(testPool, 60, loc)
-	near := saveRideDeparting(t, repo, time.Date(2031, 9, 1, 9, 10, 0, 0, loc)) // CEST
-	far := saveRideDeparting(t, repo, time.Date(2031, 9, 1, 15, 0, 0, 0, loc))
+	near := saveRideDeparting(t, repo, time.Date(2031, 9, 1, 9, 10, 0, 0, loc), domain.Exact) // CEST
+	far := saveRideDeparting(t, repo, time.Date(2031, 9, 1, 15, 0, 0, 0, loc), domain.Exact)
 
 	// Searched from winter (CET), the handler's "09:30 today" instant.
 	rides, err := repo.FindByOriginAndTime("A", "B", time.Date(2031, 1, 15, 9, 30, 0, 0, loc), 60)
@@ -121,10 +121,10 @@ func TestRideRepo_FindMatching_DailyAlertUsesServiceWallClock(t *testing.T) {
 	truncate(t)
 	loc := paris(t)
 	repo := postgres.NewRideRepo(testPool, 60, loc)
-	winter8 := saveRideDeparting(t, repo, time.Date(2031, 1, 15, 8, 0, 0, 0, loc))
-	summer8 := saveRideDeparting(t, repo, time.Date(2031, 7, 15, 8, 0, 0, 0, loc))
-	saveRideDeparting(t, repo, time.Date(2031, 1, 15, 9, 0, 0, 0, loc))
-	saveRideDeparting(t, repo, time.Date(2031, 7, 15, 10, 0, 0, 0, loc))
+	winter8 := saveRideDeparting(t, repo, time.Date(2031, 1, 15, 8, 0, 0, 0, loc), domain.Exact)
+	summer8 := saveRideDeparting(t, repo, time.Date(2031, 7, 15, 8, 0, 0, 0, loc), domain.Exact)
+	saveRideDeparting(t, repo, time.Date(2031, 1, 15, 9, 0, 0, 0, loc), domain.Exact)
+	saveRideDeparting(t, repo, time.Date(2031, 7, 15, 10, 0, 0, 0, loc), domain.Exact)
 
 	rides, err := repo.FindMatching(dailyAlertAt(8, 0))
 	if err != nil {
@@ -139,5 +139,80 @@ func TestRideRepo_FindMatching_DailyAlertUsesServiceWallClock(t *testing.T) {
 	slices.Sort(want)
 	if !slices.Equal(ids, want) {
 		t.Errorf("got %v, want the two 08:00 rides %v", ids, want)
+	}
+}
+
+// Windows that touch midnight wrap round the clock: 00:10 is 40 minutes after
+// 23:30, and a 00:10 ride give or take 30 minutes starts at 23:40.
+
+func rideIDs(rides []domain.Ride) []string {
+	var ids []string
+	for _, r := range rides {
+		ids = append(ids, r.ID)
+	}
+	return ids
+}
+
+func TestRideRepo_FindByOriginAndTime_WindowWrapsMidnight(t *testing.T) {
+	loc := paris(t)
+	cases := []struct {
+		name   string
+		ride   time.Time
+		flex   domain.Flexibility
+		search time.Time
+		match  bool
+	}{
+		{"search 23:30 finds 00:10", time.Date(2031, 1, 16, 0, 10, 0, 0, loc), domain.Exact, time.Date(2031, 1, 15, 23, 30, 0, 0, loc), true},
+		{"search 00:20 finds 00:10±30", time.Date(2031, 1, 16, 0, 10, 0, 0, loc), domain.Approximate, time.Date(2031, 1, 15, 0, 20, 0, 0, loc), true},
+		{"search 00:30 finds 23:50", time.Date(2031, 1, 15, 23, 50, 0, 0, loc), domain.Exact, time.Date(2031, 1, 15, 0, 30, 0, 0, loc), true},
+		{"search 23:30 skips 01:00", time.Date(2031, 1, 16, 1, 0, 0, 0, loc), domain.Exact, time.Date(2031, 1, 15, 23, 30, 0, 0, loc), false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			truncate(t)
+			repo := postgres.NewRideRepo(testPool, 60, loc)
+			id := saveRideDeparting(t, repo, c.ride, c.flex)
+			rides, err := repo.FindByOriginAndTime("A", "B", c.search, 60)
+			if err != nil {
+				t.Fatalf("FindByOriginAndTime: %v", err)
+			}
+			if got := slices.Contains(rideIDs(rides), id); got != c.match {
+				t.Errorf("matched = %v, want %v", got, c.match)
+			}
+		})
+	}
+}
+
+func TestDailyAlertMatching_WindowWrapsMidnight(t *testing.T) {
+	truncate(t)
+	loc := paris(t)
+	rides := postgres.NewRideRepo(testPool, 60, loc)
+	requests := postgres.NewRequestRepo(testPool, 60, loc)
+	alert := dailyAlertAt(23, 50)
+	alert.Flexibility = domain.Approximate
+	if err := requests.Save(alert); err != nil {
+		t.Fatalf("Save alert: %v", err)
+	}
+	dep := time.Date(2031, 1, 16, 0, 5, 0, 0, loc) // 15 minutes after 23:50
+	rideID := saveRideDeparting(t, rides, dep, domain.Exact)
+
+	matched, err := requests.FindMatching(domain.Ride{
+		Origin: "A", Destination: "B",
+		Date:        time.Date(2031, 1, 16, 0, 0, 0, 0, time.UTC),
+		DepartureAt: dep, Flexibility: domain.Exact,
+	})
+	if err != nil {
+		t.Fatalf("RequestRepo.FindMatching: %v", err)
+	}
+	if len(matched) != 1 || matched[0].ID != alert.ID {
+		t.Errorf("RequestRepo.FindMatching = %v, want the 23:50 alert", matched)
+	}
+
+	found, err := rides.FindMatching(alert)
+	if err != nil {
+		t.Fatalf("RideRepo.FindMatching: %v", err)
+	}
+	if ids := rideIDs(found); !slices.Equal(ids, []string{rideID}) {
+		t.Errorf("RideRepo.FindMatching = %v, want the 00:05 ride %s", ids, rideID)
 	}
 }

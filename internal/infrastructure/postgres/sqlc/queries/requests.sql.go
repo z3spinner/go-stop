@@ -85,8 +85,7 @@ WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::t
   AND (
     (date IS NULL AND departure_at IS NULL)
     OR (date IS NULL AND departure_at IS NOT NULL
-        AND ((departure_at AT TIME ZONE 'UTC')::time - (flexibility * interval '1 minute')) <= (($4::timestamptz AT TIME ZONE $3::text)::time + ($5::int * interval '1 minute'))
-        AND ((departure_at AT TIME ZONE 'UTC')::time + (flexibility * interval '1 minute')) >= (($4::timestamptz AT TIME ZONE $3::text)::time - ($5::int * interval '1 minute')))
+        AND public.clock_minutes_apart((departure_at AT TIME ZONE 'UTC')::time, ($4::timestamptz AT TIME ZONE $3::text)::time) <= flexibility + $5::int)
     OR (date = $6 AND departure_at IS NULL)
     OR (date = $6
         AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5::int * interval '1 minute'))
