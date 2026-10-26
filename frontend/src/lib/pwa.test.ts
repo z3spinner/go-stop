@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 import {
+	isInAppBrowser,
 	urlBase64ToUint8Array,
 	postSubscription,
 	updateBellState,
@@ -28,6 +29,25 @@ describe('urlBase64ToUint8Array', () => {
 	it('decodes a base64url VAPID key to bytes', () => {
 		const out = urlBase64ToUint8Array('AQID'); // base64 for [1,2,3]
 		expect(Array.from(out)).toEqual([1, 2, 3]);
+	});
+});
+
+describe('isInAppBrowser', () => {
+	const safari = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
+	const webkit = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
+	it('spots the browsers built into Facebook, Messenger, Instagram and others', () => {
+		expect(isInAppBrowser(`${webkit} [FBAN/FBIOS;FBAV/530.0.0.40.97;FBBV/1;FBDV/iPhone12,8;FBMD/iPhone;FBSN/iOS]`)).toBe(true);
+		expect(isInAppBrowser(`${webkit} [FBAN/MessengerForiOS;FBAV/500.0.0.32.106]`)).toBe(true);
+		expect(isInAppBrowser(`${webkit} Instagram 400.0.0.25.86 (iPhone12,8; iOS 18_6; fr_FR)`)).toBe(true);
+		expect(isInAppBrowser(`${webkit} WhatsApp/25.20.80`)).toBe(true);
+		expect(isInAppBrowser(`${webkit} LinkedInApp/9.31`)).toBe(true);
+		expect(isInAppBrowser(`${webkit} Snapchat/13.50.0.38`)).toBe(true);
+		expect(isInAppBrowser(`${webkit} musical_ly_41.0.0 BytedanceWebview/d8a21c6`)).toBe(true);
+	});
+	it('leaves Safari and other real browsers alone', () => {
+		expect(isInAppBrowser(safari)).toBe(false);
+		expect(isInAppBrowser(`${webkit} CriOS/141.0.7390.96 Mobile/15E148 Safari/604.1`)).toBe(false);
+		expect(isInAppBrowser(`${webkit} FxiOS/144.0 Mobile/15E148 Safari/605.1.15`)).toBe(false);
 	});
 });
 
