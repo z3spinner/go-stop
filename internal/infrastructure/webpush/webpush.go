@@ -66,10 +66,19 @@ func New(vapidPublic, vapidPrivate, vapidEmail string) *WebPushNotifier {
 // pushPayload is the minimal envelope the service worker needs. Title and URL
 // are vital (the URL routes the click); Body carries the detail and is the only
 // field we trim when a constrained device rejects the payload as too large.
+// InboxID (36 bytes, omitted when empty) lets sw.js tag the notification so a
+// reminder replaces the earlier push, and mark the inbox item read on tap.
 type pushPayload struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
-	URL   string `json:"url"`
+	Title   string `json:"title"`
+	Body    string `json:"body"`
+	URL     string `json:"url"`
+	InboxID string `json:"inbox_id,omitempty"`
+}
+
+// payloadFor is the JSON sent for msg, with body in place of msg.Body (which
+// Send may have shortened).
+func payloadFor(msg domain.Message, body string) ([]byte, error) {
+	return json.Marshal(pushPayload{Title: msg.Title, Body: body, URL: msg.URL, InboxID: msg.InboxID})
 }
 
 // Send delivers msg to sub. It right-sizes the encrypted record to the actual
@@ -82,7 +91,7 @@ func (n *WebPushNotifier) Send(sub domain.Subscription, msg domain.Message) erro
 	transientRetried := false
 
 	for {
-		payload, err := json.Marshal(pushPayload{Title: msg.Title, Body: body, URL: msg.URL})
+		payload, err := payloadFor(msg, body)
 		if err != nil {
 			return fmt.Errorf("marshal message: %w", err)
 		}

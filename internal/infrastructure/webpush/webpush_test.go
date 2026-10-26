@@ -76,13 +76,69 @@ func TestSendRightSizesRecordToPayload(t *testing.T) {
 		t.Fatalf("Send: %v", err)
 	}
 
-	payload, _ := json.Marshal(pushPayload{Title: msg.Title, Body: msg.Body, URL: msg.URL})
+	payload, _ := payloadFor(msg, msg.Body)
 	want := len(payload) + recordOverhead
 	if gotLen != want {
 		t.Errorf("encrypted body = %d bytes, want %d", gotLen, want)
 	}
 	if gotLen >= 4096 {
 		t.Errorf("body not right-sized: %d bytes (still padded toward 4096)", gotLen)
+	}
+}
+
+// sw.js reads inbox_id to tag the notification (a reminder replaces the
+// earlier push) and to mark the inbox item read when it is tapped. It was
+// dropped from the payload until Oct 2026, so neither worked.
+func TestPayloadCarriesTheInboxID(t *testing.T) {
+	msg := domain.Message{Title: "T", Body: "B", URL: "/my-rides", InboxID: "123e4567-e89b-12d3-a456-426614174000"}
+	b, err := payloadFor(msg, msg.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]string
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"title": "T", "body": "B", "url": "/my-rides", "inbox_id": "123e4567-e89b-12d3-a456-426614174000"}
+	if len(got) != len(want) {
+		t.Errorf("payload = %v, want %v", got, want)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("payload[%q] = %q, want %q", k, got[k], v)
+		}
+	}
+	// A push-only message (no inbox item) keeps the old three-field payload.
+	b, _ = payloadFor(domain.Message{Title: "T", Body: "B", URL: "/"}, "B")
+	if strings.Contains(string(b), "inbox_id") {
+		t.Errorf("empty inbox id should be omitted: %s", b)
+	}
+}
+
+// The truncation retry must keep the inbox id: only Body is shortened.
+func TestSend413KeepsTheInboxID(t *testing.T) {
+	var lens []int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		lens = append(lens, len(b))
+		if len(lens) == 1 {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			_, _ = w.Write([]byte(mozilla413Body))
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer srv.Close()
+
+	msg := domain.Message{Title: "T", Body: strings.Repeat("x", 2000), URL: "/", InboxID: "123e4567-e89b-12d3-a456-426614174000"}
+	if err := newTestNotifier(t).Send(testSub(t, srv.URL), msg); err != nil {
+		t.Fatalf("Send: %v", err)
+	}
+	// The record is sized to the payload, so the retry's size pins its content:
+	// the shortened body plus the unchanged title, url and inbox id.
+	retry, _ := payloadFor(msg, truncateBody(msg.Body, 1441))
+	if len(lens) != 2 || lens[1] != len(retry)+recordOverhead {
+		t.Errorf("retry body = %v bytes, want %d", lens, len(retry)+recordOverhead)
 	}
 }
 
