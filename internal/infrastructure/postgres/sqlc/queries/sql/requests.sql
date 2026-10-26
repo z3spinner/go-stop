@@ -62,8 +62,7 @@ WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = ro
   AND (
     (date IS NULL AND departure_at IS NULL)
     OR (date IS NULL AND departure_at IS NOT NULL
-        AND ((departure_at AT TIME ZONE 'UTC')::time - (flexibility * interval '1 minute')) <= ((sqlc.arg(departure_at)::timestamptz AT TIME ZONE sqlc.arg(service_tz)::text)::time + (sqlc.arg(window_minutes)::int * interval '1 minute'))
-        AND ((departure_at AT TIME ZONE 'UTC')::time + (flexibility * interval '1 minute')) >= ((sqlc.arg(departure_at)::timestamptz AT TIME ZONE sqlc.arg(service_tz)::text)::time - (sqlc.arg(window_minutes)::int * interval '1 minute')))
+        AND public.clock_minutes_apart((departure_at AT TIME ZONE 'UTC')::time, (sqlc.arg(departure_at)::timestamptz AT TIME ZONE sqlc.arg(service_tz)::text)::time) <= flexibility + sqlc.arg(window_minutes)::int)
     OR (date = sqlc.arg(date) AND departure_at IS NULL)
     OR (date = sqlc.arg(date)
         AND (departure_at - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz + (sqlc.arg(window_minutes)::int * interval '1 minute'))
