@@ -43,6 +43,11 @@ func NewRideRepo(pool *pgxpool.Pool, graceMins int) *RideRepo { ... }
 
 - Sequential 3-digit prefix. **Every `up` needs a `down`.** Both files, always.
 - Run with `go run ./cmd/migratedb up` (also the boot command in `Procfile`).
+- **Schema-qualify every reference inside SQL function bodies** (`public.f_unaccent(…)`,
+  not `f_unaccent(…)`). pg_dump/pg_restore run with `search_path = ''`, and CREATE
+  TABLE inlines functions used by generated columns, so an unqualified call breaks
+  every restore and major-version upgrade (see migration 021 and
+  `route_norm_integration_test.go`).
 - Numbering note: `main` skips 007 (006 → 008) — `007` lives on a feature branch,
   not a mistake to "fix" by renumbering. golang-migrate tracks applied versions by
   name and tolerates the gap. **Do not reuse 007**; the next migration is the
