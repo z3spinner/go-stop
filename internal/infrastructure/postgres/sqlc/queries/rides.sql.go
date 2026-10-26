@@ -108,8 +108,7 @@ SELECT id, driver_name, phone, origin, destination, date, departure_at, flexibil
 FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
-  AND ((departure_at AT TIME ZONE $3::text)::time - (flexibility * interval '1 minute')) <= (($4::timestamptz AT TIME ZONE 'UTC')::time + ($5::int * interval '1 minute'))
-  AND ((departure_at AT TIME ZONE $3::text)::time + (flexibility * interval '1 minute')) >= (($4::timestamptz AT TIME ZONE 'UTC')::time - ($5::int * interval '1 minute'))
+  AND public.clock_minutes_apart((departure_at AT TIME ZONE $3::text)::time, ($4::timestamptz AT TIME ZONE 'UTC')::time) <= flexibility + $5::int
 `
 
 type FindRidesMatchingDailyRequestParams struct {
@@ -603,8 +602,7 @@ FROM rides
 WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::text)
   AND expires_at > NOW()
   AND departure_at + (flexibility * interval '1 minute') + ($3::int * interval '1 minute') > NOW()
-  AND ((departure_at AT TIME ZONE $4::text)::time - (flexibility * interval '1 minute')) <= (($5::timestamptz AT TIME ZONE $4::text)::time + ($6::int * interval '1 minute'))
-  AND ((departure_at AT TIME ZONE $4::text)::time + (flexibility * interval '1 minute')) >= (($5::timestamptz AT TIME ZONE $4::text)::time - ($6::int * interval '1 minute'))
+  AND public.clock_minutes_apart((departure_at AT TIME ZONE $4::text)::time, ($5::timestamptz AT TIME ZONE $4::text)::time) <= flexibility + $6::int
 ORDER BY departure_at ASC
 `
 
