@@ -9,7 +9,6 @@ import { api } from '$lib/api';
 import { userPhone } from '$lib/stores';
 import { inboxItems, inboxUnread, refreshInbox } from '$lib/inbox';
 import { pushState } from '$lib/pwa';
-import { config } from '$lib/config';
 import { m } from '$lib/paraglide/messages';
 import type { InboxItem } from '$lib/types';
 
@@ -261,52 +260,9 @@ describe('notifications page', () => {
 });
 
 describe('morning digest switch', () => {
-	beforeEach(() => config.set({ siteName: 'Go-Stop', returnDelayHours: 2, morningDigestHour: 8 }));
-	afterEach(() => config.set({ siteName: 'Go-Stop', returnDelayHours: 2 }));
-
-	it('shows the saved choice and saves a change', async () => {
+	it('is no longer on the notifications page (it lives in the alert settings)', async () => {
 		userPhone.set('0611111111');
-		fakeServer([]);
-		vi.spyOn(api.preferences, 'get').mockResolvedValue({ morning_digest: true });
-		const set = vi.spyOn(api.preferences, 'set').mockImplementation(async (_p, prefs) => prefs);
-
-		const { container } = render(Notifications);
-		const toggle = await waitFor(() => {
-			const el = container.querySelector<HTMLInputElement>('.digest-toggle');
-			expect(el).not.toBeNull();
-			return el!;
-		});
-		expect(toggle.checked).toBe(true);
-		expect(container.querySelector('.digest-pref')?.textContent).toContain(m.digestToggleHint({ hour: '8' }));
-
-		await fireEvent.click(toggle);
-		await waitFor(() => expect(set).toHaveBeenCalledWith('0611111111', { morning_digest: false }));
-		expect(toggle.checked).toBe(false);
-	});
-
-	it('goes back and says so when saving fails', async () => {
-		userPhone.set('0611111111');
-		fakeServer([]);
-		vi.spyOn(api.preferences, 'get').mockResolvedValue({ morning_digest: true });
-		vi.spyOn(api.preferences, 'set').mockRejectedValue(new Error('offline'));
-
-		const { container } = render(Notifications);
-		const toggle = await waitFor(() => {
-			const el = container.querySelector<HTMLInputElement>('.digest-toggle');
-			expect(el).not.toBeNull();
-			return el!;
-		});
-		await fireEvent.click(toggle);
-		await waitFor(() => expect(container.querySelector('.digest-err')?.textContent).toBe(m.digestSaveErr()));
-		expect(toggle.checked).toBe(true);
-	});
-
-	it('is hidden when the server sends no digest', async () => {
-		config.set({ siteName: 'Go-Stop', returnDelayHours: 2, morningDigestHour: -1 });
-		userPhone.set('0611111111');
-		const srv = fakeServer([]);
-		vi.spyOn(api.preferences, 'get').mockResolvedValue({ morning_digest: true });
-
+		const srv = fakeServer([unreadBob]);
 		const { container } = render(Notifications);
 		await waitFor(() => expect(srv.list).toHaveBeenCalled());
 		expect(container.querySelector('.digest-toggle')).toBeNull();
