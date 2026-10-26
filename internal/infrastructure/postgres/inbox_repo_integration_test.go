@@ -223,8 +223,8 @@ func TestInboxRepo_DeleteForRideAndRequest(t *testing.T) {
 func TestInboxRepo_DeleteForGonePosts(t *testing.T) {
 	truncate(t)
 	inbox := postgres.NewInboxRepo(testPool)
-	rides := postgres.NewRideRepo(testPool, 60)
-	requests := postgres.NewRequestRepo(testPool, 60)
+	rides := postgres.NewRideRepo(testPool, 60, time.UTC)
+	requests := postgres.NewRequestRepo(testPool, 60, time.UTC)
 
 	past := time.Now().Add(-48 * time.Hour).UTC().Truncate(time.Second)
 	future := time.Now().Add(48 * time.Hour).UTC().Truncate(time.Second)

@@ -69,8 +69,8 @@ func TestMain(m *testing.M) {
 func setupRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 
-	rideRepo := postgres.NewRideRepo(handlerPool, 60)
-	reqRepo := postgres.NewRequestRepo(handlerPool, 60)
+	rideRepo := postgres.NewRideRepo(handlerPool, 60, time.UTC)
+	reqRepo := postgres.NewRequestRepo(handlerPool, 60, time.UTC)
 	subRepo := postgres.NewSubscriptionRepo(handlerPool)
 	destRepo := postgres.NewDestinationRepo(handlerPool)
 	inboxRepo := postgres.NewInboxRepo(handlerPool)

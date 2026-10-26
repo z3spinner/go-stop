@@ -39,7 +39,7 @@ func names(reqs []domain.Request) []string {
 
 func TestRequestRepo_FindExpiringBefore_OnlyUnwarnedOpenEndedAlerts(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool, 60)
+	repo := postgres.NewRequestRepo(testPool, 60, time.UTC)
 	now := time.Now().UTC()
 	soon := now.Add(2 * 24 * time.Hour)
 	daily := time.Date(1970, 1, 1, 7, 35, 0, 0, time.UTC)
@@ -86,7 +86,7 @@ func TestRequestRepo_FindExpiringBefore_OnlyUnwarnedOpenEndedAlerts(t *testing.T
 
 func TestRequestRepo_ExpiryWarningGoesWithTheRequest(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRequestRepo(testPool, 60)
+	repo := postgres.NewRequestRepo(testPool, 60, time.UTC)
 	id := saveAlert(t, repo, "a", time.Time{}, time.Time{}, time.Now().Add(time.Hour))
 	if err := repo.MarkExpiryWarned(id, time.Now().Add(time.Hour)); err != nil {
 		t.Fatal(err)

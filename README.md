@@ -79,7 +79,7 @@ You can optionally customise these from the Scalingo deploy form (all have sensi
 | Variable | Description |
 |---|---|
 | `SITE_NAME` | **Your community's name** shown as the site heading (e.g. `Stop Nyons`, `Covoiturage Drôme`) |
-| `SERVICE_TZ` | Community timezone, used to interpret time-only searches (e.g. `Europe/Paris`) |
+| `SERVICE_TZ` | Community timezone: time-only searches and daily alerts match on its local clock time (e.g. `Europe/Paris`) |
 | `INBOX_REMINDER_INTERVAL_HOURS` | Hours between reminder pushes for an unread contact request, accepted request, shared number or contact offer, and — at most 2 reminders each — for a matching ride and the post-ride "did your ride leave with passengers?" prompt (default `3`) |
 | `INBOX_REMINDER_QUIET_HOURS` | Local hours with no reminders and no post-ride prompts, e.g. `21-8` (the default); `none` to always send |
 | `NOTIFICATION_RETENTION_DAYS` | Upper limit in days for keeping a notification in the in-app inbox (default `30`); notifications are removed earlier when their ride or request expires or is deleted, the weekly "share a ride" reminder after a week and the morning digest after a day |

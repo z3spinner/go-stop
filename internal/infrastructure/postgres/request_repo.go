@@ -16,10 +16,12 @@ import (
 type RequestRepo struct {
 	q         *queries.Queries
 	graceMins int32
+	// serviceTZ is the IANA zone whose wall clock time-of-day matches use.
+	serviceTZ string
 }
 
-func NewRequestRepo(pool *pgxpool.Pool, graceMins int) *RequestRepo {
-	return &RequestRepo{q: queries.New(pool), graceMins: int32(graceMins)}
+func NewRequestRepo(pool *pgxpool.Pool, graceMins int, serviceTZ *time.Location) *RequestRepo {
+	return &RequestRepo{q: queries.New(pool), graceMins: int32(graceMins), serviceTZ: serviceTZ.String()}
 }
 
 func (r *RequestRepo) Save(req domain.Request) error {
@@ -70,6 +72,7 @@ func (r *RequestRepo) FindMatching(ride domain.Ride) ([]domain.Request, error) {
 		Destination:   ride.Destination,
 		Date:          dateFrom(ride.Date),
 		DepartureAt:   tsFrom(ride.DepartureAt),
+		ServiceTz:     r.serviceTZ,
 		WindowMinutes: int32(ride.Flexibility),
 	})
 	if err != nil {

@@ -119,7 +119,7 @@ func TestHTTP_MorningDigest_EndToEnd(t *testing.T) {
 	prefsReq(r, http.MethodPut, "0697000014", map[string]bool{"morning_digest": false})
 
 	n := usecase.NewInboxNotifier(&noopNotifier{}, postgres.NewInboxRepo(handlerPool))
-	digest := usecase.NewSendMorningDigest(postgres.NewRideRepo(handlerPool, 60), postgres.NewRequestRepo(handlerPool, 60), subRepo,
+	digest := usecase.NewSendMorningDigest(postgres.NewRideRepo(handlerPool, 60, time.UTC), postgres.NewRequestRepo(handlerPool, 60, time.UTC), subRepo,
 		postgres.NewNotificationPreferenceRepo(handlerPool), postgres.NewSettingsRepo(handlerPool), n, paris, 8, "Go-Stop")
 	digest.Clock = func() time.Time { return now }
 	if err := digest.Execute(); err != nil {

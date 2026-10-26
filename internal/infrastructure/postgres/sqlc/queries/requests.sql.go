@@ -85,18 +85,19 @@ WHERE origin_norm = route_norm($1::text) AND destination_norm = route_norm($2::t
   AND (
     (date IS NULL AND departure_at IS NULL)
     OR (date IS NULL AND departure_at IS NOT NULL
-        AND (departure_at::time - (flexibility * interval '1 minute')) <= ($3::timestamptz::time + ($4::int * interval '1 minute'))
-        AND (departure_at::time + (flexibility * interval '1 minute')) >= ($3::timestamptz::time - ($4::int * interval '1 minute')))
-    OR (date = $5 AND departure_at IS NULL)
-    OR (date = $5
-        AND (departure_at - (flexibility * interval '1 minute')) <= ($3::timestamptz + ($4::int * interval '1 minute'))
-        AND (departure_at + (flexibility * interval '1 minute')) >= ($3::timestamptz - ($4::int * interval '1 minute')))
+        AND ((departure_at AT TIME ZONE 'UTC')::time - (flexibility * interval '1 minute')) <= (($4::timestamptz AT TIME ZONE $3::text)::time + ($5::int * interval '1 minute'))
+        AND ((departure_at AT TIME ZONE 'UTC')::time + (flexibility * interval '1 minute')) >= (($4::timestamptz AT TIME ZONE $3::text)::time - ($5::int * interval '1 minute')))
+    OR (date = $6 AND departure_at IS NULL)
+    OR (date = $6
+        AND (departure_at - (flexibility * interval '1 minute')) <= ($4::timestamptz + ($5::int * interval '1 minute'))
+        AND (departure_at + (flexibility * interval '1 minute')) >= ($4::timestamptz - ($5::int * interval '1 minute')))
   )
 `
 
 type FindRequestsMatchingRideParams struct {
 	Origin        string             `db:"origin"`
 	Destination   string             `db:"destination"`
+	ServiceTz     string             `db:"service_tz"`
 	DepartureAt   pgtype.Timestamptz `db:"departure_at"`
 	WindowMinutes int32              `db:"window_minutes"`
 	Date          pgtype.Date        `db:"date"`
@@ -105,13 +106,16 @@ type FindRequestsMatchingRideParams struct {
 // Matches all alert modes inferred from NULL state of date/departure_at:
 //
 //	anytime: date IS NULL AND departure_at IS NULL
-//	daily:   date IS NULL AND departure_at IS NOT NULL (time-only match)
+//	daily:   date IS NULL AND departure_at IS NOT NULL (time-only match: the
+//	         alert's local HH:MM on its 1970-01-01 UTC sentinel vs the ride's
+//	         time of day on the service-timezone wall clock)
 //	day:     date set, departure_at IS NULL
 //	time:    both set (overlapping window)
 func (q *Queries) FindRequestsMatchingRide(ctx context.Context, arg FindRequestsMatchingRideParams) ([]Request, error) {
 	rows, err := q.db.Query(ctx, findRequestsMatchingRide,
 		arg.Origin,
 		arg.Destination,
+		arg.ServiceTz,
 		arg.DepartureAt,
 		arg.WindowMinutes,
 		arg.Date,

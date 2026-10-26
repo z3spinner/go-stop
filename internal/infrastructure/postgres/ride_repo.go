@@ -19,10 +19,12 @@ import (
 type RideRepo struct {
 	q         *queries.Queries
 	graceMins int32
+	// serviceTZ is the IANA zone whose wall clock time-of-day matches use.
+	serviceTZ string
 }
 
-func NewRideRepo(pool *pgxpool.Pool, graceMins int) *RideRepo {
-	return &RideRepo{q: queries.New(pool), graceMins: int32(graceMins)}
+func NewRideRepo(pool *pgxpool.Pool, graceMins int, serviceTZ *time.Location) *RideRepo {
+	return &RideRepo{q: queries.New(pool), graceMins: int32(graceMins), serviceTZ: serviceTZ.String()}
 }
 
 // Save upserts the ride on its dedup key. If no identical ride exists (same
@@ -162,6 +164,7 @@ func (r *RideRepo) FindByOriginAndTime(origin, destination string, searchTime ti
 		Origin:                 origin,
 		Destination:            destination,
 		SearchTime:             tsFrom(searchTime),
+		ServiceTz:              r.serviceTZ,
 		GraceMinutes:           r.graceMins,
 		SearchToleranceMinutes: int32(toleranceMins),
 	})
@@ -201,6 +204,7 @@ func (r *RideRepo) FindMatching(req domain.Request) ([]domain.Ride, error) {
 			queries.FindRidesMatchingDailyRequestParams{
 				Origin: req.Origin, Destination: req.Destination,
 				DepartureAt:   tsFrom(req.DepartureAt),
+				ServiceTz:     r.serviceTZ,
 				WindowMinutes: int32(req.Flexibility),
 			})
 	case req.DepartureAt.IsZero():

@@ -90,8 +90,8 @@ A handler/endpoint change typically touches all three: update SQL/use case →
 ## Configuration (env vars)
 
 `DATABASE_URL` (required), `PORT` (default 8080), `SITE_NAME` (heading; default
-`Go-Stop`), `SERVICE_TZ` (IANA tz used to interpret time-only searches; default
-UTC, `Europe/Paris` in compose), `RIDE_GRACE_MINUTES` (default 60),
+`Go-Stop`), `SERVICE_TZ` (IANA tz whose clock time-only searches and daily alerts match
+on; default UTC, `Europe/Paris` in compose), `RIDE_GRACE_MINUTES` (default 60),
 `RETURN_DELAY_HOURS` (default 2), `GIN_MODE` (`release` in prod), and the
 `VAPID_*` Web Push keys (auto-generated and persisted to the DB on first boot if
 unset — see `internal/infrastructure/vapid`). Copy `.env.example` → `.env` for

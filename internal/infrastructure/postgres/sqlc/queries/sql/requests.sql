@@ -50,7 +50,9 @@ ORDER BY
 -- name: FindRequestsMatchingRide :many
 -- Matches all alert modes inferred from NULL state of date/departure_at:
 --   anytime: date IS NULL AND departure_at IS NULL
---   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match)
+--   daily:   date IS NULL AND departure_at IS NOT NULL (time-only match: the
+--            alert's local HH:MM on its 1970-01-01 UTC sentinel vs the ride's
+--            time of day on the service-timezone wall clock)
 --   day:     date set, departure_at IS NULL
 --   time:    both set (overlapping window)
 SELECT id, searcher_name, phone, origin, destination, date, departure_at, flexibility, posted_at, expires_at, origin_norm, destination_norm
@@ -60,8 +62,8 @@ WHERE origin_norm = route_norm(sqlc.arg(origin)::text) AND destination_norm = ro
   AND (
     (date IS NULL AND departure_at IS NULL)
     OR (date IS NULL AND departure_at IS NOT NULL
-        AND (departure_at::time - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz::time + (sqlc.arg(window_minutes)::int * interval '1 minute'))
-        AND (departure_at::time + (flexibility * interval '1 minute')) >= (sqlc.arg(departure_at)::timestamptz::time - (sqlc.arg(window_minutes)::int * interval '1 minute')))
+        AND ((departure_at AT TIME ZONE 'UTC')::time - (flexibility * interval '1 minute')) <= ((sqlc.arg(departure_at)::timestamptz AT TIME ZONE sqlc.arg(service_tz)::text)::time + (sqlc.arg(window_minutes)::int * interval '1 minute'))
+        AND ((departure_at AT TIME ZONE 'UTC')::time + (flexibility * interval '1 minute')) >= ((sqlc.arg(departure_at)::timestamptz AT TIME ZONE sqlc.arg(service_tz)::text)::time - (sqlc.arg(window_minutes)::int * interval '1 minute')))
     OR (date = sqlc.arg(date) AND departure_at IS NULL)
     OR (date = sqlc.arg(date)
         AND (departure_at - (flexibility * interval '1 minute')) <= (sqlc.arg(departure_at)::timestamptz + (sqlc.arg(window_minutes)::int * interval '1 minute'))

@@ -63,7 +63,7 @@ func TestHTTP_AlertExpiry_WarnThenRenew(t *testing.T) {
 		`UPDATE requests SET expires_at = NOW() + INTERVAL '2 days' WHERE id = $1`, alert.ID); err != nil {
 		t.Fatal(err)
 	}
-	reqRepo := postgres.NewRequestRepo(handlerPool, 60)
+	reqRepo := postgres.NewRequestRepo(handlerPool, 60, time.UTC)
 	n := usecase.NewInboxNotifier(&noopNotifier{}, postgres.NewInboxRepo(handlerPool))
 	warn := usecase.NewSendAlertExpiryWarnings(reqRepo, postgres.NewSubscriptionRepo(handlerPool), n, usecase.QuietHours{}, time.UTC)
 	if err := warn.Execute(); err != nil {

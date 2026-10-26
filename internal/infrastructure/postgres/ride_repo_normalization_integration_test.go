@@ -36,7 +36,7 @@ func saveActiveRide(t *testing.T, repo *postgres.RideRepo, origin, destination s
 // case, accents, or surrounding whitespace — the original question behind this.
 func TestRideRepo_Search_NormalizesCaseAccentWhitespace(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 	saveActiveRide(t, repo, "Saillans", "Crest")
 
 	matches := []struct {
@@ -67,7 +67,7 @@ func TestRideRepo_Search_NormalizesCaseAccentWhitespace(t *testing.T) {
 // Normalization must not collapse genuinely different place names together.
 func TestRideRepo_Search_DoesNotMatchDifferentTown(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 	saveActiveRide(t, repo, "Saillans", "Crest")
 
 	rides, err := repo.FindByOriginAndDestination("Die", "Crest")
@@ -82,7 +82,7 @@ func TestRideRepo_Search_DoesNotMatchDifferentTown(t *testing.T) {
 // The pg_trgm fuzzy fallback should catch a near-miss typo on the route.
 func TestRideRepo_SearchFuzzy_MatchesTypo(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 	saveActiveRide(t, repo, "Saillans", "Crest")
 
 	rides, err := repo.FindByOriginAndDestinationFuzzy("Saillan", "Crest")
@@ -101,7 +101,7 @@ func TestRideRepo_SearchFuzzy_MatchesTypo(t *testing.T) {
 // drag in rides for a completely different route.
 func TestRideRepo_SearchFuzzy_RejectsUnrelatedRoute(t *testing.T) {
 	truncate(t)
-	repo := postgres.NewRideRepo(testPool, 60)
+	repo := postgres.NewRideRepo(testPool, 60, time.UTC)
 	saveActiveRide(t, repo, "Saillans", "Crest")
 
 	rides, err := repo.FindByOriginAndDestinationFuzzy("Saillans", "Marseille")
