@@ -15,7 +15,8 @@
 
 services:
   db:
-    image: postgres:17-alpine
+    # Same major/minor as production (Scalingo, upgraded 26 Oct 2026).
+    image: postgres:18.6-alpine
     environment:
       POSTGRES_USER: gostop
       POSTGRES_PASSWORD: gostop
@@ -23,7 +24,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Postgres 18 keeps its data in /var/lib/postgresql/18/docker and refuses
+      # to start with a mount at the old /var/lib/postgresql/data.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gostop"]
       interval: 5s

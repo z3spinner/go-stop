@@ -9,13 +9,15 @@
 
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18.6-alpine
     environment:
       POSTGRES_USER: gostop
       POSTGRES_PASSWORD: gostop
       POSTGRES_DB: gostop
+    # Postgres 18 keeps its data in /var/lib/postgresql/18/docker and refuses
+    # to start with a mount at the old /var/lib/postgresql/data.
     tmpfs:
-      - /var/lib/postgresql/data
+      - /var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gostop"]
       interval: 3s
