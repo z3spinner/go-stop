@@ -137,6 +137,13 @@ func main() {
 	// The post-ride feedback prompt is pushed once (not during quiet hours);
 	// its repeats are inbox reminders.
 	sendFeedbackPrompts := usecase.NewSendFeedbackPrompts(feedbackQueueRepo, subRepo, notifier, quiet, serviceTZ)
+	// Daily summary of the day's board, on by default (per-phone off switch).
+	notifPrefsRepo := postgres.NewNotificationPreferenceRepo(pool)
+	digestHour, err := usecase.ParseMorningDigestHour(os.Getenv("MORNING_DIGEST_HOUR"))
+	if err != nil {
+		log.Printf("warning: %v; using %d", err, usecase.DefaultMorningDigestHour)
+		digestHour = usecase.DefaultMorningDigestHour
+	}
 	// Open-ended alerts last 30 days; their owners are asked 3 days before
 	// whether to keep them (not during quiet hours).
 	sendAlertExpiryWarnings := usecase.NewSendAlertExpiryWarnings(requestRepo, subRepo, notifier, quiet, serviceTZ)
@@ -160,13 +167,13 @@ func main() {
 			returnDelayHours = n
 		}
 	}
-	configH := handler.NewConfigHandler(siteName, returnDelayHours, inboxRetentionDays)
+	configH := handler.NewConfigHandler(siteName, returnDelayHours, inboxRetentionDays, digestHour)
+	sendMorningDigest := usecase.NewSendMorningDigest(rideRepo, requestRepo, subRepo, notifPrefsRepo, settingsRepo, notifier, serviceTZ, digestHour, siteName)
+	notifPrefsH := handler.NewNotificationPreferencesHandler(usecase.NewGetNotificationPreferences(notifPrefsRepo), usecase.NewSetNotificationPreferences(notifPrefsRepo))
 	feedbackH := handler.NewFeedbackHandler(recordFeedback)
 	statsH := handler.NewStatsHandler(getStats)
 
 	go func() {
-		ticker := time.NewTicker(time.Hour)
-		defer ticker.Stop()
 		runCronCycle := func() {
 			// enqueueFeedback runs FIRST, before expireRides, so an evening ride
 			// about to be expired/deleted is still captured into the feedback queue.
@@ -188,6 +195,9 @@ func main() {
 			if err := sendAlertExpiryWarnings.Execute(); err != nil {
 				log.Printf("alert expiry warnings: %v", err)
 			}
+			if err := sendMorningDigest.Execute(); err != nil {
+				log.Printf("morning digest: %v", err)
+			}
 			if err := sendEngagementReminder.Execute(); err != nil {
 				log.Printf("engagement reminder: %v", err)
 			}
@@ -200,6 +210,13 @@ func main() {
 			}
 		}
 		runCronCycle() // tick at startup — don't wait an hour for the first cycle
+		// Then run just after each hour, whenever the app was (re)started, so
+		// time-of-day jobs (the 8:00 morning digest, Monday's 8:00 engagement
+		// reminder) go out on time instead of up to an hour late.
+		time.Sleep(time.Until(time.Now().Truncate(time.Hour).Add(time.Hour + time.Minute)))
+		runCronCycle()
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
 		for range ticker.C {
 			runCronCycle()
 		}
@@ -260,6 +277,8 @@ func main() {
 
 		api.GET("/notifications", notifQueueH.List)
 		api.GET("/inbox", inboxH.List)
+		api.GET("/notification-preferences", notifPrefsH.Get)
+		api.PUT("/notification-preferences", notifPrefsH.Put)
 		api.POST("/inbox/read", inboxH.MarkRead)
 		api.DELETE("/inbox/:id", inboxH.Delete)
 		api.POST("/inbox/:id/restore", inboxH.Restore)

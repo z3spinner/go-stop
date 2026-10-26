@@ -111,6 +111,10 @@ definitions:
     type: object
   handler.ConfigResponse:
     properties:
+      morningDigestHour:
+        description: Local hour (SERVICE_TZ) of the daily morning digest; -1 when
+          disabled.
+        type: integer
       notificationRetentionDays:
         description: How many days the in-app inbox keeps notifications.
         type: integer
@@ -273,6 +277,12 @@ definitions:
         type: string
       sent_count:
         type: integer
+    type: object
+  handler.NotificationPreferences:
+    properties:
+      morning_digest:
+        description: The daily summary of the day's rides and requests (on by default).
+        type: boolean
     type: object
   handler.OfferContactBody:
     properties:
@@ -703,6 +713,69 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       tags:
       - interests
+  /notification-preferences:
+    get:
+      operationId: getNotificationPreferences
+      parameters:
+      - description: Phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.NotificationPreferences'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
+    put:
+      consumes:
+      - application/json
+      operationId: setNotificationPreferences
+      parameters:
+      - description: Phone
+        in: header
+        name: X-Phone
+        required: true
+        type: string
+      - description: Preferences
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.NotificationPreferences'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.NotificationPreferences'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      tags:
+      - notifications
   /notifications:
     get:
       operationId: listNotifications

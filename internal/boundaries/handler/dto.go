@@ -242,6 +242,14 @@ type ConfigResponse struct {
 	ReturnDelayHours int    `json:"returnDelayHours"`
 	// How many days the in-app inbox keeps notifications.
 	NotificationRetentionDays int `json:"notificationRetentionDays"`
+	// Local hour (SERVICE_TZ) of the daily morning digest; -1 when disabled.
+	MorningDigestHour int `json:"morningDigestHour"`
+}
+
+// NotificationPreferences is the body of GET/PUT /notification-preferences.
+type NotificationPreferences struct {
+	// The daily summary of the day's rides and requests (on by default).
+	MorningDigest bool `json:"morning_digest"`
 }
 
 // VapidKeyResponse is returned by GET /vapid-public-key.

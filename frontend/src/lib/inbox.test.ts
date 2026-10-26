@@ -72,6 +72,20 @@ describe('inboxTitle', () => {
 		expect(inboxRoute(expiring)).toBe('Crest → Saillans');
 		expect(inboxIcon(expiring)).toBe('⏳');
 	});
+	it('renders the morning digest title in the reader\'s language and its summary as is', () => {
+		const digest = item({
+			kind: 'morning_digest',
+			contact_name: '',
+			origin: '',
+			destination: '',
+			url: '/',
+			title: '☀️ Aujourd\'hui sur Go-Stop',
+			body: 'Aujourd\'hui : 1 trajet — Saillans → Crest à 17h50 (Alice).'
+		});
+		expect(inboxTitle(digest)).toBe(m.inboxKindMorningDigest());
+		expect(inboxRoute(digest)).toBe('Aujourd\'hui : 1 trajet — Saillans → Crest à 17h50 (Alice).');
+		expect(inboxIcon(digest)).toBe('☀️');
+	});
 	it('falls back to the server title for unknown kinds or a missing name', () => {
 		expect(inboxTitle(item({ kind: 'something_new' }))).toBe('Ride available!');
 		expect(inboxTitle(item({ contact_name: '' }))).toBe('Ride available!');

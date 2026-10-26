@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 	var truncErr error
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
-		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, request_expiry_warnings, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, notifications`)
+		_, truncErr = handlerPool.Exec(context.Background(), `TRUNCATE rides, requests, request_expiry_warnings, notification_preferences, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, notifications`)
 		if truncErr == nil {
 			break
 		}
@@ -141,6 +141,10 @@ func setupRouter() *gin.Engine {
 	r.DELETE("/api/subscriptions/:phone", subH.Unsubscribe)
 	r.GET("/api/stats", statsH.Get)
 	r.GET("/api/inbox", inboxH.List)
+	prefsRepo := postgres.NewNotificationPreferenceRepo(handlerPool)
+	prefsH := handler.NewNotificationPreferencesHandler(usecase.NewGetNotificationPreferences(prefsRepo), usecase.NewSetNotificationPreferences(prefsRepo))
+	r.GET("/api/notification-preferences", prefsH.Get)
+	r.PUT("/api/notification-preferences", prefsH.Put)
 	r.POST("/api/inbox/read", inboxH.MarkRead)
 	r.DELETE("/api/inbox/:id", inboxH.Delete)
 	r.POST("/api/inbox/:id/restore", inboxH.Restore)
@@ -150,7 +154,7 @@ func setupRouter() *gin.Engine {
 func truncateAll(t *testing.T) {
 	t.Helper()
 	if _, err := handlerPool.Exec(context.Background(),
-		`TRUNCATE rides, requests, request_expiry_warnings, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers, notifications`); err != nil {
+		`TRUNCATE rides, requests, request_expiry_warnings, notification_preferences, subscriptions, ride_stats, interests, search_events, ride_events, connection_events, notification_queue, feedback_queue, contact_offers, notifications`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 }

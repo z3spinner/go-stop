@@ -92,6 +92,7 @@ type Querier interface {
 	GetFeedbackByRideID(ctx context.Context, rideID pgtype.UUID) (FeedbackQueue, error)
 	GetInterestByID(ctx context.Context, id pgtype.UUID) (Interest, error)
 	GetInterestByRideAndSearcher(ctx context.Context, arg GetInterestByRideAndSearcherParams) (Interest, error)
+	GetNotificationPreferences(ctx context.Context, phone string) (NotificationPreference, error)
 	GetRequestByID(ctx context.Context, id pgtype.UUID) (Request, error)
 	GetRideByID(ctx context.Context, id pgtype.UUID) (Ride, error)
 	GetRideEventCounts(ctx context.Context) (GetRideEventCountsRow, error)
@@ -138,6 +139,7 @@ type Querier interface {
 	// Returns all interests made by a searcher, joined with ride info for display.
 	// Includes rides that may have expired (so the searcher can see their full history).
 	ListInterestsBySearcher(ctx context.Context, searcherPhone string) ([]ListInterestsBySearcherRow, error)
+	ListMorningDigestOptOuts(ctx context.Context) ([]string, error)
 	// Dismissed (user-deleted) items are hidden.
 	ListNotificationsByPhone(ctx context.Context, arg ListNotificationsByPhoneParams) ([]Notification, error)
 	// Returns pending notifications for a searcher (for UI display).
@@ -186,6 +188,7 @@ type Querier interface {
 	// generated *_norm columns recompute from the new origin/destination. A clash
 	// with the driver's own uq_rides_dedup key surfaces as a unique violation.
 	UpdateRideByID(ctx context.Context, arg UpdateRideByIDParams) (Ride, error)
+	UpsertMorningDigestPreference(ctx context.Context, arg UpsertMorningDigestPreferenceParams) error
 	// ON CONFLICT (phone, endpoint) allows multiple devices per phone.
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error
 }

@@ -165,6 +165,7 @@ const ICONS: Record<string, string> = {
 	feedback_reminder: '💬',
 	engagement_reminder: '📣',
 	alert_expiring: '⏳',
+	morning_digest: '☀️',
 	test: '🔔'
 };
 
@@ -177,6 +178,7 @@ export function inboxTitle(item: InboxItem): string {
 	if (item.kind === 'feedback_reminder') return m.inboxKindFeedbackReminder();
 	if (item.kind === 'engagement_reminder') return m.inboxKindEngagementReminder();
 	if (item.kind === 'alert_expiring') return m.inboxKindAlertExpiring();
+	if (item.kind === 'morning_digest') return m.inboxKindMorningDigest();
 	const fn = TITLES[item.kind];
 	if (fn && item.contact_name) return fn(item.contact_name);
 	return item.title || m.inboxTitle();

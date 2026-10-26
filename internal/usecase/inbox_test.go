@@ -54,7 +54,7 @@ type mockInboxRepo struct {
 	deletedRequests  []string
 	deleteCutoff     time.Time
 	kindDeletes      []string // DeleteKindOlderThan calls: kind
-	kindCutoff       time.Time
+	kindCutoffs      map[string]time.Time
 	deleted          int64
 	goneCalled       bool
 	dismissed        []string // "phone/id"
@@ -158,7 +158,10 @@ func (m *mockInboxRepo) DeleteOlderThan(cutoff time.Time) (int64, error) {
 }
 func (m *mockInboxRepo) DeleteKindOlderThan(kind string, cutoff time.Time) (int64, error) {
 	m.kindDeletes = append(m.kindDeletes, kind)
-	m.kindCutoff = cutoff
+	if m.kindCutoffs == nil {
+		m.kindCutoffs = map[string]time.Time{}
+	}
+	m.kindCutoffs[kind] = cutoff
 	return 0, nil
 }
 
@@ -462,18 +465,27 @@ func TestPurgeInbox_DeletesOlderThanRetention(t *testing.T) {
 	}
 }
 
-func TestPurgeInbox_DropsTheEngagementReminderAfterAWeek(t *testing.T) {
+func TestPurgeInbox_DropsBroadcastsByAge(t *testing.T) {
 	inbox := &mockInboxRepo{}
 	before := time.Now()
 	if err := usecase.NewPurgeInbox(inbox, 30).Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(inbox.kindDeletes) != 1 || inbox.kindDeletes[0] != domain.KindEngagementReminder {
-		t.Fatalf("expected the engagement reminder to be purged by age, got %v", inbox.kindDeletes)
-	}
-	want := before.Add(-domain.EngagementReminderLifetime)
-	if d := inbox.kindCutoff.Sub(want); d < 0 || d > time.Minute {
-		t.Errorf("cutoff %v, want ≈ %v (a week ago)", inbox.kindCutoff, want)
+	// Neither is about a post that could expire with it: the weekly engagement
+	// reminder goes after a week, the morning digest after a day.
+	for kind, lifetime := range map[string]time.Duration{
+		domain.KindEngagementReminder: domain.EngagementReminderLifetime,
+		domain.KindMorningDigest:      domain.MorningDigestLifetime,
+	} {
+		cutoff, ok := inbox.kindCutoffs[kind]
+		if !ok {
+			t.Errorf("expected %s to be purged by age, got %v", kind, inbox.kindDeletes)
+			continue
+		}
+		want := before.Add(-lifetime)
+		if d := cutoff.Sub(want); d < 0 || d > time.Minute {
+			t.Errorf("%s cutoff %v, want ≈ %v", kind, cutoff, want)
+		}
 	}
 }
 

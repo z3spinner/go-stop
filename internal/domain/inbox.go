@@ -22,7 +22,13 @@ const (
 	KindEngagementReminder = "engagement_reminder"
 	// "your open-ended alert expires in a few days — keep it?"
 	KindAlertExpiring = "alert_expiring"
+	// The daily morning summary of the day's rides and requests.
+	KindMorningDigest = "morning_digest"
 )
+
+// MorningDigestLifetime is how long a morning digest stays in the inbox: it is
+// about that one day.
+const MorningDigestLifetime = 24 * time.Hour
 
 // AlertExpiryKey is the dedup key of the expiry warning for one lifetime of an
 // alert: renewing it moves its expiry, so the next warning is a new item.
