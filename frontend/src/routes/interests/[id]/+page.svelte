@@ -8,13 +8,13 @@
 	import { get } from 'svelte/store';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import { formatTime } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { ContactInfo } from '$lib/types';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import { formatTime } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { ContactInfo } from '#lib/types.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import CheckIcon from '@lucide/svelte/icons/check';
 
 	let contact = $state<ContactInfo | null>(null);

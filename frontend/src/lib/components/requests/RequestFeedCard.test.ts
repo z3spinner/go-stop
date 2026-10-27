@@ -5,16 +5,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { tick } from 'svelte';
 import { render, fireEvent, screen } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
-import { userName, userPhone } from '$lib/stores';
+import { userName, userPhone } from '#lib/stores.js';
 import RequestFeedCard from './RequestFeedCard.svelte';
-import type { PublicRequest } from '$lib/types';
+import type { PublicRequest } from '#lib/types.js';
 
 const offerContact = vi.hoisted(() => vi.fn(async () => null));
 const getOfferStatus = vi.hoisted(() => vi.fn(async () => ({ offered: false })));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
-vi.mock('$lib/api', () => ({ api: { requests: { offerContact, getOfferStatus } } }));
-vi.mock('$lib/profileModal', () => ({ openProfileModal: vi.fn() }));
-vi.mock('$lib/paraglide/messages', () => ({
+vi.mock('#lib/api.js', () => ({ api: { requests: { offerContact, getOfferStatus } } }));
+vi.mock('#lib/profileModal.js', () => ({ openProfileModal: vi.fn() }));
+vi.mock('#lib/paraglide/messages.js', () => ({
 	m: {
 		alertAnytimeLabel: () => 'Anytime',
 		at: () => 'at',

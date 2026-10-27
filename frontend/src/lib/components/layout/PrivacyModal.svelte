@@ -4,10 +4,10 @@
 -->
 
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { m } from '$lib/paraglide/messages';
-	import { config } from '$lib/config';
-	import { DEFAULT_RETENTION_DAYS } from '$lib/inbox';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import { config } from '#lib/config.js';
+	import { DEFAULT_RETENTION_DAYS } from '#lib/inbox.js';
 	let { open = false, onclose }: { open?: boolean; onclose: () => void } = $props();
 	function onOpenChange(v: boolean) {
 		if (!v) onclose();

@@ -8,11 +8,11 @@
 	import { page } from '$app/state';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import { formatTime } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import { formatTime } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRide } from '#lib/types.js';
 
 	const id = page.params.id!;
 	let ride = $state<PublicRide | null>(null);

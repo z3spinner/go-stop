@@ -8,12 +8,12 @@
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import AlertCard from '$lib/components/alerts/AlertCard.svelte';
-	import RequestCard from '$lib/components/requests/RequestCard.svelte';
-	import { m } from '$lib/paraglide/messages';
-	import type { Request, MyInterest } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import AlertCard from '#lib/components/alerts/AlertCard.svelte';
+	import RequestCard from '#lib/components/requests/RequestCard.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Request, MyInterest } from '#lib/types.js';
 
 	let phone = $state(get(userPhone));
 	let alerts = $state<Request[]>([]);

@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import Edit from './rides/[id]/edit/+page.svelte';
-import { userPhone } from '$lib/stores';
+import { userPhone } from '#lib/stores.js';
 
 const goto = vi.fn();
 vi.mock('$app/state', () => ({ page: { params: { id: 'ride-1' } } }));

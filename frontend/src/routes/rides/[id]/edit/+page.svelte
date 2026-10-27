@@ -8,12 +8,12 @@
 	import { page } from '$app/state';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import { m } from '$lib/paraglide/messages';
-	import type { Flexibility } from '$lib/types';
-	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
-	import FlexibilitySelect from '$lib/components/forms/FlexibilitySelect.svelte';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Flexibility } from '#lib/types.js';
+	import PlaceCombobox from '#lib/components/forms/PlaceCombobox.svelte';
+	import FlexibilitySelect from '#lib/components/forms/FlexibilitySelect.svelte';
 
 	const id = page.params.id!;
 	let destinations = $state<string[]>([]);

@@ -13,7 +13,7 @@
 -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { swipeDirection, swipeOutcome } from '$lib/swipe';
+	import { swipeDirection, swipeOutcome } from '#lib/swipe.js';
 
 	let {
 		ondelete,

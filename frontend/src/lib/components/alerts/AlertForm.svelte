@@ -6,14 +6,14 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { untrack } from 'svelte';
-	import { api } from '$lib/api';
-	import { userName, userPhone } from '$lib/stores';
-	import { normalizePhone } from '$lib/utils';
-	import ProfileFields from '$lib/components/ProfileFields.svelte';
-	import { m } from '$lib/paraglide/messages';
-	import type { Flexibility, PostRequestBody } from '$lib/types';
-	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
-	import FlexibilitySelect from '$lib/components/forms/FlexibilitySelect.svelte';
+	import { api } from '#lib/api.js';
+	import { userName, userPhone } from '#lib/stores.js';
+	import { normalizePhone } from '#lib/utils.js';
+	import ProfileFields from '#lib/components/ProfileFields.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Flexibility, PostRequestBody } from '#lib/types.js';
+	import PlaceCombobox from '#lib/components/forms/PlaceCombobox.svelte';
+	import FlexibilitySelect from '#lib/components/forms/FlexibilitySelect.svelte';
 
 	let {
 		origin = '', destination = '', departureAt = '', destinations = [], onposted

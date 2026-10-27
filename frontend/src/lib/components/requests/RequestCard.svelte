@@ -4,11 +4,11 @@
 -->
 
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { api } from '$lib/api';
-	import { formatTime } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { MyInterest } from '$lib/types';
+	import { browser } from '$app/env';
+	import { api } from '#lib/api.js';
+	import { formatTime } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { MyInterest } from '#lib/types.js';
 
 	let {
 		interest,

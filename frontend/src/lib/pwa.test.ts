@@ -14,7 +14,7 @@ import { api } from './api';
 
 // updateBellState bails out under SSR (`browser === false`); force it true so the
 // re-post path runs. The pure-function tests below don't read `browser`.
-vi.mock('$app/environment', () => ({ browser: true }));
+vi.mock('$app/env', () => ({ browser: true }));
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {

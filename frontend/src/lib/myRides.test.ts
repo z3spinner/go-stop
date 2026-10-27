@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const list = vi.hoisted(() => vi.fn());
-vi.mock('$lib/api', () => ({ api: { rides: { list } } }));
+vi.mock('#lib/api.js', () => ({ api: { rides: { list } } }));
 
 import { loadMyRideIds } from './myRides';
 

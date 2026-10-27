@@ -7,15 +7,15 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { get } from 'svelte/store';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import { loadAcceptedContacts } from '$lib/contacts';
-	import { formatTime, flexLabel } from '$lib/utils';
-	import ContactOrInterest from '$lib/components/rides/ContactOrInterest.svelte';
-	import ShareButton from '$lib/components/ShareButton.svelte';
-	import { config } from '$lib/config';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import { loadAcceptedContacts } from '#lib/contacts.js';
+	import { formatTime, flexLabel } from '#lib/utils.js';
+	import ContactOrInterest from '#lib/components/rides/ContactOrInterest.svelte';
+	import ShareButton from '#lib/components/ShareButton.svelte';
+	import { config } from '#lib/config.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRide } from '#lib/types.js';
 
 	let ride = $state<PublicRide | null>(null);
 	let contactPhone = $state<string | undefined>(undefined);

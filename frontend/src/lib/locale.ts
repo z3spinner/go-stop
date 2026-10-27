@@ -9,13 +9,13 @@ import {
 	overwriteGetLocale,
 	overwriteSetLocale,
 	type Locale
-} from '$lib/paraglide/runtime';
+} from '#lib/paraglide/runtime.js';
 
 const KEY = 'lang';
 
 // True in a real browser and in the jsdom test environment, false during SSR /
 // prerender. We guard on the actual presence of `localStorage` rather than
-// SvelteKit's `$app/environment` `browser` flag, because that flag is compiled
+// SvelteKit's `$app/env` `browser` flag, because that flag is compiled
 // to `false` under Vitest and would otherwise disable the strategy in tests.
 function hasStorage(): boolean {
 	return typeof localStorage !== 'undefined';

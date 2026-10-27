@@ -4,10 +4,10 @@
 -->
 
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { isIOSBrowser } from '$lib/pwa';
-	import { openA2HS } from '$lib/a2hs';
-	import { m } from '$lib/paraglide/messages';
+	import { browser } from '$app/env';
+	import { isIOSBrowser } from '#lib/pwa.js';
+	import { openA2HS } from '#lib/a2hs.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let dismissed = $state(browser ? localStorage.getItem('a2hs_dismissed') === '1' : true);
 	let show = $derived(browser && isIOSBrowser() && !dismissed);

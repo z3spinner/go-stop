@@ -4,7 +4,7 @@
 -->
 
 <script lang="ts">
-	import { getLocale, setLocale, locales } from '$lib/locale';
+	import { getLocale, setLocale, locales } from '#lib/locale.js';
 
 	const FLAGS: Record<string, string> = { fr: '🇫🇷', en: '🇬🇧', es: '🇪🇸', it: '🇮🇹', de: '🇩🇪', nl: '🇳🇱', el: '🇬🇷' };
 	const ORDER = ['fr', 'en', 'es', 'it', 'de', 'nl', 'el'] as const;

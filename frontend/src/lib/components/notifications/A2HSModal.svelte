@@ -4,11 +4,11 @@
 -->
 
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { a2hsModalOpen } from '$lib/a2hs';
-	import { isInAppBrowser } from '$lib/pwa';
-	import { m } from '$lib/paraglide/messages';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { a2hsModalOpen } from '#lib/a2hs.js';
+	import { isInAppBrowser } from '#lib/pwa.js';
+	import { m } from '#lib/paraglide/messages.js';
 	let open = $derived($a2hsModalOpen);
 	function onOpenChange(v: boolean) {
 		a2hsModalOpen.set(v);

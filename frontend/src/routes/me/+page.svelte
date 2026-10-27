@@ -5,9 +5,9 @@
 
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import { userName, userPhone } from '$lib/stores';
-	import { normalizePhone } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
+	import { userName, userPhone } from '#lib/stores.js';
+	import { normalizePhone } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let name = $state(get(userName));
 	let phone = $state(get(userPhone));

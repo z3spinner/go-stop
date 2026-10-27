@@ -7,12 +7,12 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
-	import RideForm from '$lib/components/rides/RideForm.svelte';
-	import { openNotifModal } from '$lib/notifModal';
-	import { pushState } from '$lib/pwa';
+	import { api } from '#lib/api.js';
+	import RideForm from '#lib/components/rides/RideForm.svelte';
+	import { openNotifModal } from '#lib/notifModal.js';
+	import { pushState } from '#lib/pwa.js';
 	import { get } from 'svelte/store';
-	import { m } from '$lib/paraglide/messages';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let destinations = $state<string[]>([]);
 	onMount(async () => { try { destinations = await api.destinations.list(); } catch { destinations = []; } });

@@ -6,13 +6,13 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { api, ApiError } from '$lib/api';
-	import { userName, userPhone } from '$lib/stores';
-	import { openProfileModal } from '$lib/profileModal';
-	import { normalizePhone } from '$lib/utils';
-	import { formatTime, formatDate, flexLabel } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRequest } from '$lib/types';
+	import { api, ApiError } from '#lib/api.js';
+	import { userName, userPhone } from '#lib/stores.js';
+	import { openProfileModal } from '#lib/profileModal.js';
+	import { normalizePhone } from '#lib/utils.js';
+	import { formatTime, formatDate, flexLabel } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRequest } from '#lib/types.js';
 
 	// A searcher's open request (phone-stripped). Same 4-mode display as AlertCard,
 	// but the action is driver-facing: "I can drive this" prefills Post a Ride.

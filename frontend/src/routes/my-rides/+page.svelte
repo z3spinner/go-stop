@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { get } from 'svelte/store';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import MyRideCard from '$lib/components/rides/MyRideCard.svelte';
-	import { m } from '$lib/paraglide/messages';
-	import type { Ride } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import MyRideCard from '#lib/components/rides/MyRideCard.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Ride } from '#lib/types.js';
 
 	let phone = $state(get(userPhone));
 	let rides = $state<Ride[]>([]);

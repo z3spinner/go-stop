@@ -5,9 +5,9 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import { m } from '$lib/paraglide/messages';
-	import type { Stats, ActivityCounts } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Stats, ActivityCounts } from '#lib/types.js';
 
 	let stats = $state<Stats | null>(null);
 	let err = $state(false);

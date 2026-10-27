@@ -3,7 +3,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
-import { config } from '$lib/config';
+import { config } from '#lib/config.js';
 
 // qrcode is async and DOM-free; stub it so the component renders deterministically.
 vi.mock('qrcode', () => ({

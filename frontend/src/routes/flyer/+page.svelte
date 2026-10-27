@@ -6,9 +6,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import QRCode from 'qrcode';
-	import { m } from '$lib/paraglide/messages';
-	import { config } from '$lib/config';
-	import { getLocale, locales, baseLocale, type Locale } from '$lib/locale';
+	import { m } from '#lib/paraglide/messages.js';
+	import { config } from '#lib/config.js';
+	import { getLocale, locales, baseLocale, type Locale } from '#lib/locale.js';
 
 	// `selected` drives only the flyer's rendered copy (via Paraglide's per-call
 	// { locale } option) — it never touches the app's global locale or reloads.

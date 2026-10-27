@@ -4,16 +4,16 @@
 -->
 
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { browser } from '$app/env';
 	import { get } from 'svelte/store';
-	import { api } from '$lib/api';
-	import { userName, userPhone } from '$lib/stores';
-	import { pushState, updateBellState } from '$lib/pwa';
-	import { openNotifModal } from '$lib/notifModal';
-	import { openProfileModal } from '$lib/profileModal';
-	import { normalizePhone } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide, Ride } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { userName, userPhone } from '#lib/stores.js';
+	import { pushState, updateBellState } from '#lib/pwa.js';
+	import { openNotifModal } from '#lib/notifModal.js';
+	import { openProfileModal } from '#lib/profileModal.js';
+	import { normalizePhone } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRide, Ride } from '#lib/types.js';
 
 	let { ride, contactPhone }: { ride: PublicRide | Ride; contactPhone?: string } = $props();
 

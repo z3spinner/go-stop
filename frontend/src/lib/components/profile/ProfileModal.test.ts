@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import ProfileModal from './ProfileModal.svelte';
-import { profileModalState, openProfileModal } from '$lib/profileModal';
-import { userName, userPhone } from '$lib/stores';
+import { profileModalState, openProfileModal } from '#lib/profileModal.js';
+import { userName, userPhone } from '#lib/stores.js';
 
 beforeEach(() => {
 	localStorage.clear();

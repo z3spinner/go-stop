@@ -7,15 +7,15 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
-	import { config } from '$lib/config';
-	import { userPhone } from '$lib/stores';
-	import { loadAcceptedContacts } from '$lib/contacts';
-	import RideCard from '$lib/components/rides/RideCard.svelte';
-	import RequestFeedCard from '$lib/components/requests/RequestFeedCard.svelte';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide, PublicRequest } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { config } from '#lib/config.js';
+	import { userPhone } from '#lib/stores.js';
+	import { loadAcceptedContacts } from '#lib/contacts.js';
+	import RideCard from '#lib/components/rides/RideCard.svelte';
+	import RequestFeedCard from '#lib/components/requests/RequestFeedCard.svelte';
+	import * as Tabs from '#lib/components/ui/tabs/index.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRide, PublicRequest } from '#lib/types.js';
 
 	let rides = $state<PublicRide[]>([]);
 	let requests = $state<PublicRequest[]>([]);

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Zeno Kerr
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api } from '$lib/api';
-import type { Ride } from '$lib/types';
+import { api } from '#lib/api.js';
+import type { Ride } from '#lib/types.js';
 
 /**
  * Returns the set of ride IDs published by this phone. Empty set when no phone is

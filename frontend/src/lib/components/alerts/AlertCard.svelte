@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import { get } from 'svelte/store';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import { formatTime, formatDate, flexLabel } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { Request, ContactOffer } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import { formatTime, formatDate, flexLabel } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Request, ContactOffer } from '#lib/types.js';
 
 	let { request, onseematches }: { request: Request; onseematches?: (o: string, d: string, dep: string) => void } = $props();
 	let msg = $state('');

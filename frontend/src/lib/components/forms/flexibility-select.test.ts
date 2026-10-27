@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/svelte';
 import FlexibilitySelect from './FlexibilitySelect.svelte';
-import { m } from '$lib/paraglide/messages';
+import { m } from '#lib/paraglide/messages.js';
 
 describe('FlexibilitySelect', () => {
 	it('renders the label for the current value on the trigger', () => {

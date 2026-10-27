@@ -4,10 +4,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import AlertCard from './AlertCard.svelte';
-import { userPhone } from '$lib/stores';
-import { m } from '$lib/paraglide/messages';
-import { formatDate } from '$lib/utils';
-import type { Request } from '$lib/types';
+import { userPhone } from '#lib/stores.js';
+import { m } from '#lib/paraglide/messages.js';
+import { formatDate } from '#lib/utils.js';
+import type { Request } from '#lib/types.js';
 
 const ZERO = '0001-01-01T00:00:00Z';
 const DAY = 24 * 60 * 60 * 1000;

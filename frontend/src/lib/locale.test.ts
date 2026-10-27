@@ -3,7 +3,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { registerLangStrategy } from './locale';
-import { getLocale } from '$lib/paraglide/runtime';
+import { getLocale } from '#lib/paraglide/runtime.js';
 
 describe('lang persistence', () => {
 	beforeEach(() => localStorage.clear());

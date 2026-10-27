@@ -4,8 +4,8 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import A2HSModal from './A2HSModal.svelte';
-import { a2hsModalOpen } from '$lib/a2hs';
-import { m } from '$lib/paraglide/messages';
+import { a2hsModalOpen } from '#lib/a2hs.js';
+import { m } from '#lib/paraglide/messages.js';
 
 const SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1';
 const INSTAGRAM = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 400.0.0.25.86';

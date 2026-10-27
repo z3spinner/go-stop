@@ -6,18 +6,18 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { untrack } from 'svelte';
-	import { api } from '$lib/api';
-	import { userName, userPhone } from '$lib/stores';
-	import { config } from '$lib/config';
-	import { defaultDeparture, normalizePhone, formatDate } from '$lib/utils';
-	import ProfileFields from '$lib/components/ProfileFields.svelte';
-	import { m } from '$lib/paraglide/messages';
-	import type { Flexibility } from '$lib/types';
-	import { expandOffsets, shiftDaysIso, type Frequency } from '$lib/recurrence';
-	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
-	import FlexibilitySelect from '$lib/components/forms/FlexibilitySelect.svelte';
-	import NumberStepper from '$lib/components/ui/number-stepper/NumberStepper.svelte';
-	import * as Select from '$lib/components/ui/select';
+	import { api } from '#lib/api.js';
+	import { userName, userPhone } from '#lib/stores.js';
+	import { config } from '#lib/config.js';
+	import { defaultDeparture, normalizePhone, formatDate } from '#lib/utils.js';
+	import ProfileFields from '#lib/components/ProfileFields.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Flexibility } from '#lib/types.js';
+	import { expandOffsets, shiftDaysIso, type Frequency } from '#lib/recurrence.js';
+	import PlaceCombobox from '#lib/components/forms/PlaceCombobox.svelte';
+	import FlexibilitySelect from '#lib/components/forms/FlexibilitySelect.svelte';
+	import NumberStepper from '#lib/components/ui/number-stepper/NumberStepper.svelte';
+	import * as Select from '#lib/components/ui/select/index.js';
 
 	// origin/destination/departureAt seed the form (e.g. "I can drive this" from a
 	// requested ride). departureAt is a datetime-local string; falls back to default.

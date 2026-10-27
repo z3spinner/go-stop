@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import Search from './search/+page.svelte';
-import { userPhone } from '$lib/stores';
+import { userPhone } from '#lib/stores.js';
 
 afterEach(() => { vi.unstubAllGlobals(); userPhone.set(''); localStorage.clear(); });
 
