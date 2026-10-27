@@ -4,7 +4,7 @@
 -->
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages';
+	import { m } from '#lib/paraglide/messages.js';
 
 	// `url` defaults to the current page. `title`/`text` are used by the native
 	// share sheet; the clipboard fallback shares the URL. `size` sizes the icon.

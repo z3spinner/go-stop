@@ -5,11 +5,11 @@
 
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { profileModalState } from '$lib/profileModal';
-	import { userName, userPhone } from '$lib/stores';
-	import { normalizePhone } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { profileModalState } from '#lib/profileModal.js';
+	import { userName, userPhone } from '#lib/stores.js';
+	import { normalizePhone } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let onComplete = $derived($profileModalState);
 	let open = $derived(onComplete !== null);

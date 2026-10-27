@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import Me from './me/+page.svelte';
-import { userName, userPhone } from '$lib/stores';
+import { userName, userPhone } from '#lib/stores.js';
 
 beforeEach(() => { localStorage.clear(); userName.set(''); userPhone.set(''); });
 

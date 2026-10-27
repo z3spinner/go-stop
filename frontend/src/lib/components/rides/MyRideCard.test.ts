@@ -9,7 +9,7 @@ const { listInterests, del, feedback } = vi.hoisted(() => ({
 	del: vi.fn(async () => null),
 	feedback: vi.fn(async () => null),
 }));
-vi.mock('$lib/api', () => ({
+vi.mock('#lib/api.js', () => ({
 	api: {
 		rides: {
 			listMatchingRequests: vi.fn(async () => []),

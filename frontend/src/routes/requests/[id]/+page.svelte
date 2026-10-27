@@ -7,14 +7,14 @@
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 	import { page } from '$app/state';
-	import { api } from '$lib/api';
-	import { userPhone } from '$lib/stores';
-	import { formatTime, flexLabel } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { Request } from '$lib/types';
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Button } from '$lib/components/ui/button';
+	import { api } from '#lib/api.js';
+	import { userPhone } from '#lib/stores.js';
+	import { formatTime, flexLabel } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Request } from '#lib/types.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
 	import HandIcon from '@lucide/svelte/icons/hand';
 
 	let req = $state<Request | null>(null);

@@ -6,12 +6,12 @@
 <script lang="ts">
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { pushState } from '$lib/pwa';
-	import { openNotifModal } from '$lib/notifModal';
-	import { openA2HS } from '$lib/a2hs';
-	import { inboxUnread, badgeText } from '$lib/inbox';
-	import { userPhone } from '$lib/stores';
-	import { m } from '$lib/paraglide/messages';
+	import { pushState } from '#lib/pwa.js';
+	import { openNotifModal } from '#lib/notifModal.js';
+	import { openA2HS } from '#lib/a2hs.js';
+	import { inboxUnread, badgeText } from '#lib/inbox.js';
+	import { userPhone } from '#lib/stores.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let state = $derived($pushState);
 	let isIos = $derived(state === 'ios-browser');

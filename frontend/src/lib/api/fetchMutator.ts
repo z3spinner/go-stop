@@ -10,7 +10,7 @@
  *   - the `{error}` envelope -> ApiError(status, message) on non-2xx,
  *   - 204/empty bodies -> null.
  *
- * The facade (`$lib/api.ts`) re-exports ApiError and wraps the generated
+ * The facade (`#lib/api.ts`) re-exports ApiError and wraps the generated
  * functions into the Appendix A `api.<resource>.<verb>()` surface.
  */
 

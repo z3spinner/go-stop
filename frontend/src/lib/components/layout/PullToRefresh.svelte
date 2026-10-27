@@ -14,7 +14,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import { isStandalone } from '$lib/pwa';
+	import { isStandalone } from '#lib/pwa.js';
 
 	let { onrefresh, children }: { onrefresh: () => Promise<void> | void; children?: Snippet } =
 		$props();

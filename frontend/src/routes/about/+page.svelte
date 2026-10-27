@@ -4,8 +4,8 @@
 -->
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages';
-	import { config } from '$lib/config';
+	import { m } from '#lib/paraglide/messages.js';
+	import { config } from '#lib/config.js';
 </script>
 
 <svelte:head>

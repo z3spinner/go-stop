@@ -6,12 +6,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { page } from '$app/state';
-	import { userPhone } from '$lib/stores';
-	import { inboxAction, inboxIcon, inboxItems, inboxRoute, inboxTitle, refreshInbox } from '$lib/inbox';
-	import { formatTime } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
+	import { userPhone } from '#lib/stores.js';
+	import { inboxAction, inboxIcon, inboxItems, inboxRoute, inboxTitle, refreshInbox } from '#lib/inbox.js';
+	import { formatTime } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
 
 	// One notification on its own: the ones that point at no particular page
 	// (morning digest, weekly reminder, test) open here from the list, so the

@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { onDestroy, untrack } from 'svelte';
 	import { get } from 'svelte/store';
-	import { userPhone } from '$lib/stores';
-	import { pushState } from '$lib/pwa';
-	import { openNotifModal } from '$lib/notifModal';
-	import { openA2HS } from '$lib/a2hs';
-	import { config } from '$lib/config';
+	import { userPhone } from '#lib/stores.js';
+	import { pushState } from '#lib/pwa.js';
+	import { openNotifModal } from '#lib/notifModal.js';
+	import { openA2HS } from '#lib/a2hs.js';
+	import { config } from '#lib/config.js';
 	import {
 		DEFAULT_RETENTION_DAYS,
 		inboxHref,
@@ -23,11 +23,11 @@
 		refreshInbox,
 		deleteInboxItem,
 		restoreInboxItem
-	} from '$lib/inbox';
-	import SwipeToDelete from '$lib/components/notifications/SwipeToDelete.svelte';
-	import type { InboxItem } from '$lib/types';
-	import { formatTime } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
+	} from '#lib/inbox.js';
+	import SwipeToDelete from '#lib/components/notifications/SwipeToDelete.svelte';
+	import type { InboxItem } from '#lib/types.js';
+	import { formatTime } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	// Follows the profile phone live (it can be entered from the settings modal
 	// opened on this page).

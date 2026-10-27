@@ -4,11 +4,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import NotifModal from './NotifModal.svelte';
-import { notifModalState } from '$lib/notifModal';
-import { api } from '$lib/api';
-import { config } from '$lib/config';
-import { userPhone } from '$lib/stores';
-import { m } from '$lib/paraglide/messages';
+import { notifModalState } from '#lib/notifModal.js';
+import { api } from '#lib/api.js';
+import { config } from '#lib/config.js';
+import { userPhone } from '#lib/stores.js';
+import { m } from '#lib/paraglide/messages.js';
 
 beforeEach(() => notifModalState.set(null));
 afterEach(() => {

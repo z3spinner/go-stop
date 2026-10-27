@@ -8,14 +8,14 @@
 	import { get } from 'svelte/store';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { api } from '$lib/api';
-	import { lastOrigin, lastDestination, userPhone } from '$lib/stores';
-	import { loadAcceptedContacts } from '$lib/contacts';
-	import { loadMyRideIds } from '$lib/myRides';
-	import RideCard from '$lib/components/rides/RideCard.svelte';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide, RideSearchParams } from '$lib/types';
-	import PlaceCombobox from '$lib/components/forms/PlaceCombobox.svelte';
+	import { api } from '#lib/api.js';
+	import { lastOrigin, lastDestination, userPhone } from '#lib/stores.js';
+	import { loadAcceptedContacts } from '#lib/contacts.js';
+	import { loadMyRideIds } from '#lib/myRides.js';
+	import RideCard from '#lib/components/rides/RideCard.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRide, RideSearchParams } from '#lib/types.js';
+	import PlaceCombobox from '#lib/components/forms/PlaceCombobox.svelte';
 
 	let destinations = $state<string[]>([]);
 	let origin = $state('');
@@ -60,7 +60,7 @@
 		} else if (search_time) {
 			params.search_time = search_time; url.set('search_time', search_time);
 		}
-		goto(`/search?${url.toString()}`, { replaceState: true, keepFocus: true, noScroll: true });
+		goto(`/search?${url.toString()}`, { replace: true, reset: false });
 
 		// Reverse-direction lookup (return rides). count=false so a single user search
 		// records one search event rather than double-counting in the statistics.

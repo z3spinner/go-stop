@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import ContactOrInterest from './ContactOrInterest.svelte';
 import { get } from 'svelte/store';
-import { userName, userPhone } from '$lib/stores';
-import { profileModalState } from '$lib/profileModal';
+import { userName, userPhone } from '#lib/stores.js';
+import { profileModalState } from '#lib/profileModal.js';
 
 beforeEach(() => { localStorage.clear(); userName.set('Bob'); userPhone.set('0622000002'); profileModalState.set(null); });
 afterEach(() => vi.unstubAllGlobals());

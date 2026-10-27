@@ -5,14 +5,14 @@
 
 <script lang="ts">
 	import { get } from 'svelte/store';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { notifModalState } from '$lib/notifModal';
-	import { userName, userPhone } from '$lib/stores';
-	import { normalizePhone } from '$lib/utils';
-	import { trySubscribePush, updateBellState, sendTestPush, reconfigurePush } from '$lib/pwa';
-	import { m } from '$lib/paraglide/messages';
-	import { api } from '$lib/api';
-	import { config } from '$lib/config';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { notifModalState } from '#lib/notifModal.js';
+	import { userName, userPhone } from '#lib/stores.js';
+	import { normalizePhone } from '#lib/utils.js';
+	import { trySubscribePush, updateBellState, sendTestPush, reconfigurePush } from '#lib/pwa.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import { api } from '#lib/api.js';
+	import { config } from '#lib/config.js';
 
 	let modalState = $derived($notifModalState);
 	let open = $derived(modalState !== null);

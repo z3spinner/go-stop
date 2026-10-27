@@ -4,9 +4,9 @@
 -->
 
 <script lang="ts">
-	import * as Select from '$lib/components/ui/select';
-	import { m } from '$lib/paraglide/messages';
-	import type { Flexibility } from '$lib/types';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Flexibility } from '#lib/types.js';
 
 	let { value = $bindable(30) }: { value?: Flexibility } = $props();
 

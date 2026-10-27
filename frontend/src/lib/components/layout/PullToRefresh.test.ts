@@ -7,7 +7,7 @@ import PullToRefresh from './PullToRefresh.svelte';
 
 // Toggle standalone detection per test.
 const { standalone } = vi.hoisted(() => ({ standalone: { value: true } }));
-vi.mock('$lib/pwa', () => ({ isStandalone: () => standalone.value }));
+vi.mock('#lib/pwa.js', () => ({ isStandalone: () => standalone.value }));
 
 function emit(type: string, y: number, x = 0) {
 	const e = new Event(type, { bubbles: true, cancelable: true });

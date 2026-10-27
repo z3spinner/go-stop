@@ -4,7 +4,7 @@
 -->
 
 <script lang="ts">
-	import { m } from '$lib/paraglide/messages';
+	import { m } from '#lib/paraglide/messages.js';
 
 	// Name + phone are seeded from the saved profile. When both are already filled
 	// the user has nothing to type, so we hide the inputs and show a compact

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Zeno Kerr
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { api } from './api';
 import type { MyInterest } from './types';
 

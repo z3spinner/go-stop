@@ -8,22 +8,22 @@
 	import '../legacy.css'; // ported live-site styles; targets the preserved semantic class names
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { goto, invalidateAll, replaceState } from '$app/navigation';
-	import { browser } from '$app/environment';
-	import { registerLangStrategy } from '$lib/locale';
-	import { loadConfig } from '$lib/config';
-	import { userPhone } from '$lib/stores';
+	import { goto, refreshAll } from '$app/navigation';
+	import { browser } from '$app/env';
+	import { registerLangStrategy } from '#lib/locale.js';
+	import { loadConfig } from '#lib/config.js';
+	import { userPhone } from '#lib/stores.js';
 	import { get } from 'svelte/store';
-	import { updateBellState } from '$lib/pwa';
-	import { refreshInbox, markInboxItemsRead, inboxIdFromUrl } from '$lib/inbox';
-	import TopBar from '$lib/components/layout/TopBar.svelte';
-	import PrivacyModal from '$lib/components/layout/PrivacyModal.svelte';
-	import A2HSBanner from '$lib/components/notifications/A2HSBanner.svelte';
-	import A2HSModal from '$lib/components/notifications/A2HSModal.svelte';
-	import NotifModal from '$lib/components/notifications/NotifModal.svelte';
-	import ProfileModal from '$lib/components/profile/ProfileModal.svelte';
-	import PullToRefresh from '$lib/components/layout/PullToRefresh.svelte';
-	import { m } from '$lib/paraglide/messages';
+	import { updateBellState } from '#lib/pwa.js';
+	import { refreshInbox, markInboxItemsRead, inboxIdFromUrl } from '#lib/inbox.js';
+	import TopBar from '#lib/components/layout/TopBar.svelte';
+	import PrivacyModal from '#lib/components/layout/PrivacyModal.svelte';
+	import A2HSBanner from '#lib/components/notifications/A2HSBanner.svelte';
+	import A2HSModal from '#lib/components/notifications/A2HSModal.svelte';
+	import NotifModal from '#lib/components/notifications/NotifModal.svelte';
+	import ProfileModal from '#lib/components/profile/ProfileModal.svelte';
+	import PullToRefresh from '#lib/components/layout/PullToRefresh.svelte';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let { children } = $props();
 	let showPrivacy = $state(false);
@@ -33,7 +33,7 @@
 	// Bumping this remounts the page subtree, re-running each page's onMount fetch.
 	let refreshNonce = $state(0);
 	async function refresh() {
-		await invalidateAll(); // re-run load() for the pages that use it
+		await refreshAll(); // re-run load() for the pages that use it
 		refreshNonce++; // remount to re-run onMount-based fetches
 	}
 
@@ -79,11 +79,9 @@
 		// parameter from the address bar.
 		const fromPush = inboxIdFromUrl(new URL(location.href));
 		if (fromPush.id) {
-			try {
-				replaceState(fromPush.clean, page.state);
-			} catch {
+			goto(fromPush.clean, { shallow: true, replace: true, state: page.state }).catch(() => {
 				/* router not ready: the leftover ?n= is harmless */
-			}
+			});
 			markInboxItemsRead(phone.trim(), [fromPush.id]);
 		}
 		// Leftover from the old toast polling, replaced by the inbox.

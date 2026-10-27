@@ -1,6 +1,6 @@
 # AGENTS.md — `frontend/` (SvelteKit SPA)
 
-Svelte 5 + SvelteKit 2 + TypeScript, Tailwind v4, shadcn-svelte, Paraglide i18n.
+Svelte 5 + SvelteKit 3 + TypeScript, Tailwind v4, shadcn-svelte, Paraglide i18n.
 Builds to a **static SPA** at `../web/build`, which the Go server serves. There is
 no SSR (`src/routes/+layout.ts` sets `ssr = false; prerender = false`).
 
@@ -16,7 +16,13 @@ no SSR (`src/routes/+layout.ts` sets `ssr = false; prerender = false`).
 | Compile i18n messages | `npm run paraglide` |
 
 `vite.config.ts` proxies `/api` to `VITE_API_PROXY_TARGET` (default
-`http://localhost:8080`). The compose devstack runs this on :5173.
+`http://localhost:8080`). The compose devstack runs this on :5173. It also holds
+the SvelteKit config (adapter, compiler options) as `sveltekit({ ... })` options:
+SvelteKit 3 has no `svelte.config.js`.
+
+Import from `src/lib` via the `#lib` subpath import (`package.json` `imports`),
+with an explicit extension: `#lib/utils.js`, `#lib/components/ui/button/index.js`,
+`#lib/components/rides/RideCard.svelte`. SvelteKit 3 no longer provides `$lib`.
 
 ## Generated API client — do not hand-edit
 
@@ -32,13 +38,15 @@ on top of it:
 - `src/lib/types.ts` — friendly aliases over generated models, wrapped in
   `DeepRequired<T>` (the server always populates fields the spec marks optional).
 
-Import `api` from `$lib/api`, not the generated module directly.
+Import `api` from `#lib/api.js`, not the generated module directly.
 
 ## Components
 
 - `src/lib/components/ui/*` — **shadcn-svelte primitives** (button, dialog, card,
   select, tabs, …). Treat as generated: add/update via the shadcn CLI
-  (`components.json` holds the config), don't hand-roll them.
+  (`components.json` holds the config), don't hand-roll them. The CLI still
+  only understands `$lib` aliases, so rewrite the `$lib/...` imports in any
+  component it adds to `#lib/....js` before committing.
 - `src/lib/components/{rides,requests,alerts,notifications,layout}/` — domain
   components. Co-located `*.test.ts` next to each.
 - **Svelte 5 runes throughout** — `$props`, `$state`, `$derived`, `{@render ...}`,
@@ -49,7 +57,7 @@ Import `api` from `$lib/api`, not the generated module directly.
 - Messages: `src/messages/{fr,en,es,it,de,nl}.json`. **`fr` is the base locale**
   (`project.inlang/settings.json`). Compiled output lands in `src/lib/paraglide/`
   (gitignored) — run `npm run paraglide` if message functions look stale.
-- Use in components: `import { m } from '$lib/paraglide/messages'` then
+- Use in components: `import { m } from '#lib/paraglide/messages.js'` then
   `m.someKey()` / `m.someKey({ count })`.
 - Locale is stored **raw** (unquoted) in `localStorage["lang"]` by the custom
   strategy in `src/lib/locale.ts`.

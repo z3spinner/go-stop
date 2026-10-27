@@ -5,11 +5,11 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import { formatTime, flexLabel } from '$lib/utils';
+	import { api } from '#lib/api.js';
+	import { formatTime, flexLabel } from '#lib/utils.js';
 	import SeekerRow from './SeekerRow.svelte';
-	import { m } from '$lib/paraglide/messages';
-	import type { Ride, PublicRequest, InterestListItem } from '$lib/types';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { Ride, PublicRequest, InterestListItem } from '#lib/types.js';
 
 	let { ride, phone }: { ride: Ride; phone: string } = $props();
 	let seekers = $state<PublicRequest[]>([]);

@@ -18,7 +18,7 @@ This app uses phone number as a lightweight delete credential with **no verifica
 ## Requirements
 
 - Go 1.25+
-- Node 22+ (for the SvelteKit frontend)
+- Node 22.17+ (for the SvelteKit frontend)
 - PostgreSQL 14+
 
 ## Local setup (with Docker — recommended)

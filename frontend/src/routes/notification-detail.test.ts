@@ -4,11 +4,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/svelte';
 import Detail from './notifications/[id]/+page.svelte';
-import { api } from '$lib/api';
-import { userPhone } from '$lib/stores';
-import { inboxItems, inboxUnread } from '$lib/inbox';
-import { m } from '$lib/paraglide/messages';
-import type { InboxItem } from '$lib/types';
+import { api } from '#lib/api.js';
+import { userPhone } from '#lib/stores.js';
+import { inboxItems, inboxUnread } from '#lib/inbox.js';
+import { m } from '#lib/paraglide/messages.js';
+import type { InboxItem } from '#lib/types.js';
 
 const params = vi.hoisted(() => ({ id: 'd1' }));
 vi.mock('$app/state', () => ({ page: { params } }));

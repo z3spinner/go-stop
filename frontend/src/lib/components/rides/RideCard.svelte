@@ -5,9 +5,9 @@
 
 <script lang="ts">
 	import ContactOrInterest from './ContactOrInterest.svelte';
-	import { formatTime, flexLabel } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRide, Ride } from '$lib/types';
+	import { formatTime, flexLabel } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRide, Ride } from '#lib/types.js';
 
 	let {
 		ride,

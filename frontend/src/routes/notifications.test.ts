@@ -5,12 +5,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor, fireEvent } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 import Notifications from './notifications/+page.svelte';
-import { api } from '$lib/api';
-import { userPhone } from '$lib/stores';
-import { inboxItems, inboxUnread, refreshInbox } from '$lib/inbox';
-import { pushState } from '$lib/pwa';
-import { m } from '$lib/paraglide/messages';
-import type { InboxItem } from '$lib/types';
+import { api } from '#lib/api.js';
+import { userPhone } from '#lib/stores.js';
+import { inboxItems, inboxUnread, refreshInbox } from '#lib/inbox.js';
+import { pushState } from '#lib/pwa.js';
+import { m } from '#lib/paraglide/messages.js';
+import type { InboxItem } from '#lib/types.js';
 
 function item(over: Partial<InboxItem>): InboxItem {
 	return {

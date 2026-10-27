@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import RideForm from './RideForm.svelte';
-import { config } from '$lib/config';
+import { config } from '#lib/config.js';
 
 beforeEach(() => { localStorage.clear(); config.set({ siteName: 'Go-Stop', returnDelayHours: 2 }); });
 

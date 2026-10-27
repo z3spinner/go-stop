@@ -6,11 +6,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import LangPicker from './LangPicker.svelte';
-	import BellButton from '$lib/components/notifications/BellButton.svelte';
-	import ShareButton from '$lib/components/ShareButton.svelte';
-	import { userName } from '$lib/stores';
-	import { config } from '$lib/config';
-	import { m } from '$lib/paraglide/messages';
+	import BellButton from '#lib/components/notifications/BellButton.svelte';
+	import ShareButton from '#lib/components/ShareButton.svelte';
+	import { userName } from '#lib/stores.js';
+	import { config } from '#lib/config.js';
+	import { m } from '#lib/paraglide/messages.js';
 
 	let { onprivacy }: { onprivacy?: () => void } = $props();
 	let hasProfile = $derived($userName.length > 0);

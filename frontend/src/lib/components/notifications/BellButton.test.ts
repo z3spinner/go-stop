@@ -6,10 +6,10 @@ import { render, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { get } from 'svelte/store';
 import BellButton from './BellButton.svelte';
-import { userPhone } from '$lib/stores';
-import { inboxUnread } from '$lib/inbox';
-import { pushState } from '$lib/pwa';
-import { notifModalState } from '$lib/notifModal';
+import { userPhone } from '#lib/stores.js';
+import { inboxUnread } from '#lib/inbox.js';
+import { pushState } from '#lib/pwa.js';
+import { notifModalState } from '#lib/notifModal.js';
 
 const goto = vi.fn();
 vi.mock('$app/navigation', () => ({ goto: (...a: unknown[]) => goto(...a) }));

@@ -4,10 +4,10 @@
 -->
 
 <script lang="ts">
-	import { api } from '$lib/api';
-	import { formatTime, flexLabel } from '$lib/utils';
-	import { m } from '$lib/paraglide/messages';
-	import type { PublicRequest } from '$lib/types';
+	import { api } from '#lib/api.js';
+	import { formatTime, flexLabel } from '#lib/utils.js';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { PublicRequest } from '#lib/types.js';
 
 	let { request, rideId, driverPhone }: { request: PublicRequest; rideId: string; driverPhone: string } = $props();
 	let done = $state(false);
